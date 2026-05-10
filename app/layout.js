@@ -50,15 +50,17 @@ export default function RootLayout({ children }) {
           paddingRight: '20px',
           zIndex: 1000,
         }}>
-          <button
-            onClick={() => router.push('/trang-chu')}
-            onMouseEnter={() => setHoverHome(true)}
-            onMouseLeave={() => setHoverHome(false)}
-            style={btnStyle(hoverHome)}
-          >
-            Trang chủ
-          </button>
-
+          {/* Bên trái */}
+          {userInfo && (
+            <button
+              onClick={() => router.push('/trang-chu')}
+              onMouseEnter={() => setHoverHome(true)}
+              onMouseLeave={() => setHoverHome(false)}
+              style={btnStyle(hoverHome)}
+            >
+              Trang chủ
+            </button>
+          )}
           {userInfo && (
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ color: 'white', fontSize: '14px' }}>

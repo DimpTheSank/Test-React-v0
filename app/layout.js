@@ -8,9 +8,13 @@ export default function RootLayout({ children }) {
   const router = useRouter()
 
   useEffect(() => {
-    const raw = Cookies.get('userInfo')
-    console.log('userInfo cookie:', raw) // mở F12 → Console để xem
-    if (raw) setUserInfo(JSON.parse(raw))
+    const raw = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('userInfo='))
+      ?.split('=')[1]
+    
+    console.log('raw cookie:', raw)
+    if (raw) setUserInfo(JSON.parse(decodeURIComponent(raw)))
   }, [])
 
   const handleLogout = () => {

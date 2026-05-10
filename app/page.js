@@ -18,7 +18,12 @@ export default function Home() {
       setLoi('Thông tin đăng nhập sai')
     }
   }
-
+  useEffect(() => {
+    const isLoggedIn = Cookies.get('isLoggedIn')
+    if (isLoggedIn) {
+      router.push('/trang-chu') // đã đăng nhập → vào thẳng trang chủ
+    }
+  }, [])
   return (
     <main style={{
       display: 'flex',
@@ -100,9 +105,3 @@ export default function Home() {
   )
 }
 
-useEffect(() => {
-  const isLoggedIn = Cookies.get('isLoggedIn')
-  if (isLoggedIn) {
-    router.push('/trang-chu') // đã đăng nhập → vào thẳng trang chủ
-  }
-}, [])

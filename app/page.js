@@ -14,6 +14,7 @@ export default function Home() {
         display: 'flex',
         flexDirection: 'column',
         gap: '16px',
+        backgroundColor: '#EEF6FF',
       }}>
         <h2 style={{ margin: 0, textAlign: 'center' }}>Đăng nhập</h2>
 

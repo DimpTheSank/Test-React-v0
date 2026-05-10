@@ -3,7 +3,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <header style={{
-          position: 'fixed',
+          position: 'fixed', // Đặt header ở vị trí cố định
           top: 0,
           left: 0,
           right: 0,

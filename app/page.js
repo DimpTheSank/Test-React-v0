@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
 
 export default function Home() {
   const [hover, setHover] = useState(false)
@@ -11,6 +12,7 @@ export default function Home() {
 
   const handleLogin = () => {
     if (taiKhoan === 'try' && matKhau === 'try') {
+      Cookies.set('isLoggedIn', 'true', { expires: 7 }) // lưu 7 ngày
       router.push('/trang-chu')
     } else {
       setLoi('Thông tin đăng nhập sai')
@@ -97,3 +99,10 @@ export default function Home() {
     </main>
   )
 }
+
+useEffect(() => {
+  const isLoggedIn = Cookies.get('isLoggedIn')
+  if (isLoggedIn) {
+    router.push('/trang-chu') // đã đăng nhập → vào thẳng trang chủ
+  }
+}, [])

@@ -10,9 +10,9 @@ const BAI_TAP = [
 ]
 
 const mauTrangThai = {
-  'Đã làm':   { bg: '#E6F4EA', text: '#2E7D32' },
-  'Đang làm': { bg: '#FFF8E1', text: '#F57F17' },
-  'Chưa làm': { bg: '#F3F3F3', text: '#757575' },
+  'Đã làm':   { bg: '#E1F5EE', text: '#085041' },
+  'Đang làm': { bg: '#FAEEDA', text: '#633806' },
+  'Chưa làm': { bg: '#FCEBEB', text: '#791F1F' },
 }
 
 export default function TrangChu() {
@@ -28,13 +28,9 @@ export default function TrangChu() {
       maxWidth: '800px',
       margin: '0 auto',
     }}>
-      <h2 style={{ marginBottom: '20px' }}>Bài tập của tôi</h2>
+      <h2 style={{ marginBottom: '20px', color: '#0C447C' }}>Bài tập của tôi</h2>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {BAI_TAP.map(bai => (
           <CardBaiTap key={bai.id} bai={bai} />
         ))}
@@ -49,22 +45,20 @@ function CardBaiTap({ bai }) {
 
   return (
     <div style={{
-      border: '1px solid #ddd',
+      border: '1px solid #B5D4F4',
       borderRadius: '16px',
       padding: '20px 24px',
       display: 'flex',
       alignItems: 'center',
       gap: '16px',
       backgroundColor: 'white',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
     }}>
-
-      {/* Tên bài tập */}
       <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontWeight: '600', fontSize: '15px' }}>{bai.ten}</p>
+        <p style={{ margin: 0, fontWeight: '500', fontSize: '15px', color: '#0C447C' }}>
+          {bai.ten}
+        </p>
       </div>
 
-      {/* Trạng thái */}
       <div style={{
         padding: '4px 12px',
         borderRadius: '20px',
@@ -77,18 +71,16 @@ function CardBaiTap({ bai }) {
         {bai.trangThai}
       </div>
 
-      {/* Điểm */}
       <div style={{
         minWidth: '70px',
         textAlign: 'center',
         fontSize: '15px',
-        fontWeight: '600',
-        color: bai.diem !== null ? '#3B9EE8' : '#bbb',
+        fontWeight: '500',
+        color: bai.diem !== null ? '#1D9E75' : '#B5D4F4',
       }}>
         {bai.diem !== null ? `${bai.diem} / ${bai.diemToiDa}` : `— / ${bai.diemToiDa}`}
       </div>
 
-      {/* Nút làm bài */}
       <button
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
@@ -96,7 +88,7 @@ function CardBaiTap({ bai }) {
           padding: '8px 18px',
           borderRadius: '8px',
           border: 'none',
-          backgroundColor: hover ? '#1a7fd4' : '#3B9EE8',
+          backgroundColor: hover ? '#0C447C' : '#378ADD',
           color: 'white',
           fontSize: '14px',
           fontWeight: '500',

@@ -50,18 +50,19 @@ export default function Home() {
       minHeight: 'calc(100vh - 56px)',
     }}>
       <div style={{
-        border: '1px solid #ddd',
+        border: '1px solid #B5D4F4',
         borderRadius: '16px',
         padding: '40px',
         width: '360px',
         display: 'flex',
         flexDirection: 'column',
         gap: '16px',
+        backgroundColor: '#E6F1FB',
       }}>
-        <h2 style={{ margin: 0, textAlign: 'center' }}>Đăng nhập</h2>
+        <h2 style={{ margin: 0, textAlign: 'center', color: '#0C447C' }}>Đăng nhập</h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label>Tài khoản</label>
+          <label style={{ color: '#185FA5', fontSize: '14px' }}>Tài khoản</label>
           <input
             type="text"
             placeholder="Nhập tài khoản"
@@ -71,14 +72,16 @@ export default function Home() {
             style={{
               padding: '10px 12px',
               borderRadius: '8px',
-              border: '1px solid #ccc',
+              border: '1px solid #85B7EB',
               fontSize: '14px',
+              backgroundColor: 'white',
+              outline: 'none',
             }}
           />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label>Mật khẩu</label>
+          <label style={{ color: '#185FA5', fontSize: '14px' }}>Mật khẩu</label>
           <input
             type="password"
             placeholder="Nhập mật khẩu"
@@ -88,14 +91,16 @@ export default function Home() {
             style={{
               padding: '10px 12px',
               borderRadius: '8px',
-              border: '1px solid #ccc',
+              border: '1px solid #85B7EB',
               fontSize: '14px',
+              backgroundColor: 'white',
+              outline: 'none',
             }}
           />
         </div>
 
         {loi && (
-          <p style={{ margin: 0, color: 'red', fontSize: '14px', textAlign: 'center' }}>
+          <p style={{ margin: 0, color: '#E24B4A', fontSize: '14px', textAlign: 'center' }}>
             {loi}
           </p>
         )}
@@ -108,7 +113,7 @@ export default function Home() {
             padding: '12px',
             borderRadius: '8px',
             border: 'none',
-            backgroundColor: hover ? '#1a7fd4' : '#3B9EE8',
+            backgroundColor: hover ? '#0C447C' : '#378ADD',
             color: 'white',
             fontSize: '15px',
             fontWeight: '500',

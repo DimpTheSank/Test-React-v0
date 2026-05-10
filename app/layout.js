@@ -9,6 +9,7 @@ export default function RootLayout({ children }) {
 
   useEffect(() => {
     const raw = Cookies.get('userInfo')
+    console.log('userInfo cookie:', raw) // mở F12 → Console để xem
     if (raw) setUserInfo(JSON.parse(raw))
   }, [])
 

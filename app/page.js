@@ -3,6 +3,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 
+const USERS = [
+  {
+    taiKhoan: 'try',
+    matKhau: 'try',
+    ho: 'Nguyễn Văn',
+    ten: 'An',
+    vaiTro: 'Học viên',
+    lop: '10A1',
+  },
+]
+
 export default function Home() {
   const [hover, setHover] = useState(false)
   const [taiKhoan, setTaiKhoan] = useState('')
@@ -11,19 +22,26 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    const isLoggedIn = Cookies.get('isLoggedIn')
-    if (isLoggedIn) {
-      router.push('/trang-chu') // đã đăng nhập → vào thẳng trang chủ
-    }
-  }, [])  
+    if (Cookies.get('isLoggedIn')) router.push('/trang-chu')
+  }, [])
+
   const handleLogin = () => {
-    if (taiKhoan === 'try' && matKhau === 'try') {
-      Cookies.set('isLoggedIn', 'true', { expires: 7 }) // lưu 7 ngày
+    const user = USERS.find(u => u.taiKhoan === taiKhoan && u.matKhau === matKhau)
+    if (user) {
+      Cookies.set('isLoggedIn', 'true', { expires: 7 })
+      Cookies.set('userInfo', JSON.stringify({
+        ho: user.ho,
+        ten: user.ten,
+        vaiTro: user.vaiTro,
+        lop: user.lop,
+        lanCuoiTruyCap: new Date().toISOString(),
+      }), { expires: 7 })
       router.push('/trang-chu')
     } else {
       setLoi('Thông tin đăng nhập sai')
     }
   }
+
 
   return (
     <main style={{

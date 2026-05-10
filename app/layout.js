@@ -1,21 +1,23 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Cookies from 'js-cookie'
 
 export default function RootLayout({ children }) {
   const [userInfo, setUserInfo] = useState(null)
+  const [hoverHome, setHoverHome] = useState(false)
+  const [hoverLogout, setHoverLogout] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     const raw = document.cookie
       .split('; ')
       .find(row => row.startsWith('userInfo='))
       ?.split('=')[1]
-    
-    console.log('raw cookie:', raw)
     if (raw) setUserInfo(JSON.parse(decodeURIComponent(raw)))
-  }, [])
+    else setUserInfo(null)
+  }, [pathname])
 
   const handleLogout = () => {
     Cookies.remove('isLoggedIn')
@@ -34,9 +36,6 @@ export default function RootLayout({ children }) {
     transition: 'background-color 0.2s',
   })
 
-  const [hoverHome, setHoverHome] = useState(false)
-  const [hoverLogout, setHoverLogout] = useState(false)
-
   return (
     <html lang="en">
       <body>
@@ -51,7 +50,6 @@ export default function RootLayout({ children }) {
           paddingRight: '20px',
           zIndex: 1000,
         }}>
-          {/* Bên trái */}
           <button
             onClick={() => router.push('/trang-chu')}
             onMouseEnter={() => setHoverHome(true)}
@@ -61,7 +59,6 @@ export default function RootLayout({ children }) {
             Trang chủ
           </button>
 
-          {/* Bên phải */}
           {userInfo && (
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ color: 'white', fontSize: '14px' }}>

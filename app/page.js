@@ -42,7 +42,6 @@ export default function Home() {
     }
   }
 
-
   return (
     <main style={{
       display: 'flex',
@@ -123,4 +122,3 @@ export default function Home() {
     </main>
   )
 }
-

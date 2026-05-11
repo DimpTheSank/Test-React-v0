@@ -93,6 +93,7 @@ function CardBaiTap({ bai }) {
   const [hover, setHover] = useState(false)
   const mau = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
   const mauHeader = mauKyNang[bai.kyNang] || { bg: '#185FA5', text: 'white' }
+  const router = useRouter()
 
   return (
     <div style={{
@@ -164,6 +165,7 @@ function CardBaiTap({ bai }) {
 
         {/* Nút làm bài */}
         <button
+          onClick={() => router.push(`/bai-tap/${bai.exerciseId}`)}
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           style={{

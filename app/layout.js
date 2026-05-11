@@ -70,7 +70,13 @@ export default function RootLayout({ children }) {
           {userInfo && (
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ color: 'white', fontSize: '14px' }}>
-                {userInfo.vaiTro}: {userInfo.ten}
+                <span style={{ fontWeight: '700' }}>
+                  {userInfo.vaiTro}
+                </span>
+                {': '}
+                <span style={{ fontStyle: 'italic' }}>
+                  {userInfo.ten}
+                </span>
               </span>
               <button
                 onClick={handleLogout}

@@ -2,6 +2,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Cookies from 'js-cookie'
+import { Be_Vietnam_Pro } from 'next/font/google'
+
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ['vietnamese', 'latin'],
+  weight: ['400', '500', '600', '700'],
+})
 
 export default function RootLayout({ children }) {
   const [userInfo, setUserInfo] = useState(null)
@@ -37,7 +43,7 @@ export default function RootLayout({ children }) {
   })
 
   return (
-    <html lang="en">
+    <html lang="vi" className={beVietnamPro.className}>
       <body>
         <header style={{
           position: 'fixed',

@@ -34,6 +34,7 @@ export default function Home() {
 
         Cookies.set('isLoggedIn', 'true', { expires: 7 })
         Cookies.set('userInfo', JSON.stringify({
+          taiKhoan: user.taiKhoan,
           ho: user.ho,
           ten: user.ten,
           vaiTro: user.vaiTro,

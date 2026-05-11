@@ -73,3 +73,75 @@ export default function TrangChu() {
     </main>
   )
 }
+const mauTrangThai = {
+  'Đã làm':   { bg: '#E1F5EE', text: '#085041' },
+  'Đang làm': { bg: '#FAEEDA', text: '#633806' },
+  'Chưa làm': { bg: '#FCEBEB', text: '#791F1F' },
+}
+
+function CardBaiTap({ bai }) {
+  const [hover, setHover] = useState(false)
+  const mau = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
+
+  return (
+    <div style={{
+      border: '1px solid #B5D4F4',
+      borderRadius: '16px',
+      padding: '20px 24px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      backgroundColor: 'white',
+    }}>
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontWeight: '500', fontSize: '15px', color: '#0C447C' }}>
+          {bai.tenBaiTap}
+        </p>
+        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#888' }}>
+          {bai.loaiBai} · {bai.kyNang}
+        </p>
+      </div>
+
+      <div style={{
+        padding: '4px 12px',
+        borderRadius: '20px',
+        backgroundColor: mau.bg,
+        color: mau.text,
+        fontSize: '13px',
+        fontWeight: '500',
+        whiteSpace: 'nowrap',
+      }}>
+        {bai.trangThai}
+      </div>
+
+      <div style={{
+        minWidth: '70px',
+        textAlign: 'center',
+        fontSize: '15px',
+        fontWeight: '500',
+        color: bai.diem !== null ? '#1D9E75' : '#B5D4F4',
+      }}>
+        {bai.diem !== null ? `${bai.diem} / ${bai.diemToiDa}` : '— / —'}
+      </div>
+
+      <button
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          padding: '8px 18px',
+          borderRadius: '8px',
+          border: 'none',
+          backgroundColor: hover ? '#0C447C' : '#378ADD',
+          color: 'white',
+          fontSize: '14px',
+          fontWeight: '500',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Làm bài
+      </button>
+    </div>
+  )
+}

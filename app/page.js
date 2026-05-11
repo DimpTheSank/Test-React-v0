@@ -2,45 +2,57 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
-
-const USERS = [
-  {
-    taiKhoan: 'try',
-    matKhau: 'try',
-    ho: 'Nguyễn Văn',
-    ten: 'An',
-    vaiTro: 'Học viên',
-    lop: '10A1',
-  },
-]
+import { db } from '@/lib/firebase'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
 
 export default function Home() {
   const [hover, setHover] = useState(false)
   const [taiKhoan, setTaiKhoan] = useState('')
   const [matKhau, setMatKhau] = useState('')
   const [loi, setLoi] = useState('')
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     if (Cookies.get('isLoggedIn')) router.push('/trang-chu')
   }, [])
 
-  const handleLogin = () => {
-    const user = USERS.find(u => u.taiKhoan === taiKhoan && u.matKhau === matKhau)
-    if (user) {
-      Cookies.set('isLoggedIn', 'true', { expires: 7 })
-      Cookies.set('userInfo', JSON.stringify({
-        ho: user.ho,
-        ten: user.ten,
-        vaiTro: user.vaiTro,
-        lop: user.lop,
-        lanCuoiTruyCap: new Date().toISOString(),
-      }), { expires: 7 })
-      router.push('/trang-chu')
-    } else {
-      setLoi('Thông tin đăng nhập sai')
+  const handleLogin = async () => {
+    setLoading(true)
+    setLoi('')
+    try {
+      const userRef = doc(db, 'users', taiKhoan)
+      const userSnap = await getDoc(userRef)
+
+      if (userSnap.exists() && userSnap.data().matKhau === matKhau) {
+        const user = userSnap.data()
+
+        // Cập nhật lần cuối truy cập
+        await updateDoc(userRef, {
+          lanCuoiTruyCap: new Date().toISOString()
+        })
+
+        Cookies.set('isLoggedIn', 'true', { expires: 7 })
+        Cookies.set('userInfo', JSON.stringify({
+          ho: user.ho,
+          ten: user.ten,
+          vaiTro: user.vaiTro,
+          lop: user.lop,
+          mucTieu: user.mucTieu,
+        }), { expires: 7 })
+
+        router.push('/trang-chu')
+      } else {
+        setLoi('Thông tin đăng nhập sai')
+      }
+    } catch (err) {
+      setLoi('Có lỗi xảy ra, thử lại sau')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
   }
+
 
   return (
     <main style={{
@@ -107,6 +119,7 @@ export default function Home() {
 
         <button
           onClick={handleLogin}
+          disabled={loading}
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           style={{
@@ -121,7 +134,7 @@ export default function Home() {
             transition: 'background-color 0.2s',
           }}
         >
-          Đăng nhập
+          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
       </div>
     </main>

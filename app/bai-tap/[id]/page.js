@@ -12,6 +12,7 @@ export default function BaiTap({ params }) {
   const [exercise, setExercise] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { id } = use(params)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) {
@@ -24,7 +25,7 @@ export default function BaiTap({ params }) {
   const loadBaiTap = async () => {
     try {
       // Lấy thông tin exercise từ Firestore
-      const exSnap = await getDoc(doc(db, 'exercises', params.id))
+      const exSnap = await getDoc(doc(db, 'exercises', id))
       if (!exSnap.exists()) {
         setError('Không tìm thấy bài tập')
         return

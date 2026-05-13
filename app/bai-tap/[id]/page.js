@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
-import { readExcelFromDrive } from '@/lib/readexcel'
+import { readExcelFromDrive } from '@/lib/readExcel'
 
 export default function BaiTap({ params }) {
   const router = useRouter()

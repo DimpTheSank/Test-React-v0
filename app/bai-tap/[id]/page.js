@@ -103,7 +103,7 @@ export default function BaiTap({ params }) {
               style={{
                 width: '36px',
                 height: '36px',
-                borderRadius: '50%',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

@@ -3,11 +3,9 @@ import { useEffect, use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, addDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore'
 import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
-
-
 
 const mauKyNang = {
   'Reading':   '#378ADD',
@@ -22,7 +20,10 @@ export default function BaiTap({ params }) {
   const [exercise, setExercise] = useState(null)
   const [questions, setQuestions] = useState([])
   const [cauHienTai, setCauHienTai] = useState(0)
-  const [answers, setAnswers] = useState({}) 
+  const [answers, setAnswers] = useState({})
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitDone, setSubmitDone] = useState(false)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
@@ -40,19 +41,17 @@ export default function BaiTap({ params }) {
       const csvUrl = `https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`
       const response = await fetch(csvUrl)
       const text = await response.text()
-      
-      const { data } = Papa.parse(text, { 
-        header: true, 
+
+      const { data } = Papa.parse(text, {
+        header: true,
         skipEmptyLines: true,
         transform: (val, col) => (col === 'Group' ? val.trim() : val)
-        
       })
       const splitMedia = (raw, type) =>
         (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
-      const processedData = data.map((item, index) => ({ 
-        ...item, 
+      const processedData = data.map((item, index) => ({
+        ...item,
         globalIndex: index,
-        // Đảm bảo link được convert ngay khi load để render mượt hơn
         Contexts: splitMedia(item.Context, 'image'),
         Audios:   splitMedia(item.Audio, 'audio'),
       }))
@@ -62,11 +61,61 @@ export default function BaiTap({ params }) {
     }
   }
 
+  const getUserInfo = () => {
+    try {
+      const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
+      return JSON.parse(decodeURIComponent(raw))
+    } catch { return null }
+  }
+
+  const soCauChuaLam = questions.length - Object.keys(answers).length
+
+  const handleNopBai = async () => {
+    setIsSubmitting(true)
+    try {
+      const userInfo = getUserInfo()
+      const taiKhoan = userInfo?.taiKhoan
+
+      // Tìm assignmentId của user với exercise này
+      const assignQuery = query(
+        collection(db, 'assignments'),
+        where('userId', '==', taiKhoan),
+        where('exerciseId', '==', id)
+      )
+      const assignSnap = await getDocs(assignQuery)
+      const assignmentId = assignSnap.docs[0]?.id || null
+
+      // Lưu submission
+      await addDoc(collection(db, 'submissions'), {
+        userId: taiKhoan,
+        exerciseId: id,
+        assignmentId,
+        answers,
+        thoiGianNop: new Date().toISOString(),
+        trangThai: 'Đã nộp',
+      })
+
+      // Cập nhật trạng thái assignment nếu có
+      if (assignmentId) {
+        await updateDoc(doc(db, 'assignments', assignmentId), {
+          trangThai: 'Đã làm',
+          thoiGianNop: new Date().toISOString(),
+        })
+      }
+
+      setSubmitDone(true)
+    } catch (err) {
+      console.error('Lỗi khi nộp bài:', err)
+      alert('Có lỗi xảy ra khi nộp bài. Vui lòng thử lại!')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const currentCau = questions[cauHienTai]
   const currentGroup = currentCau?.Group
   const questionsInGroup = questions.filter(q => q.Group === currentGroup)
-  const firstInGroup = questionsInGroup[0] 
-
+  const firstInGroup = questionsInGroup[0]
   const mauHeader = mauKyNang[exercise?.kyNang] || '#185FA5'
 
   const getOptions = (q) => {
@@ -89,6 +138,105 @@ export default function BaiTap({ params }) {
   return (
     <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
+      {/* Dialog xác nhận nộp bài */}
+      {showConfirm && !submitDone && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          backgroundColor: 'rgba(12,68,124,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px',
+            padding: '32px', width: '340px',
+            display: 'flex', flexDirection: 'column', gap: '16px',
+            boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
+          }}>
+            <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Xác nhận nộp bài</h3>
+
+            {soCauChuaLam > 0 ? (
+              <div style={{
+                backgroundColor: '#FAEEDA', borderRadius: '10px',
+                padding: '12px 16px', textAlign: 'center',
+              }}>
+                <span style={{ color: '#633806', fontSize: '14px', fontWeight: '500' }}>
+                  ⚠️ Bạn còn <strong>{soCauChuaLam}</strong> câu chưa làm.
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                backgroundColor: '#E1F5EE', borderRadius: '10px',
+                padding: '12px 16px', textAlign: 'center',
+              }}>
+                <span style={{ color: '#085041', fontSize: '14px', fontWeight: '500' }}>
+                  ✅ Bạn đã hoàn thành tất cả {questions.length} câu!
+                </span>
+              </div>
+            )}
+
+            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
+              Sau khi nộp bạn không thể chỉnh sửa đáp án.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px',
+                  border: '1px solid #B5D4F4', backgroundColor: 'white',
+                  color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
+                }}
+              >
+                Làm tiếp
+              </button>
+              <button
+                onClick={handleNopBai}
+                disabled={isSubmitting}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px',
+                  border: 'none', backgroundColor: '#1D9E75',
+                  color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+                  opacity: isSubmitting ? 0.7 : 1,
+                }}
+              >
+                {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog nộp thành công */}
+      {submitDone && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          backgroundColor: 'rgba(12,68,124,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px',
+            padding: '40px 32px', width: '340px',
+            display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center',
+            boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
+          }}>
+            <div style={{ fontSize: '48px' }}>🎉</div>
+            <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Nộp bài thành công!</h3>
+            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
+              Bài làm của bạn đã được ghi nhận. Kết quả sẽ được công bố sau khi giáo viên chấm điểm.
+            </p>
+            <button
+              onClick={() => router.push('/trang-chu')}
+              style={{
+                width: '100%', padding: '12px', borderRadius: '8px',
+                border: 'none', backgroundColor: '#378ADD',
+                color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '15px',
+              }}
+            >
+              Về trang chủ
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header bài tập */}
       <div style={{
         backgroundColor: mauHeader,
@@ -105,6 +253,28 @@ export default function BaiTap({ params }) {
         <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
           Câu {cauHienTai + 1} / {questions.length}
         </span>
+
+        {/* Nút nộp bài */}
+        <button
+          onClick={() => setShowConfirm(true)}
+          style={{
+            marginLeft: '12px',
+            padding: '7px 18px',
+            borderRadius: '8px',
+            border: '2px solid white',
+            backgroundColor: 'transparent',
+            color: 'white',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          Nộp bài ✓
+        </button>
       </div>
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -133,6 +303,21 @@ export default function BaiTap({ params }) {
               {i + 1}
             </div>
           ))}
+
+          {/* Nút nộp bài mini ở cuối cột số câu */}
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => setShowConfirm(true)}
+            style={{
+              width: '48px', padding: '8px 0',
+              borderRadius: '8px', border: 'none',
+              backgroundColor: '#1D9E75', color: 'white',
+              fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+              marginBottom: '4px', lineHeight: '1.3',
+            }}
+          >
+            Nộp<br/>bài
+          </button>
         </div>
 
         {/* Vùng 2: Nội dung */}
@@ -141,7 +326,6 @@ export default function BaiTap({ params }) {
           padding: '20px', overflowY: 'auto',
           display: 'flex', flexDirection: 'column', gap: '16px',
         }}>
-          {/* Audio — render hết, mỗi cái 1 iframe */}
           {firstInGroup?.Audios?.map((src, i) => (
             <iframe
               key={src + i}
@@ -151,7 +335,6 @@ export default function BaiTap({ params }) {
             />
           ))}
 
-          {/* Context — ảnh hoặc text, render lần lượt theo thứ tự trong cột */}
           {firstInGroup?.Contexts?.map((ctx, i) => (
             <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
               {ctx.startsWith('http')
@@ -161,11 +344,9 @@ export default function BaiTap({ params }) {
             </div>
           ))}
 
-          {/* Fallback */}
           {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
             <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
           )}
-
         </div>
 
         {/* Vùng 3: Câu hỏi & Đáp án */}
@@ -174,13 +355,12 @@ export default function BaiTap({ params }) {
           display: 'flex', flexDirection: 'column', gap: '35px',
         }}>
           {questionsInGroup.map((q) => (
-            <div 
-              key={q.globalIndex} 
-              style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
+            <div
+              key={q.globalIndex}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
                 gap: '12px',
-                // Highlight nhẹ câu đang được chọn trong group
                 backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent',
                 padding: '10px',
                 borderRadius: '8px'
@@ -190,7 +370,6 @@ export default function BaiTap({ params }) {
                 Câu {q.globalIndex + 1}: {q.Question}
               </p>
 
-              {/* MCQ / MCQ BLANK */}
               {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {q.Question_Type === 'mcq'
@@ -200,7 +379,7 @@ export default function BaiTap({ params }) {
                           onClick={() => chonDapAn(q.globalIndex, opt.key)}
                           style={{
                             padding: '10px 14px', borderRadius: '8px',
-                            border: `1px solid ${answers[q.globalGlobalIndex || q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4'}`,
+                            border: `1px solid ${answers[q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4'}`,
                             backgroundColor: answers[q.globalIndex] === opt.key ? '#E6F1FB' : 'white',
                             color: answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD',
                             fontSize: '14px', cursor: 'pointer', transition: 'all 0.15s',
@@ -228,7 +407,6 @@ export default function BaiTap({ params }) {
                 </div>
               )}
 
-              {/* Fill short */}
               {q.Question_Type === 'fill_short' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
@@ -248,7 +426,6 @@ export default function BaiTap({ params }) {
                 </div>
               )}
 
-              {/* Fill long */}
               {q.Question_Type === 'fill_long' && (
                 <textarea
                   placeholder="Nhập bài làm của bạn..."
@@ -260,7 +437,7 @@ export default function BaiTap({ params }) {
             </div>
           ))}
 
-          {/* Nút điều hướng */}
+          {/* Nút điều hướng + Nộp bài */}
           <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
             <button
               onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
@@ -273,17 +450,30 @@ export default function BaiTap({ params }) {
             >
               ← Câu trước
             </button>
-            <button
-              onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
-              disabled={cauHienTai === questions.length - 1}
-              style={{
-                flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                backgroundColor: '#378ADD', color: 'white', cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer',
-                opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500'
-              }}
-            >
-              Câu tiếp →
-            </button>
+
+            {cauHienTai === questions.length - 1 ? (
+              <button
+                onClick={() => setShowConfirm(true)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                  backgroundColor: '#1D9E75', color: 'white',
+                  fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+                }}
+              >
+                Nộp bài ✓
+              </button>
+            ) : (
+              <button
+                onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                  backgroundColor: '#378ADD', color: 'white',
+                  fontWeight: '500', cursor: 'pointer',
+                }}
+              >
+                Câu tiếp →
+              </button>
+            )}
           </div>
         </div>
 

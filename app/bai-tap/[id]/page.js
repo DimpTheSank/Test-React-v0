@@ -137,11 +137,14 @@ export default function BaiTap({ params }) {
           padding: '20px', overflowY: 'auto',
           display: 'flex', flexDirection: 'column', gap: '16px',
         }}>
-          {/* QUAN TRỌNG: Thêm key cho audio để nó reset khi đổi group */}
           {firstInGroup?.Audio && (
-            <audio key={firstInGroup.Audio} controls style={{ width: '100%' }}>
-              <source src={firstInGroup.Audio} type="audio/mpeg"/>
-            </audio>
+            <iframe
+              key={firstInGroup.Audio}
+              src={firstInGroup.Audio}
+              width="100%"
+              height="80"
+              style={{ border: 'none', borderRadius: '8px' }}
+            />
           )}
           {firstInGroup?.Context && (
             <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>

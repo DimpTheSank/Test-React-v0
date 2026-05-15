@@ -7,6 +7,16 @@ import { doc, getDoc } from 'firebase/firestore'
 import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
 
+const splitMedia = (raw, type) =>
+  (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
+
+const processedData = data.map((item, index) => ({
+  ...item,
+  globalIndex: index,
+  Contexts: splitMedia(item.Context, 'image'),  // mảng
+  Audios:   splitMedia(item.Audio, 'audio'),    // mảng
+}))
+
 const mauKyNang = {
   'Reading':   '#378ADD',
   'Listening': '#1D9E75',
@@ -137,31 +147,31 @@ export default function BaiTap({ params }) {
           padding: '20px', overflowY: 'auto',
           display: 'flex', flexDirection: 'column', gap: '16px',
         }}>
-          {firstInGroup?.Audio && (
+          {/* Audio — render hết, mỗi cái 1 iframe */}
+          {firstInGroup?.Audios?.map((src, i) => (
             <iframe
-              key={firstInGroup.Audio}
-              src={firstInGroup.Audio}
-              width="100%"
-              height="80"
+              key={src + i}
+              src={src}
+              width="100%" height="80"
               style={{ border: 'none', borderRadius: '8px' }}
             />
-          )}
-          {firstInGroup?.Context && (
-            <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
-              {firstInGroup.Context.startsWith('http')
-                ? <img 
-                    src={firstInGroup.Context} 
-                    style={{ maxWidth: '100%', borderRadius: '8px' }} 
-                    alt="Exercise content"
-                    onError={(e) => console.error("Không thể load ảnh từ Drive:", e)} 
-                  />
-                : firstInGroup.Context
+          ))}
+
+          {/* Context — ảnh hoặc text, render lần lượt theo thứ tự trong cột */}
+          {firstInGroup?.Contexts?.map((ctx, i) => (
+            <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
+              {ctx.startsWith('http')
+                ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
+                : ctx
               }
             </div>
-          )}
-          {!firstInGroup?.Context && !firstInGroup?.Audio && (
+          ))}
+
+          {/* Fallback */}
+          {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
             <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
           )}
+
         </div>
 
         {/* Vùng 3: Câu hỏi & Đáp án */}

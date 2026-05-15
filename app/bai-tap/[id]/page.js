@@ -7,15 +7,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
 
-const splitMedia = (raw, type) =>
-  (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
 
-const processedData = data.map((item, index) => ({
-  ...item,
-  globalIndex: index,
-  Contexts: splitMedia(item.Context, 'image'),  // mảng
-  Audios:   splitMedia(item.Audio, 'audio'),    // mảng
-}))
 
 const mauKyNang = {
   'Reading':   '#378ADD',
@@ -53,14 +45,16 @@ export default function BaiTap({ params }) {
         header: true, 
         skipEmptyLines: true,
         transform: (val, col) => (col === 'Group' ? val.trim() : val)
+        
       })
-      
+      const splitMedia = (raw, type) =>
+        (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
       const processedData = data.map((item, index) => ({ 
         ...item, 
         globalIndex: index,
         // Đảm bảo link được convert ngay khi load để render mượt hơn
-        Context: convertDriveLink(item.Context, 'image'),
-        Audio: convertDriveLink(item.Audio, 'audio')
+        Contexts: splitMedia(item.Context, 'image'),
+        Audios:   splitMedia(item.Audio, 'audio'),
       }))
       setQuestions(processedData)
     } catch (error) {

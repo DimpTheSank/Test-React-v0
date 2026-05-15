@@ -139,15 +139,8 @@ export default function BaiTap({ params }) {
         }}>
           {/* QUAN TRỌNG: Thêm key cho audio để nó reset khi đổi group */}
           {firstInGroup?.Audio && (
-            <audio 
-              key={firstInGroup.Audio} 
-              controls 
-              style={{ width: '100%' }}
-            >
-              <source 
-                src={`https://drive.google.com/uc?export=download&id=${firstInGroup.Audio.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1]}`} 
-                type="audio/mpeg"
-              />
+            <audio key={firstInGroup.Audio} controls style={{ width: '100%' }}>
+              <source src={firstInGroup.Audio} type="audio/mpeg"/>
             </audio>
           )}
           {firstInGroup?.Context && (

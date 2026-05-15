@@ -139,9 +139,14 @@ export default function BaiTap({ params }) {
         }}>
           {/* QUAN TRỌNG: Thêm key cho audio để nó reset khi đổi group */}
           {firstInGroup?.Audio && (
-            <audio key={firstInGroup.Audio} controls style={{ width: '100%' }}crossOrigin="anonymous">
-              <source src={firstInGroup.Audio} type="audio/mpeg"/>
-            </audio>
+            <iframe
+              key={firstInGroup.Audio}
+              src={firstInGroup.Audio}
+              width="100%"
+              height="80"
+              allow="autoplay"
+              style={{ border: 'none', borderRadius: '8px' }}
+            />
           )}
           {firstInGroup?.Context && (
             <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>

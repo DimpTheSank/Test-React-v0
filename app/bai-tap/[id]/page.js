@@ -139,14 +139,16 @@ export default function BaiTap({ params }) {
         }}>
           {/* QUAN TRỌNG: Thêm key cho audio để nó reset khi đổi group */}
           {firstInGroup?.Audio && (
-            <iframe
-              key={firstInGroup.Audio}
-              src={firstInGroup.Audio}
-              width="100%"
-              height="80"
-              allow="autoplay"
-              style={{ border: 'none', borderRadius: '8px' }}
-            />
+            <audio 
+              key={firstInGroup.Audio} 
+              controls 
+              style={{ width: '100%' }}
+            >
+              <source 
+                src={`https://drive.google.com/uc?export=download&id=${firstInGroup.Audio.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1]}`} 
+                type="audio/mpeg"
+              />
+            </audio>
           )}
           {firstInGroup?.Context && (
             <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>

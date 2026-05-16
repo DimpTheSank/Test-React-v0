@@ -24,6 +24,7 @@ export default function BaiTap({ params }) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitDone, setSubmitDone] = useState(false)
+  const [ketQua, setKetQua] = useState(null)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
@@ -76,6 +77,23 @@ export default function BaiTap({ params }) {
       const userInfo = getUserInfo()
       const taiKhoan = userInfo?.taiKhoan
 
+      //Tính điểm
+      let soCauDung = 0
+      questions.forEach((q) => {
+        const correctRaw = q.Correct_Ans?.trim()
+        if (!correctRaw) return
+        const userAns = answers[q.globalIndex]
+
+        if (q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') {
+          if (userAns === correctRaw) soCauDung++
+        } else if (q.Question_Type === 'fill_short') {
+          const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
+          const userParts = (userAns || []).map(s => s.trim().toLowerCase())
+          if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
+        }
+        // fill_long không tự chấm
+      })      
+
       // Tìm assignmentId của user với exercise này
       const assignQuery = query(
         collection(db, 'assignments'),
@@ -91,6 +109,8 @@ export default function BaiTap({ params }) {
         exerciseId: id,
         assignmentId,
         answers,
+        diem: soCauDung,           
+        tongCau: questions.length,
         thoiGianNop: new Date().toISOString(),
         trangThai: 'Đã nộp',
       })
@@ -102,7 +122,7 @@ export default function BaiTap({ params }) {
           thoiGianNop: new Date().toISOString(),
         })
       }
-
+      setKetQua({ dung: soCauDung, tong: questions.length })
       setSubmitDone(true)
     } catch (err) {
       console.error('Lỗi khi nộp bài:', err)
@@ -220,8 +240,8 @@ export default function BaiTap({ params }) {
           }}>
             <div style={{ fontSize: '48px' }}>🎉</div>
             <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Nộp bài thành công!</h3>
-            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
-              Bài làm của bạn đã được ghi nhận. Kết quả sẽ được công bố sau khi giáo viên chấm điểm.
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#1D9E75' }}>
+              {ketQua?.dung} / {ketQua?.tong} câu đúng.
             </p>
             <button
               onClick={() => router.push('/trang-chu')}

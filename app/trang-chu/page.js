@@ -51,7 +51,11 @@ export default function TrangChu() {
       // Map: exerciseId -> submission data
       const subMap = {}
       subSnap.docs.forEach(d => {
-        subMap[d.data().exerciseId] = d.data()
+        const data = d.data()
+        const existing = subMap[data.exerciseId]
+        if (!existing || (data.diem ?? -1) > (existing.diem ?? -1)) {
+          subMap[data.exerciseId] = data
+        }
       })
 
       // 3. Lấy chi tiết từng exercise

@@ -68,6 +68,7 @@ export default function TrangChu() {
             ...exSnap.data(),
             trangThai: sub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
             diem: sub?.diem ?? null,
+            tongCau: sub?.tongCau ?? null,
             thoiGianNop: sub?.thoiGianNop ?? null,
           }
         })
@@ -175,7 +176,7 @@ function CardBaiTap({ bai }) {
           margin: 0, fontSize: '13px',
           color: bai.diem !== null ? '#1D9E75' : '#B5D4F4', fontWeight: '500',
         }}>
-          {bai.diem !== null ? `${bai.diem} / ${bai.diemToiDa}` : '— / —'}
+          {bai.diem !== null ? `${bai.diem} / ${bai.tongCau}` : '— / —'}
         </p>
 
         {/* Nút làm bài / xem lại */}

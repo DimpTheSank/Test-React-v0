@@ -14,7 +14,13 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    if (Cookies.get('isLoggedIn')) router.push('/trang-chu')
+    if (Cookies.get('isLoggedIn')) {
+      const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
+      if (raw) {
+        const info = JSON.parse(decodeURIComponent(raw))
+        router.push(info.vaiTro === 'Giao vien' ? '/trang-chu-gv' : '/trang-chu')
+      }
+    }
   }, [])
 
   const handleLogin = async () => {
@@ -27,7 +33,6 @@ export default function Home() {
       if (userSnap.exists() && userSnap.data().matKhau === matKhau) {
         const user = userSnap.data()
 
-        // Cập nhật lần cuối truy cập
         await updateDoc(userRef, {
           lanCuoiTruyCap: new Date().toISOString()
         })
@@ -42,7 +47,7 @@ export default function Home() {
           mucTieu: user.mucTieu,
         }), { expires: 7 })
 
-        router.push('/trang-chu')
+        router.push(user.vaiTro === 'Giao vien' ? '/trang-chu-gv' : '/trang-chu')
       } else {
         setLoi('Thông tin đăng nhập sai')
       }
@@ -53,7 +58,6 @@ export default function Home() {
       setLoading(false)
     }
   }
-
 
   return (
     <main style={{
@@ -83,12 +87,9 @@ export default function Home() {
             onChange={(e) => { setTaiKhoan(e.target.value); setLoi('') }}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             style={{
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: '1px solid #85B7EB',
-              fontSize: '14px',
-              backgroundColor: 'white',
-              outline: 'none',
+              padding: '10px 12px', borderRadius: '8px',
+              border: '1px solid #85B7EB', fontSize: '14px',
+              backgroundColor: 'white', outline: 'none',
             }}
           />
         </div>
@@ -102,12 +103,9 @@ export default function Home() {
             onChange={(e) => { setMatKhau(e.target.value); setLoi('') }}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             style={{
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: '1px solid #85B7EB',
-              fontSize: '14px',
-              backgroundColor: 'white',
-              outline: 'none',
+              padding: '10px 12px', borderRadius: '8px',
+              border: '1px solid #85B7EB', fontSize: '14px',
+              backgroundColor: 'white', outline: 'none',
             }}
           />
         </div>
@@ -124,15 +122,10 @@ export default function Home() {
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           style={{
-            padding: '12px',
-            borderRadius: '8px',
-            border: 'none',
+            padding: '12px', borderRadius: '8px', border: 'none',
             backgroundColor: hover ? '#0C447C' : '#378ADD',
-            color: 'white',
-            fontSize: '15px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
+            color: 'white', fontSize: '15px', fontWeight: '500',
+            cursor: 'pointer', transition: 'background-color 0.2s',
           }}
         >
           {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}

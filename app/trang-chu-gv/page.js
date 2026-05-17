@@ -1,0 +1,753 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
+import { db } from '@/lib/firebase'
+import {
+  collection, query, where, getDocs, getDoc, addDoc, doc, orderBy
+} from 'firebase/firestore'
+
+const mauKyNang = {
+  'Reading':   { bg: '#378ADD', text: 'white' },
+  'Listening': { bg: '#1D9E75', text: 'white' },
+  'Writing':   { bg: '#BA7517', text: 'white' },
+  'Speaking':  { bg: '#A32D2D', text: 'white' },
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+const getUserInfo = () => {
+  try {
+    const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
+    return JSON.parse(decodeURIComponent(raw))
+  } catch { return null }
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+export default function TrangChuGV() {
+  const router = useRouter()
+  const [tab, setTab] = useState('baiTap') // 'baiTap' | 'tienDo'
+  const [userInfo, setUserInfo] = useState(null)
+
+  useEffect(() => {
+    if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
+    const info = getUserInfo()
+    if (!info || info.vaiTro !== 'Giao vien') { router.push('/trang-chu'); return }
+    setUserInfo(info)
+  }, [])
+
+  if (!userInfo) return (
+    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
+      <p style={{ color: '#185FA5' }}>Đang tải...</p>
+    </main>
+  )
+
+  return (
+    <main style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#F0F7FF' }}>
+      {/* Tab bar */}
+      <div style={{
+        backgroundColor: 'white',
+        borderBottom: '1px solid #B5D4F4',
+        display: 'flex',
+        paddingLeft: '24px',
+        gap: '0',
+      }}>
+        {[
+          { key: 'baiTap', label: '📚 Bài tập' },
+          { key: 'tienDo', label: '📊 Tiến độ' },
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: '14px 24px',
+              border: 'none',
+              borderBottom: tab === t.key ? '3px solid #185FA5' : '3px solid transparent',
+              backgroundColor: 'transparent',
+              color: tab === t.key ? '#185FA5' : '#888',
+              fontWeight: tab === t.key ? '600' : '400',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+        {tab === 'baiTap' && <TabBaiTap userInfo={userInfo} />}
+        {tab === 'tienDo' && <TabTienDo userInfo={userInfo} />}
+      </div>
+    </main>
+  )
+}
+
+// ─── TAB BÀI TẬP ─────────────────────────────────────────────────────────────
+function TabBaiTap({ userInfo }) {
+  const [exercises, setExercises] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [showAssign, setShowAssign] = useState(null) // exercise object
+
+  const loadExercises = async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(collection(db, 'exercises'))
+      setExercises(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { loadExercises() }, [])
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0, color: '#0C447C' }}>Danh sách bài tập</h2>
+        <button
+          onClick={() => setShowCreate(true)}
+          style={{
+            marginLeft: 'auto',
+            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            backgroundColor: '#185FA5', color: 'white',
+            fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+          }}
+        >
+          + Tạo bài mới
+        </button>
+      </div>
+
+      {loading ? (
+        <p style={{ color: '#185FA5' }}>Đang tải...</p>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          {exercises.map(ex => (
+            <CardBaiTapGV key={ex.id} ex={ex} onAssign={() => setShowAssign(ex)} />
+          ))}
+        </div>
+      )}
+
+      {showCreate && (
+        <ModalTaoBai
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); loadExercises() }}
+        />
+      )}
+
+      {showAssign && (
+        <ModalGiaoBai
+          exercise={showAssign}
+          userInfo={userInfo}
+          onClose={() => setShowAssign(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function CardBaiTapGV({ ex, onAssign }) {
+  const [hover, setHover] = useState(false)
+  const mauHeader = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
+
+  return (
+    <div style={{
+      border: '1px solid #B5D4F4',
+      borderRadius: '16px',
+      width: '180px',
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: 'white',
+      overflow: 'hidden',
+    }}>
+      <div style={{ backgroundColor: mauHeader.bg, padding: '8px 12px', textAlign: 'center' }}>
+        <span style={{ color: mauHeader.text, fontSize: '12px', fontWeight: '600' }}>
+          {ex.loaiBai} · {ex.kyNang}
+        </span>
+      </div>
+      <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+        <p style={{ margin: 0, fontWeight: '600', fontSize: '14px', color: '#0C447C', lineHeight: '1.4' }}>
+          {ex.tenBaiTap}
+        </p>
+        <button
+          onClick={onAssign}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          style={{
+            marginTop: 'auto', padding: '8px', borderRadius: '8px', border: 'none',
+            backgroundColor: hover ? '#0C447C' : '#378ADD',
+            color: 'white', fontSize: '13px', fontWeight: '500',
+            cursor: 'pointer', transition: 'background-color 0.2s',
+          }}
+        >
+          Giao bài
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── MODAL TẠO BÀI ───────────────────────────────────────────────────────────
+function ModalTaoBai({ onClose, onCreated }) {
+  const [form, setForm] = useState({
+    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'IELTS', linkDrive: ''
+  })
+  const [saving, setSaving] = useState(false)
+  const [loi, setLoi] = useState('')
+
+  const handleSave = async () => {
+    if (!form.tenBaiTap.trim() || !form.linkDrive.trim()) {
+      setLoi('Vui lòng điền đầy đủ thông tin'); return
+    }
+    setSaving(true)
+    try {
+      await addDoc(collection(db, 'exercises'), {
+        tenBaiTap: form.tenBaiTap.trim(),
+        kyNang: form.kyNang,
+        loaiBai: form.loaiBai,
+        linkDrive: form.linkDrive.trim(),
+      })
+      onCreated()
+    } catch (err) {
+      setLoi('Lỗi khi tạo bài, thử lại sau')
+      console.error(err)
+    } finally { setSaving(false) }
+  }
+
+  const inputStyle = {
+    padding: '10px 12px', borderRadius: '8px',
+    border: '1px solid #85B7EB', fontSize: '14px',
+    backgroundColor: 'white', outline: 'none', width: '100%',
+    boxSizing: 'border-box',
+  }
+  const labelStyle = { color: '#185FA5', fontSize: '13px', fontWeight: '500' }
+
+  return (
+    <Overlay onClose={onClose}>
+      <h3 style={{ margin: 0, color: '#0C447C' }}>Tạo bài tập mới</h3>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={labelStyle}>Tên bài tập</label>
+        <input style={inputStyle} placeholder="Nhập tên bài tập"
+          value={form.tenBaiTap} onChange={e => setForm(f => ({ ...f, tenBaiTap: e.target.value }))} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Loại bài</label>
+          <select style={inputStyle} value={form.loaiBai}
+            onChange={e => setForm(f => ({ ...f, loaiBai: e.target.value }))}>
+            {['IELTS', 'TOEIC', 'TOEFL', 'Khác'].map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Kỹ năng</label>
+          <select style={inputStyle} value={form.kyNang}
+            onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
+            {['Reading', 'Listening', 'Writing', 'Speaking'].map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={labelStyle}>Link Google Drive (Excel)</label>
+        <input style={inputStyle} placeholder="https://docs.google.com/spreadsheets/..."
+          value={form.linkDrive} onChange={e => setForm(f => ({ ...f, linkDrive: e.target.value }))} />
+      </div>
+
+      {loi && <p style={{ margin: 0, color: '#E24B4A', fontSize: '13px' }}>{loi}</p>}
+
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={onClose} style={btnSecondary}>Huỷ</button>
+        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
+          {saving ? 'Đang lưu...' : 'Tạo bài'}
+        </button>
+      </div>
+    </Overlay>
+  )
+}
+
+// ─── MODAL GIAO BÀI ──────────────────────────────────────────────────────────
+function ModalGiaoBai({ exercise, userInfo, onClose }) {
+  const [classes, setClasses] = useState([])        // lớp của GV
+  const [selectedLop, setSelectedLop] = useState(null)
+  const [hocViens, setHocViens] = useState([])      // học viên trong lớp
+  const [selected, setSelected] = useState(new Set()) // userId được chọn
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    loadClasses()
+  }, [])
+
+  const loadClasses = async () => {
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'classes'),
+        where('giaoVienId', '==', userInfo.taiKhoan)
+      ))
+      setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }
+
+  const handleChonLop = async (cls) => {
+    setSelectedLop(cls)
+    setSelected(new Set())
+    setHocViens([])
+    if (!cls.hocVienIds?.length) return
+    try {
+      // Load thông tin từng học viên
+      const hvData = await Promise.all(
+        cls.hocVienIds.map(async uid => {
+          const snap = await getDoc(doc(db, 'users', uid))
+          return snap.exists() ? { id: uid, ...snap.data() } : null
+        })
+      )
+      setHocViens(hvData.filter(Boolean))
+      setSelected(new Set(cls.hocVienIds)) // mặc định chọn tất cả
+    } catch (err) { console.error(err) }
+  }
+
+  const toggleHocVien = (uid) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(uid) ? next.delete(uid) : next.add(uid)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (selected.size === hocViens.length) setSelected(new Set())
+    else setSelected(new Set(hocViens.map(h => h.id)))
+  }
+
+  const handleGiao = async () => {
+    if (!selected.size) return
+    setSaving(true)
+    try {
+      const thoiGianGiao = new Date().toISOString()
+      await Promise.all([...selected].map(uid =>
+        addDoc(collection(db, 'assignments'), {
+          userId: uid,
+          exerciseId: exercise.id,
+          lopId: selectedLop.lop,
+          thoiGianGiao,
+          trangThai: 'Chưa làm',
+        })
+      ))
+      setDone(true)
+    } catch (err) { console.error(err) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <Overlay onClose={onClose} width="480px">
+      {done ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ fontSize: '48px' }}>✅</div>
+          <h3 style={{ margin: 0, color: '#0C447C' }}>Giao bài thành công!</h3>
+          <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
+            Đã giao <strong>{exercise.tenBaiTap}</strong> cho <strong>{selected.size}</strong> học viên.
+          </p>
+          <button onClick={onClose} style={{ ...btnPrimary, width: '100%' }}>Đóng</button>
+        </div>
+      ) : (
+        <>
+          <h3 style={{ margin: 0, color: '#0C447C' }}>Giao bài: {exercise.tenBaiTap}</h3>
+
+          {loading ? (
+            <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải lớp...</p>
+          ) : (
+            <>
+              {/* Chọn lớp */}
+              <div>
+                <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>
+                  Chọn lớp
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {classes.map(cls => (
+                    <button
+                      key={cls.id}
+                      onClick={() => handleChonLop(cls)}
+                      style={{
+                        padding: '7px 16px', borderRadius: '20px',
+                        border: `1.5px solid ${selectedLop?.id === cls.id ? '#185FA5' : '#B5D4F4'}`,
+                        backgroundColor: selectedLop?.id === cls.id ? '#E6F1FB' : 'white',
+                        color: selectedLop?.id === cls.id ? '#0C447C' : '#378ADD',
+                        fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                      }}
+                    >
+                      {cls.lop}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Danh sách học viên */}
+              {selectedLop && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                    <p style={{ margin: 0, color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>
+                      Học viên ({selected.size}/{hocViens.length})
+                    </p>
+                    <button
+                      onClick={toggleAll}
+                      style={{
+                        marginLeft: 'auto', padding: '4px 12px', borderRadius: '6px',
+                        border: '1px solid #B5D4F4', backgroundColor: 'white',
+                        color: '#378ADD', fontSize: '12px', cursor: 'pointer',
+                      }}
+                    >
+                      {selected.size === hocViens.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                    </button>
+                  </div>
+
+                  <div style={{
+                    maxHeight: '280px', overflowY: 'auto',
+                    border: '1px solid #B5D4F4', borderRadius: '10px',
+                  }}>
+                    {hocViens.length === 0 ? (
+                      <p style={{ padding: '16px', color: '#888', fontSize: '14px', textAlign: 'center' }}>
+                        Lớp này chưa có học viên
+                      </p>
+                    ) : hocViens.map((hv, i) => (
+                      <div
+                        key={hv.id}
+                        onClick={() => toggleHocVien(hv.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '12px',
+                          padding: '10px 14px', cursor: 'pointer',
+                          borderBottom: i < hocViens.length - 1 ? '1px solid #E6F1FB' : 'none',
+                          backgroundColor: selected.has(hv.id) ? '#F0F7FF' : 'white',
+                          transition: 'background-color 0.15s',
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <div style={{
+                          width: '18px', height: '18px', borderRadius: '4px',
+                          border: `2px solid ${selected.has(hv.id) ? '#185FA5' : '#B5D4F4'}`,
+                          backgroundColor: selected.has(hv.id) ? '#185FA5' : 'white',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, transition: 'all 0.15s',
+                        }}>
+                          {selected.has(hv.id) && (
+                            <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>✓</span>
+                          )}
+                        </div>
+                        <div>
+                          <p style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#0C447C' }}>
+                            {hv.ho} {hv.ten}
+                          </p>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>
+                            {hv.lop} · {hv.taiKhoan}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={onClose} style={btnSecondary}>Huỷ</button>
+                <button
+                  onClick={handleGiao}
+                  disabled={saving || !selected.size || !selectedLop}
+                  style={{ ...btnPrimary, opacity: (!selected.size || !selectedLop) ? 0.5 : 1 }}
+                >
+                  {saving ? 'Đang giao...' : `Giao cho ${selected.size} học viên`}
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </Overlay>
+  )
+}
+
+// ─── TAB TIẾN ĐỘ ─────────────────────────────────────────────────────────────
+function TabTienDo({ userInfo }) {
+  const [classes, setClasses] = useState([])
+  const [selectedLop, setSelectedLop] = useState(null)
+  const [exercises, setExercises] = useState([])
+  const [selectedEx, setSelectedEx] = useState(null)
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [loadingClasses, setLoadingClasses] = useState(true)
+
+  useEffect(() => { loadClasses() }, [])
+
+  const loadClasses = async () => {
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'classes'),
+        where('giaoVienId', '==', userInfo.taiKhoan)
+      ))
+      setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch (err) { console.error(err) }
+    finally { setLoadingClasses(false) }
+  }
+
+  const handleChonLop = async (cls) => {
+    setSelectedLop(cls)
+    setSelectedEx(null)
+    setRows([])
+    setExercises([])
+    // Lấy các bài tập đã giao cho lớp này
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'assignments'),
+        where('lopId', '==', cls.lop)
+      ))
+      const exIds = [...new Set(snap.docs.map(d => d.data().exerciseId))]
+      const exData = await Promise.all(
+        exIds.map(async exId => {
+          const s = await getDoc(doc(db, 'exercises', exId))
+          return s.exists() ? { id: exId, ...s.data() } : null
+        })
+      )
+      setExercises(exData.filter(Boolean))
+    } catch (err) { console.error(err) }
+  }
+
+  const handleChonBai = async (ex) => {
+    setSelectedEx(ex)
+    setRows([])
+    setLoading(true)
+    try {
+      const cls = selectedLop
+      // Load học viên
+      const hvData = await Promise.all(
+        (cls.hocVienIds || []).map(async uid => {
+          const s = await getDoc(doc(db, 'users', uid))
+          return s.exists() ? { id: uid, ...s.data() } : null
+        })
+      )
+      const hvs = hvData.filter(Boolean)
+
+      // Load submissions của bài này
+      const subSnap = await getDocs(query(
+        collection(db, 'submissions'),
+        where('exerciseId', '==', ex.id)
+      ))
+      // Map userId -> best submission
+      const subMap = {}
+      subSnap.docs.forEach(d => {
+        const data = d.data()
+        if (!subMap[data.userId] || (data.diem ?? -1) > (subMap[data.userId].diem ?? -1)) {
+          subMap[data.userId] = data
+        }
+      })
+
+      setRows(hvs.map(hv => ({
+        ...hv,
+        sub: subMap[hv.id] || null,
+      })))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }
+
+  const daDam = rows.filter(r => r.sub).length
+  const chuaLam = rows.filter(r => !r.sub).length
+  const diemTB = rows.filter(r => r.sub?.diem != null).length > 0
+    ? (rows.filter(r => r.sub?.diem != null).reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0)
+      / rows.filter(r => r.sub?.diem != null).length).toFixed(0)
+    : null
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <h2 style={{ margin: 0, color: '#0C447C' }}>Tiến độ học viên</h2>
+
+      {/* Chọn lớp */}
+      {loadingClasses ? (
+        <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải lớp...</p>
+      ) : (
+        <div>
+          <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>Chọn lớp</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {classes.map(cls => (
+              <button
+                key={cls.id}
+                onClick={() => handleChonLop(cls)}
+                style={{
+                  padding: '8px 20px', borderRadius: '20px',
+                  border: `1.5px solid ${selectedLop?.id === cls.id ? '#185FA5' : '#B5D4F4'}`,
+                  backgroundColor: selectedLop?.id === cls.id ? '#185FA5' : 'white',
+                  color: selectedLop?.id === cls.id ? 'white' : '#378ADD',
+                  fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
+                }}
+              >
+                {cls.lop}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Chọn bài tập */}
+      {selectedLop && exercises.length > 0 && (
+        <div>
+          <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>Chọn bài tập</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {exercises.map(ex => {
+              const mau = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
+              const isSelected = selectedEx?.id === ex.id
+              return (
+                <button
+                  key={ex.id}
+                  onClick={() => handleChonBai(ex)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '20px',
+                    border: `1.5px solid ${isSelected ? mau.bg : '#B5D4F4'}`,
+                    backgroundColor: isSelected ? mau.bg : 'white',
+                    color: isSelected ? mau.text : '#378ADD',
+                    fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  {ex.kyNang} · {ex.tenBaiTap}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {selectedLop && exercises.length === 0 && !loading && (
+        <p style={{ color: '#888', fontSize: '14px' }}>Lớp này chưa được giao bài tập nào.</p>
+      )}
+
+      {/* Bảng tiến độ */}
+      {selectedEx && (
+        <div>
+          {loading ? (
+            <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải...</p>
+          ) : (
+            <>
+              {/* Tóm tắt */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Tổng học viên', value: rows.length, bg: '#E6F1FB', color: '#0C447C' },
+                  { label: 'Đã làm', value: daDam, bg: '#E1F5EE', color: '#085041' },
+                  { label: 'Chưa làm', value: chuaLam, bg: '#FCEBEB', color: '#791F1F' },
+                  { label: 'Điểm TB', value: diemTB ? `${diemTB}%` : '—', bg: '#FAEEDA', color: '#633806' },
+                ].map(s => (
+                  <div key={s.label} style={{
+                    padding: '12px 20px', borderRadius: '12px',
+                    backgroundColor: s.bg, display: 'flex', flexDirection: 'column', gap: '2px',
+                  }}>
+                    <span style={{ fontSize: '12px', color: s.color, fontWeight: '500' }}>{s.label}</span>
+                    <span style={{ fontSize: '22px', fontWeight: '700', color: s.color }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bảng */}
+              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #B5D4F4' }}>
+                {/* Header */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                  backgroundColor: '#185FA5',
+                  padding: '10px 16px', gap: '8px',
+                }}>
+                  {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
+                    <span key={h} style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{h}</span>
+                  ))}
+                </div>
+
+                {/* Rows */}
+                {rows.map((r, i) => {
+                  const daDamRow = !!r.sub
+                  const phanTram = r.sub?.diem != null
+                    ? Math.round(r.sub.diem / r.sub.tongCau * 100)
+                    : null
+                  const formatNgay = (iso) => {
+                    if (!iso) return '—'
+                    const d = new Date(iso)
+                    return `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+                  }
+
+                  return (
+                    <div
+                      key={r.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                        padding: '10px 16px', gap: '8px',
+                        backgroundColor: i % 2 === 0 ? 'white' : '#F8FBFF',
+                        borderTop: '1px solid #E6F1FB',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#0C447C' }}>
+                        {r.ho} {r.ten}
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#555' }}>{r.lop}</span>
+                      <span style={{
+                        fontSize: '12px', fontWeight: '500',
+                        padding: '3px 10px', borderRadius: '20px',
+                        backgroundColor: daDamRow ? '#E1F5EE' : '#FCEBEB',
+                        color: daDamRow ? '#085041' : '#791F1F',
+                        alignSelf: 'center', justifySelf: 'start',
+                      }}>
+                        {daDamRow ? 'Đã làm' : 'Chưa làm'}
+                      </span>
+                      <span style={{
+                        fontSize: '14px', fontWeight: '600',
+                        color: phanTram >= 50 ? '#1D9E75' : phanTram != null ? '#E24B4A' : '#B5D4F4',
+                      }}>
+                        {r.sub?.diem != null ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)` : '—'}
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#888' }}>
+                        {formatNgay(r.sub?.thoiGianNop)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Shared Components ────────────────────────────────────────────────────────
+function Overlay({ onClose, children, width = '420px' }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 2000,
+      backgroundColor: 'rgba(12,68,124,0.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        backgroundColor: 'white', borderRadius: '16px',
+        padding: '32px', width, maxWidth: '95vw',
+        display: 'flex', flexDirection: 'column', gap: '16px',
+        boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
+        maxHeight: '90vh', overflowY: 'auto',
+      }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const btnPrimary = {
+  flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+  backgroundColor: '#185FA5', color: 'white',
+  fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+}
+
+const btnSecondary = {
+  flex: 1, padding: '12px', borderRadius: '8px',
+  border: '1px solid #B5D4F4', backgroundColor: 'white',
+  color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
+}

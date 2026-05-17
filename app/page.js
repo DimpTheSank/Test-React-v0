@@ -18,7 +18,7 @@ export default function Home() {
       const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
       if (raw) {
         const info = JSON.parse(decodeURIComponent(raw))
-        router.push(info.vaiTro === 'Giao vien' ? '/trang-chu-gv' : '/trang-chu')
+        router.push(info.vaiTro === 'Giáo viên' ? '/trang-chu-gv' : '/trang-chu')
       }
     }
   }, [])

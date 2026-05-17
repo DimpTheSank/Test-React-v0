@@ -28,12 +28,13 @@ export default function TrangChuGV() {
   const [tab, setTab] = useState('baiTap') // 'baiTap' | 'tienDo'
   const [userInfo, setUserInfo] = useState(null)
 
-  useEffect(() => {
-    if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
-    const info = getUserInfo()
-    if (!info || info.vaiTro !== 'Giao vien') { router.push('/trang-chu'); return }
-    setUserInfo(info)
-  }, [])
+	useEffect(() => {
+	if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
+	const info = getUserInfo()
+	console.log('info trong trang-chu-gv:', info)
+	if (!info || info.vaiTro !== 'Giáo viên') { router.push('/trang-chu'); return }
+	setUserInfo(info)
+	}, [])
 
   if (!userInfo) return (
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>

@@ -46,7 +46,6 @@ export default function Home() {
           lop: user.lop,
           mucTieu: user.mucTieu,
         }), { expires: 7 })
-        await new Promise(resolve => setTimeout(resolve, 50))
         router.push(user.vaiTro === 'Giáo viên' ? '/trang-chu-gv' : '/trang-chu')
       } else {
         setLoi('Thông tin đăng nhập sai')

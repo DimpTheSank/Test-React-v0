@@ -48,7 +48,8 @@ export default function TrangChu() {
         collection(db, 'submissions'),
         where('userId', '==', taiKhoan)
       ))
-      // Map: exerciseId -> submission data
+
+      // Map: exerciseId -> submission có điểm cao nhất
       const subMap = {}
       subSnap.docs.forEach(d => {
         const data = d.data()
@@ -63,17 +64,24 @@ export default function TrangChu() {
         assignSnap.docs.map(async (assignDoc) => {
           const assign = assignDoc.data()
           const exSnap = await getDoc(doc(db, 'exercises', assign.exerciseId))
-          const sub = subMap[assign.exerciseId]
+          const bestSub = subMap[assign.exerciseId]
+
+          const diem = bestSub?.diem ?? null
+          const tongCau = bestSub?.tongCau ?? null
+          const duocXemLai = bestSub
+            ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.5
+            : false
 
           return {
             id: assignDoc.id,
             exerciseId: assign.exerciseId,
             thoiGianGiao: assign.thoiGianGiao,
             ...exSnap.data(),
-            trangThai: sub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
-            diem: sub?.diem ?? null,
-            tongCau: sub?.tongCau ?? null,
-            thoiGianNop: sub?.thoiGianNop ?? null,
+            trangThai: bestSub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
+            diem,
+            tongCau,
+            thoiGianNop: bestSub?.thoiGianNop ?? null,
+            duocXemLai,
           }
         })
       )
@@ -99,7 +107,6 @@ export default function TrangChu() {
     <main style={{ padding: '24px 16px', maxWidth: '860px', margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, color: '#0C447C' }}>Bài tập của tôi</h2>
-        {/* Tóm tắt nhanh */}
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
           <span style={{
             padding: '4px 12px', borderRadius: '20px',
@@ -124,7 +131,8 @@ export default function TrangChu() {
 }
 
 function CardBaiTap({ bai }) {
-  const [hover, setHover] = useState(false)
+  const [hoverLam, setHoverLam] = useState(false)
+  const [hoverXem, setHoverXem] = useState(false)
   const mau = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
   const mauHeader = mauKyNang[bai.kyNang] || { bg: '#185FA5', text: 'white' }
   const router = useRouter()
@@ -183,22 +191,39 @@ function CardBaiTap({ bai }) {
           {bai.diem !== null ? `${bai.diem} / ${bai.tongCau}` : '— / —'}
         </p>
 
-        {/* Nút làm bài / xem lại */}
-        <button
-          onClick={() => router.push(`/bai-tap/${bai.exerciseId}`)}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          style={{
-            marginTop: 'auto', padding: '8px', borderRadius: '8px', border: 'none',
-            backgroundColor: daDam
-              ? (hover ? '#085041' : '#1D9E75')
-              : (hover ? '#0C447C' : '#378ADD'),
-            color: 'white', fontSize: '13px', fontWeight: '500',
-            cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
-          }}
-        >
-          {daDam ? 'Xem lại' : 'Làm bài'}
-        </button>
+        {/* Nút làm bài (luôn hiện) + Xem lại (nếu đủ điều kiện) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
+          <button
+            onClick={() => router.push(`/bai-tap/${bai.exerciseId}`)}
+            onMouseEnter={() => setHoverLam(true)}
+            onMouseLeave={() => setHoverLam(false)}
+            style={{
+              padding: '8px', borderRadius: '8px', border: 'none',
+              backgroundColor: hoverLam ? '#0C447C' : '#378ADD',
+              color: 'white', fontSize: '13px', fontWeight: '500',
+              cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
+            }}
+          >
+            Làm bài
+          </button>
+
+          {bai.duocXemLai && (
+            <button
+              onClick={() => router.push(`/bai-tap/${bai.exerciseId}?review=true`)}
+              onMouseEnter={() => setHoverXem(true)}
+              onMouseLeave={() => setHoverXem(false)}
+              style={{
+                padding: '8px', borderRadius: '8px',
+                border: '1px solid #1D9E75',
+                backgroundColor: hoverXem ? '#E1F5EE' : 'white',
+                color: '#1D9E75', fontSize: '13px', fontWeight: '500',
+                cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
+              }}
+            >
+              Xem lại
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

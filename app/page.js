@@ -32,8 +32,7 @@ export default function Home() {
 
       if (userSnap.exists() && userSnap.data().matKhau === matKhau) {
         const user = userSnap.data()
-        console.log('cookie userInfo:', document.cookie)
-        console.log('redirect về:', user.vaiTro === 'Giáo viên' ? '/trang-chu-gv' : '/trang-chu')
+
         await updateDoc(userRef, {
           lanCuoiTruyCap: new Date().toISOString()
         })
@@ -47,7 +46,7 @@ export default function Home() {
           lop: user.lop,
           mucTieu: user.mucTieu,
         }), { expires: 7 })
-
+        await new Promise(resolve => setTimeout(resolve, 50))
         router.push(user.vaiTro === 'Giáo viên' ? '/trang-chu-gv' : '/trang-chu')
       } else {
         setLoi('Thông tin đăng nhập sai')

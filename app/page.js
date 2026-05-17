@@ -32,7 +32,8 @@ export default function Home() {
 
       if (userSnap.exists() && userSnap.data().matKhau === matKhau) {
         const user = userSnap.data()
-
+        console.log('vaiTro từ DB:', JSON.stringify(user.vaiTro))
+        console.log('so sánh:', user.vaiTro === 'Giáo viên')
         await updateDoc(userRef, {
           lanCuoiTruyCap: new Date().toISOString()
         })

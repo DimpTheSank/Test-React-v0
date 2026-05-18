@@ -59,7 +59,7 @@ export default function RootLayout({ children }) {
           {/* Bên trái */}
           {userInfo && (
             <button
-              onClick={() => router.push('/trang-chu')}
+              onClick={() => router.push(userInfo.vaiTro === 'Giáo viên' ? '/trang-chu-gv' : '/trang-chu')}
               onMouseEnter={() => setHoverHome(true)}
               onMouseLeave={() => setHoverHome(false)}
               style={btnStyle(hoverHome)}

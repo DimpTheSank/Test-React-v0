@@ -47,7 +47,7 @@ export default function TrangChu() {
 
       const assignSnap = await getDocs(query(
         collection(db, 'assignments'),
-        where('userId', 'array-contains', taiKhoan)
+        where('userId', '==', taiKhoan)
       ))
       
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import {
-  collection, query, where, getDocs, getDoc, addDoc, doc
+  collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc
 } from 'firebase/firestore'
 
 const mauKyNang = {
@@ -84,6 +84,9 @@ function TabBaiTap({ userInfo }) {
   const [selected, setSelected] = useState(new Set()) // exerciseId được chọn
   const [filterMucDo, setFilterMucDo] = useState('Tất cả')
   const [filterKyNang, setFilterKyNang] = useState('Tất cả')
+  const [showDelete, setShowDelete] = useState(false)
+  const [deletingEx, setDeletingEx] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadExercises = async () => {
     setLoading(true)
@@ -92,6 +95,31 @@ function TabBaiTap({ userInfo }) {
       setExercises(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
+  }
+
+  const handleXoaBai = async () => {
+    if (!deletingEx) return
+    setIsDeleting(true)
+    try {
+      // Xoá tất cả assignments liên quan
+      const assignSnap = await getDocs(query(
+        collection(db, 'assignments'),
+        where('exerciseId', '==', deletingEx.id)
+      ))
+      await Promise.all(assignSnap.docs.map(d => deleteDoc(d.ref)))
+
+      // Xoá exercise
+      await deleteDoc(doc(db, 'exercises', deletingEx.id))
+
+      setShowDelete(false)
+      setDeletingEx(null)
+      loadExercises()
+    } catch (err) {
+      console.error('Lỗi khi xoá bài:', err)
+      alert('Có lỗi khi xoá bài. Thử lại sau!')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   useEffect(() => { loadExercises() }, [])
@@ -195,6 +223,10 @@ function TabBaiTap({ userInfo }) {
                 setSelected(new Set([ex.id]))
                 setShowAssign(true)
               }}
+              onXoa={() => {
+                setDeletingEx(ex)
+                setShowDelete(true)
+              }}
             />
           ))}
         </div>
@@ -207,6 +239,40 @@ function TabBaiTap({ userInfo }) {
         />
       )}
 
+      {showDelete && deletingEx && (
+        <Overlay onClose={() => { setShowDelete(false); setDeletingEx(null) }}>
+          <h3 style={{ margin: 0, color: '#0C447C' }}>Xác nhận xoá bài tập</h3>
+          <div style={{
+            backgroundColor: '#FCEBEB', borderRadius: '10px',
+            padding: '12px 16px', textAlign: 'center',
+          }}>
+            <span style={{ color: '#791F1F', fontSize: '14px', fontWeight: '500' }}>
+              ⚠️ Bạn sắp xoá bài <strong>"{deletingEx.tenBaiTap}"</strong>.<br/>
+              Tất cả assignment liên quan cũng sẽ bị xoá vĩnh viễn.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => { setShowDelete(false); setDeletingEx(null) }}
+              style={btnSecondary}
+            >
+              Huỷ
+            </button>
+            <button
+              onClick={handleXoaBai}
+              disabled={isDeleting}
+              style={{
+                ...btnPrimary,
+                backgroundColor: '#E24B4A',
+                opacity: isDeleting ? 0.7 : 1,
+              }}
+            >
+              {isDeleting ? 'Đang xoá...' : 'Xoá bài'}
+            </button>
+          </div>
+        </Overlay>
+      )}        
+
       {showAssign && (
         <ModalGiaoBai
           exercises={selectedExercises}
@@ -218,10 +284,11 @@ function TabBaiTap({ userInfo }) {
   )
 }
 
-function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh }) {
+function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
   const [hover, setHover] = useState(false)
   const mauHeader = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
   const mauDo = mauMucDo[ex.mucDo] || null
+  const [hoverXoa, setHoverXoa] = useState(false)
 
   return (
     <div
@@ -281,6 +348,20 @@ function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh }) {
           }}
         >
           Giao bài
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); onXoa() }}
+          onMouseEnter={() => setHoverXoa(true)}
+          onMouseLeave={() => setHoverXoa(false)}
+          style={{
+            marginTop: '8px', padding: '8px', borderRadius: '8px', border: 'none',
+            backgroundColor: hoverXoa ? '#E24B4A' : '#F0F0F0',
+            color: hoverXoa ? 'white' : '#333',
+            fontSize: '13px', fontWeight: '500',
+            cursor: 'pointer', transition: 'all 0.2s',
+          }}
+        >
+          Xoá bài
         </button>
       </div>
     </div>

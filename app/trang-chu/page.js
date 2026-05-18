@@ -44,14 +44,12 @@ export default function TrangChu() {
       const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
       const userInfo = JSON.parse(decodeURIComponent(raw))
       const taiKhoan = userInfo.taiKhoan
-      console.log('taiKhoan:', taiKhoan)//
 
       const assignSnap = await getDocs(query(
         collection(db, 'assignments'),
-        where('userId', '==', taiKhoan)
+        where('userId', 'array-contains', taiKhoan)
       ))
       
-      console.log('số assignments:', assignSnap.docs.length)//
 
       const subSnap = await getDocs(query(
         collection(db, 'submissions'),

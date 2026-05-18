@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import {
-  collection, query, where, getDocs, getDoc, addDoc, doc, orderBy
+  collection, query, where, getDocs, getDoc, addDoc, doc
 } from 'firebase/firestore'
 
 const mauKyNang = {
@@ -14,7 +14,15 @@ const mauKyNang = {
   'Speaking':  { bg: '#A32D2D', text: 'white' },
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+const mauMucDo = {
+  'Cơ bản':    { bg: '#E1F5EE', text: '#085041' },
+  'Trung bình':{ bg: '#FAEEDA', text: '#633806' },
+  'Nâng cao':  { bg: '#FCEBEB', text: '#791F1F' },
+}
+
+const cacMucDo = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
+const cacKyNang = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking']
+
 const getUserInfo = () => {
   try {
     const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
@@ -25,16 +33,15 @@ const getUserInfo = () => {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function TrangChuGV() {
   const router = useRouter()
-  const [tab, setTab] = useState('baiTap') // 'baiTap' | 'tienDo'
+  const [tab, setTab] = useState('baiTap')
   const [userInfo, setUserInfo] = useState(null)
 
-	useEffect(() => {
-	if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
-	const info = getUserInfo()
-	console.log('info trong trang-chu-gv:', info)
-	if (!info || info.vaiTro !== 'Giáo viên') { router.push('/trang-chu'); return }
-	setUserInfo(info)
-	}, [])
+  useEffect(() => {
+    if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
+    const info = getUserInfo()
+    if (!info || info.vaiTro !== 'Giáo viên') { router.push('/trang-chu'); return }
+    setUserInfo(info)
+  }, [])
 
   if (!userInfo) return (
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
@@ -44,39 +51,22 @@ export default function TrangChuGV() {
 
   return (
     <main style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#F0F7FF' }}>
-      {/* Tab bar */}
       <div style={{
-        backgroundColor: 'white',
-        borderBottom: '1px solid #B5D4F4',
-        display: 'flex',
-        paddingLeft: '24px',
-        gap: '0',
+        backgroundColor: 'white', borderBottom: '1px solid #B5D4F4',
+        display: 'flex', paddingLeft: '24px',
       }}>
-        {[
-          { key: 'baiTap', label: '📚 Bài tập' },
-          { key: 'tienDo', label: '📊 Tiến độ' },
-        ].map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: '14px 24px',
-              border: 'none',
-              borderBottom: tab === t.key ? '3px solid #185FA5' : '3px solid transparent',
-              backgroundColor: 'transparent',
-              color: tab === t.key ? '#185FA5' : '#888',
-              fontWeight: tab === t.key ? '600' : '400',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            {t.label}
-          </button>
+        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: '14px 24px', border: 'none',
+            borderBottom: tab === t.key ? '3px solid #185FA5' : '3px solid transparent',
+            backgroundColor: 'transparent',
+            color: tab === t.key ? '#185FA5' : '#888',
+            fontWeight: tab === t.key ? '600' : '400',
+            fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
+          }}>{t.label}</button>
         ))}
       </div>
 
-      {/* Content */}
       <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
         {tab === 'baiTap' && <TabBaiTap userInfo={userInfo} />}
         {tab === 'tienDo' && <TabTienDo userInfo={userInfo} />}
@@ -90,7 +80,10 @@ function TabBaiTap({ userInfo }) {
   const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
-  const [showAssign, setShowAssign] = useState(null) // exercise object
+  const [showAssign, setShowAssign] = useState(false)
+  const [selected, setSelected] = useState(new Set()) // exerciseId được chọn
+  const [filterMucDo, setFilterMucDo] = useState('Tất cả')
+  const [filterKyNang, setFilterKyNang] = useState('Tất cả')
 
   const loadExercises = async () => {
     setLoading(true)
@@ -103,29 +96,106 @@ function TabBaiTap({ userInfo }) {
 
   useEffect(() => { loadExercises() }, [])
 
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const filtered = exercises.filter(ex => {
+    const okMucDo = filterMucDo === 'Tất cả' || ex.mucDo === filterMucDo
+    const okKyNang = filterKyNang === 'Tất cả' || ex.kyNang === filterKyNang
+    return okMucDo && okKyNang
+  })
+
+  const selectedExercises = exercises.filter(ex => selected.has(ex.id))
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '10px', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, color: '#0C447C' }}>Danh sách bài tập</h2>
-        <button
-          onClick={() => setShowCreate(true)}
-          style={{
-            marginLeft: 'auto',
-            padding: '10px 20px', borderRadius: '8px', border: 'none',
-            backgroundColor: '#185FA5', color: 'white',
-            fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-          }}
-        >
-          + Tạo bài mới
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+          {selected.size > 0 && (
+            <button
+              onClick={() => setShowAssign(true)}
+              style={{
+                padding: '10px 20px', borderRadius: '8px', border: 'none',
+                backgroundColor: '#1D9E75', color: 'white',
+                fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              }}
+            >
+              Giao {selected.size} bài đã chọn
+            </button>
+          )}
+          <button
+            onClick={() => setShowCreate(true)}
+            style={{
+              padding: '10px 20px', borderRadius: '8px', border: 'none',
+              backgroundColor: '#185FA5', color: 'white',
+              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+            }}
+          >
+            + Tạo bài mới
+          </button>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div style={{
+        display: 'flex', gap: '24px', marginBottom: '20px',
+        padding: '14px 16px', backgroundColor: 'white',
+        borderRadius: '12px', border: '1px solid #B5D4F4',
+        flexWrap: 'wrap', alignItems: 'center',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Mức độ:</span>
+          {cacMucDo.map(m => (
+            <button key={m} onClick={() => setFilterMucDo(m)} style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
+              border: `1.5px solid ${filterMucDo === m ? '#185FA5' : '#B5D4F4'}`,
+              backgroundColor: filterMucDo === m ? '#185FA5' : 'white',
+              color: filterMucDo === m ? 'white' : '#555',
+              fontWeight: filterMucDo === m ? '600' : '400',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>{m}</button>
+          ))}
+        </div>
+
+        <div style={{ width: '1px', height: '24px', backgroundColor: '#B5D4F4' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Kỹ năng:</span>
+          {cacKyNang.map(k => (
+            <button key={k} onClick={() => setFilterKyNang(k)} style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
+              border: `1.5px solid ${filterKyNang === k ? '#185FA5' : '#B5D4F4'}`,
+              backgroundColor: filterKyNang === k ? '#185FA5' : 'white',
+              color: filterKyNang === k ? 'white' : '#555',
+              fontWeight: filterKyNang === k ? '600' : '400',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>{k}</button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <p style={{ color: '#185FA5' }}>Đang tải...</p>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-          {exercises.map(ex => (
-            <CardBaiTapGV key={ex.id} ex={ex} onAssign={() => setShowAssign(ex)} />
+          {filtered.map(ex => (
+            <CardBaiTapGV
+              key={ex.id}
+              ex={ex}
+              isSelected={selected.has(ex.id)}
+              onToggle={() => toggleSelect(ex.id)}
+              onGiaoNhanh={() => {
+                setSelected(new Set([ex.id]))
+                setShowAssign(true)
+              }}
+            />
           ))}
         </div>
       )}
@@ -139,40 +209,68 @@ function TabBaiTap({ userInfo }) {
 
       {showAssign && (
         <ModalGiaoBai
-          exercise={showAssign}
+          exercises={selectedExercises}
           userInfo={userInfo}
-          onClose={() => setShowAssign(null)}
+          onClose={() => { setShowAssign(false); setSelected(new Set()) }}
         />
       )}
     </div>
   )
 }
 
-function CardBaiTapGV({ ex, onAssign }) {
+function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh }) {
   const [hover, setHover] = useState(false)
   const mauHeader = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
+  const mauDo = mauMucDo[ex.mucDo] || null
 
   return (
-    <div style={{
-      border: '1px solid #B5D4F4',
-      borderRadius: '16px',
-      width: '180px',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: 'white',
-      overflow: 'hidden',
-    }}>
-      <div style={{ backgroundColor: mauHeader.bg, padding: '8px 12px', textAlign: 'center' }}>
-        <span style={{ color: mauHeader.text, fontSize: '12px', fontWeight: '600' }}>
-          {ex.loaiBai} · {ex.kyNang}
-        </span>
+    <div
+      onClick={onToggle}
+      style={{
+        border: `2px solid ${isSelected ? '#185FA5' : '#B5D4F4'}`,
+        borderRadius: '16px', width: '180px',
+        display: 'flex', flexDirection: 'column',
+        backgroundColor: isSelected ? '#F0F7FF' : 'white',
+        overflow: 'hidden', cursor: 'pointer',
+        transition: 'all 0.15s',
+        boxShadow: isSelected ? '0 0 0 3px rgba(24,95,165,0.15)' : 'none',
+      }}
+    >
+      {/* Checkbox góc + header */}
+      <div style={{ position: 'relative' }}>
+        <div style={{ backgroundColor: mauHeader.bg, padding: '8px 12px', textAlign: 'center' }}>
+          <span style={{ color: mauHeader.text, fontSize: '12px', fontWeight: '600' }}>
+            {ex.loaiBai} · {ex.kyNang}
+          </span>
+        </div>
+        {/* Checkbox */}
+        <div style={{
+          position: 'absolute', top: '6px', right: '8px',
+          width: '16px', height: '16px', borderRadius: '4px',
+          border: `2px solid ${isSelected ? 'white' : 'rgba(255,255,255,0.6)'}`,
+          backgroundColor: isSelected ? 'white' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {isSelected && <span style={{ color: '#185FA5', fontSize: '10px', fontWeight: '700' }}>✓</span>}
+        </div>
       </div>
-      <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+
+      <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
         <p style={{ margin: 0, fontWeight: '600', fontSize: '14px', color: '#0C447C', lineHeight: '1.4' }}>
           {ex.tenBaiTap}
         </p>
+
+        {mauDo && (
+          <span style={{
+            padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '500',
+            backgroundColor: mauDo.bg, color: mauDo.text, alignSelf: 'flex-start',
+          }}>
+            {ex.mucDo}
+          </span>
+        )}
+
         <button
-          onClick={onAssign}
+          onClick={e => { e.stopPropagation(); onGiaoNhanh() }}
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           style={{
@@ -192,7 +290,8 @@ function CardBaiTapGV({ ex, onAssign }) {
 // ─── MODAL TẠO BÀI ───────────────────────────────────────────────────────────
 function ModalTaoBai({ onClose, onCreated }) {
   const [form, setForm] = useState({
-    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'IELTS', linkDrive: ''
+    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'IELTS',
+    mucDo: 'Cơ bản', linkDrive: ''
   })
   const [saving, setSaving] = useState(false)
   const [loi, setLoi] = useState('')
@@ -207,6 +306,7 @@ function ModalTaoBai({ onClose, onCreated }) {
         tenBaiTap: form.tenBaiTap.trim(),
         kyNang: form.kyNang,
         loaiBai: form.loaiBai,
+        mucDo: form.mucDo,
         linkDrive: form.linkDrive.trim(),
       })
       onCreated()
@@ -252,6 +352,26 @@ function ModalTaoBai({ onClose, onCreated }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={labelStyle}>Mức độ</label>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {['Cơ bản', 'Trung bình', 'Nâng cao'].map(m => {
+            const mau = mauMucDo[m]
+            const isSelected = form.mucDo === m
+            return (
+              <button key={m} onClick={() => setForm(f => ({ ...f, mucDo: m }))} style={{
+                flex: 1, padding: '8px', borderRadius: '8px',
+                border: `1.5px solid ${isSelected ? mau.text : '#B5D4F4'}`,
+                backgroundColor: isSelected ? mau.bg : 'white',
+                color: isSelected ? mau.text : '#888',
+                fontSize: '13px', fontWeight: isSelected ? '600' : '400',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}>{m}</button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <label style={labelStyle}>Link Google Drive (Excel)</label>
         <input style={inputStyle} placeholder="https://docs.google.com/spreadsheets/..."
           value={form.linkDrive} onChange={e => setForm(f => ({ ...f, linkDrive: e.target.value }))} />
@@ -269,19 +389,17 @@ function ModalTaoBai({ onClose, onCreated }) {
   )
 }
 
-// ─── MODAL GIAO BÀI ──────────────────────────────────────────────────────────
-function ModalGiaoBai({ exercise, userInfo, onClose }) {
-  const [classes, setClasses] = useState([])        // lớp của GV
-  const [selectedLop, setSelectedLop] = useState(null)
-  const [hocViens, setHocViens] = useState([])      // học viên trong lớp
-  const [selected, setSelected] = useState(new Set()) // userId được chọn
+// ─── MODAL GIAO BÀI (nhiều bài, nhiều lớp) ───────────────────────────────────
+function ModalGiaoBai({ exercises, userInfo, onClose }) {
+  const [classes, setClasses] = useState([])
+  const [selectedLops, setSelectedLops] = useState(new Set()) // lop names
+  const [hocViensByLop, setHocViensByLop] = useState({})     // lopId -> [{id, ...}]
+  const [selectedHVs, setSelectedHVs] = useState(new Set())  // userId
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
 
-  useEffect(() => {
-    loadClasses()
-  }, [])
+  useEffect(() => { loadClasses() }, [])
 
   const loadClasses = async () => {
     try {
@@ -294,76 +412,128 @@ function ModalGiaoBai({ exercise, userInfo, onClose }) {
     finally { setLoading(false) }
   }
 
-  const handleChonLop = async (cls) => {
-    setSelectedLop(cls)
-    setSelected(new Set())
-    setHocViens([])
-    if (!cls.hocVienIds?.length) return
-    try {
-      // Load thông tin từng học viên
-      const hvData = await Promise.all(
-        cls.hocVienIds.map(async uid => {
-          const snap = await getDoc(doc(db, 'users', uid))
-          return snap.exists() ? { id: uid, ...snap.data() } : null
+  const handleToggleLop = async (cls) => {
+    const lopName = cls.lop
+    const next = new Set(selectedLops)
+
+    if (next.has(lopName)) {
+      // Bỏ chọn lớp → bỏ học viên của lớp đó
+      next.delete(lopName)
+      const hvIds = (hocViensByLop[lopName] || []).map(h => h.id)
+      setSelectedHVs(prev => {
+        const s = new Set(prev)
+        hvIds.forEach(id => s.delete(id))
+        return s
+      })
+    } else {
+      next.add(lopName)
+      // Load học viên nếu chưa có
+      if (!hocViensByLop[lopName] && cls.hocVienIds?.length) {
+        const hvData = await Promise.all(
+          cls.hocVienIds.map(async uid => {
+            const snap = await getDoc(doc(db, 'users', uid))
+            return snap.exists() ? { id: uid, ...snap.data() } : null
+          })
+        )
+        const hvs = hvData.filter(Boolean)
+        setHocViensByLop(prev => ({ ...prev, [lopName]: hvs }))
+        // Mặc định chọn tất cả học viên của lớp mới
+        setSelectedHVs(prev => {
+          const s = new Set(prev)
+          hvs.forEach(h => s.add(h.id))
+          return s
         })
-      )
-      setHocViens(hvData.filter(Boolean))
-      setSelected(new Set(cls.hocVienIds)) // mặc định chọn tất cả
-    } catch (err) { console.error(err) }
+      } else if (hocViensByLop[lopName]) {
+        // Đã load rồi, chọn lại tất cả
+        setSelectedHVs(prev => {
+          const s = new Set(prev)
+          hocViensByLop[lopName].forEach(h => s.add(h.id))
+          return s
+        })
+      }
+    }
+    setSelectedLops(next)
   }
 
-  const toggleHocVien = (uid) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(uid) ? next.delete(uid) : next.add(uid)
-      return next
+  const toggleHV = (uid) => {
+    setSelectedHVs(prev => {
+      const s = new Set(prev)
+      s.has(uid) ? s.delete(uid) : s.add(uid)
+      return s
     })
   }
 
-  const toggleAll = () => {
-    if (selected.size === hocViens.length) setSelected(new Set())
-    else setSelected(new Set(hocViens.map(h => h.id)))
-  }
+  // Tất cả học viên đã load từ các lớp được chọn
+  const allHVs = [...selectedLops].flatMap(lopName => hocViensByLop[lopName] || [])
+  // Dedupe theo id
+  const uniqueHVs = [...new Map(allHVs.map(h => [h.id, h])).values()]
 
   const handleGiao = async () => {
-    if (!selected.size) return
+    if (!selectedHVs.size || !exercises.length) return
     setSaving(true)
     try {
       const thoiGianGiao = new Date().toISOString()
-      await Promise.all([...selected].map(uid =>
-        addDoc(collection(db, 'assignments'), {
-          userId: uid,
-          exerciseId: exercise.id,
-          lopId: selectedLop.lop,
-          thoiGianGiao,
-          trangThai: 'Chưa làm',
-        })
-      ))
+      // Với mỗi bài × mỗi học viên → tạo assignment
+      await Promise.all(
+        exercises.flatMap(ex =>
+          [...selectedHVs].map(uid => {
+            // Tìm lớp của học viên này trong các lớp đã chọn
+            const lopName = [...selectedLops].find(lopName =>
+              (hocViensByLop[lopName] || []).some(h => h.id === uid)
+            ) || ''
+            return addDoc(collection(db, 'assignments'), {
+              userId: uid,
+              exerciseId: ex.id,
+              lopId: lopName,
+              thoiGianGiao,
+              trangThai: 'Chưa làm',
+            })
+          })
+        )
+      )
       setDone(true)
     } catch (err) { console.error(err) }
     finally { setSaving(false) }
   }
 
   return (
-    <Overlay onClose={onClose} width="480px">
+    <Overlay onClose={onClose} width="520px">
       {done ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <div style={{ fontSize: '48px' }}>✅</div>
           <h3 style={{ margin: 0, color: '#0C447C' }}>Giao bài thành công!</h3>
           <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
-            Đã giao <strong>{exercise.tenBaiTap}</strong> cho <strong>{selected.size}</strong> học viên.
+            Đã giao <strong>{exercises.length}</strong> bài cho <strong>{selectedHVs.size}</strong> học viên.
           </p>
           <button onClick={onClose} style={{ ...btnPrimary, width: '100%' }}>Đóng</button>
         </div>
       ) : (
         <>
-          <h3 style={{ margin: 0, color: '#0C447C' }}>Giao bài: {exercise.tenBaiTap}</h3>
+          <h3 style={{ margin: 0, color: '#0C447C' }}>
+            Giao bài ({exercises.length} bài đã chọn)
+          </h3>
+
+          {/* Danh sách bài được giao */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {exercises.map(ex => {
+              const mau = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
+              return (
+                <span key={ex.id} style={{
+                  padding: '4px 10px', borderRadius: '20px',
+                  backgroundColor: mau.bg, color: mau.text,
+                  fontSize: '12px', fontWeight: '500',
+                }}>
+                  {ex.tenBaiTap}
+                </span>
+              )
+            })}
+          </div>
 
           {loading ? (
             <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải lớp...</p>
           ) : (
             <>
-              {/* Chọn lớp */}
+              {/* Chọn lớp (multi) */}
               <div>
                 <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>
                   Chọn lớp
@@ -372,13 +542,13 @@ function ModalGiaoBai({ exercise, userInfo, onClose }) {
                   {classes.map(cls => (
                     <button
                       key={cls.id}
-                      onClick={() => handleChonLop(cls)}
+                      onClick={() => handleToggleLop(cls)}
                       style={{
                         padding: '7px 16px', borderRadius: '20px',
-                        border: `1.5px solid ${selectedLop?.id === cls.id ? '#185FA5' : '#B5D4F4'}`,
-                        backgroundColor: selectedLop?.id === cls.id ? '#E6F1FB' : 'white',
-                        color: selectedLop?.id === cls.id ? '#0C447C' : '#378ADD',
-                        fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                        border: `1.5px solid ${selectedLops.has(cls.lop) ? '#185FA5' : '#B5D4F4'}`,
+                        backgroundColor: selectedLops.has(cls.lop) ? '#185FA5' : 'white',
+                        color: selectedLops.has(cls.lop) ? 'white' : '#378ADD',
+                        fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.15s',
                       }}
                     >
                       {cls.lop}
@@ -388,53 +558,51 @@ function ModalGiaoBai({ exercise, userInfo, onClose }) {
               </div>
 
               {/* Danh sách học viên */}
-              {selectedLop && (
+              {uniqueHVs.length > 0 && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                     <p style={{ margin: 0, color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>
-                      Học viên ({selected.size}/{hocViens.length})
+                      Học viên ({selectedHVs.size}/{uniqueHVs.length})
                     </p>
                     <button
-                      onClick={toggleAll}
+                      onClick={() => {
+                        if (selectedHVs.size === uniqueHVs.length) setSelectedHVs(new Set())
+                        else setSelectedHVs(new Set(uniqueHVs.map(h => h.id)))
+                      }}
                       style={{
                         marginLeft: 'auto', padding: '4px 12px', borderRadius: '6px',
                         border: '1px solid #B5D4F4', backgroundColor: 'white',
                         color: '#378ADD', fontSize: '12px', cursor: 'pointer',
                       }}
                     >
-                      {selected.size === hocViens.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                      {selectedHVs.size === uniqueHVs.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                     </button>
                   </div>
 
                   <div style={{
-                    maxHeight: '280px', overflowY: 'auto',
+                    maxHeight: '260px', overflowY: 'auto',
                     border: '1px solid #B5D4F4', borderRadius: '10px',
                   }}>
-                    {hocViens.length === 0 ? (
-                      <p style={{ padding: '16px', color: '#888', fontSize: '14px', textAlign: 'center' }}>
-                        Lớp này chưa có học viên
-                      </p>
-                    ) : hocViens.map((hv, i) => (
+                    {uniqueHVs.map((hv, i) => (
                       <div
                         key={hv.id}
-                        onClick={() => toggleHocVien(hv.id)}
+                        onClick={() => toggleHV(hv.id)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '12px',
                           padding: '10px 14px', cursor: 'pointer',
-                          borderBottom: i < hocViens.length - 1 ? '1px solid #E6F1FB' : 'none',
-                          backgroundColor: selected.has(hv.id) ? '#F0F7FF' : 'white',
+                          borderBottom: i < uniqueHVs.length - 1 ? '1px solid #E6F1FB' : 'none',
+                          backgroundColor: selectedHVs.has(hv.id) ? '#F0F7FF' : 'white',
                           transition: 'background-color 0.15s',
                         }}
                       >
-                        {/* Checkbox */}
                         <div style={{
                           width: '18px', height: '18px', borderRadius: '4px',
-                          border: `2px solid ${selected.has(hv.id) ? '#185FA5' : '#B5D4F4'}`,
-                          backgroundColor: selected.has(hv.id) ? '#185FA5' : 'white',
+                          border: `2px solid ${selectedHVs.has(hv.id) ? '#185FA5' : '#B5D4F4'}`,
+                          backgroundColor: selectedHVs.has(hv.id) ? '#185FA5' : 'white',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0, transition: 'all 0.15s',
                         }}>
-                          {selected.has(hv.id) && (
+                          {selectedHVs.has(hv.id) && (
                             <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>✓</span>
                           )}
                         </div>
@@ -456,10 +624,10 @@ function ModalGiaoBai({ exercise, userInfo, onClose }) {
                 <button onClick={onClose} style={btnSecondary}>Huỷ</button>
                 <button
                   onClick={handleGiao}
-                  disabled={saving || !selected.size || !selectedLop}
-                  style={{ ...btnPrimary, opacity: (!selected.size || !selectedLop) ? 0.5 : 1 }}
+                  disabled={saving || !selectedHVs.size || !selectedLops.size}
+                  style={{ ...btnPrimary, opacity: (!selectedHVs.size || !selectedLops.size) ? 0.5 : 1 }}
                 >
-                  {saving ? 'Đang giao...' : `Giao cho ${selected.size} học viên`}
+                  {saving ? 'Đang giao...' : `Giao cho ${selectedHVs.size} học viên`}
                 </button>
               </div>
             </>
@@ -498,7 +666,6 @@ function TabTienDo({ userInfo }) {
     setSelectedEx(null)
     setRows([])
     setExercises([])
-    // Lấy các bài tập đã giao cho lớp này
     try {
       const snap = await getDocs(query(
         collection(db, 'assignments'),
@@ -520,22 +687,18 @@ function TabTienDo({ userInfo }) {
     setRows([])
     setLoading(true)
     try {
-      const cls = selectedLop
-      // Load học viên
       const hvData = await Promise.all(
-        (cls.hocVienIds || []).map(async uid => {
+        (selectedLop.hocVienIds || []).map(async uid => {
           const s = await getDoc(doc(db, 'users', uid))
           return s.exists() ? { id: uid, ...s.data() } : null
         })
       )
       const hvs = hvData.filter(Boolean)
 
-      // Load submissions của bài này
       const subSnap = await getDocs(query(
         collection(db, 'submissions'),
         where('exerciseId', '==', ex.id)
       ))
-      // Map userId -> best submission
       const subMap = {}
       subSnap.docs.forEach(d => {
         const data = d.data()
@@ -544,10 +707,7 @@ function TabTienDo({ userInfo }) {
         }
       })
 
-      setRows(hvs.map(hv => ({
-        ...hv,
-        sub: subMap[hv.id] || null,
-      })))
+      setRows(hvs.map(hv => ({ ...hv, sub: subMap[hv.id] || null })))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -555,7 +715,8 @@ function TabTienDo({ userInfo }) {
   const daDam = rows.filter(r => r.sub).length
   const chuaLam = rows.filter(r => !r.sub).length
   const diemTB = rows.filter(r => r.sub?.diem != null).length > 0
-    ? (rows.filter(r => r.sub?.diem != null).reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0)
+    ? (rows.filter(r => r.sub?.diem != null)
+        .reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0)
       / rows.filter(r => r.sub?.diem != null).length).toFixed(0)
     : null
 
@@ -563,7 +724,6 @@ function TabTienDo({ userInfo }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <h2 style={{ margin: 0, color: '#0C447C' }}>Tiến độ học viên</h2>
 
-      {/* Chọn lớp */}
       {loadingClasses ? (
         <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải lớp...</p>
       ) : (
@@ -571,25 +731,18 @@ function TabTienDo({ userInfo }) {
           <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>Chọn lớp</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {classes.map(cls => (
-              <button
-                key={cls.id}
-                onClick={() => handleChonLop(cls)}
-                style={{
-                  padding: '8px 20px', borderRadius: '20px',
-                  border: `1.5px solid ${selectedLop?.id === cls.id ? '#185FA5' : '#B5D4F4'}`,
-                  backgroundColor: selectedLop?.id === cls.id ? '#185FA5' : 'white',
-                  color: selectedLop?.id === cls.id ? 'white' : '#378ADD',
-                  fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-                }}
-              >
-                {cls.lop}
-              </button>
+              <button key={cls.id} onClick={() => handleChonLop(cls)} style={{
+                padding: '8px 20px', borderRadius: '20px',
+                border: `1.5px solid ${selectedLop?.id === cls.id ? '#185FA5' : '#B5D4F4'}`,
+                backgroundColor: selectedLop?.id === cls.id ? '#185FA5' : 'white',
+                color: selectedLop?.id === cls.id ? 'white' : '#378ADD',
+                fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
+              }}>{cls.lop}</button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Chọn bài tập */}
       {selectedLop && exercises.length > 0 && (
         <div>
           <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>Chọn bài tập</p>
@@ -598,17 +751,13 @@ function TabTienDo({ userInfo }) {
               const mau = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
               const isSelected = selectedEx?.id === ex.id
               return (
-                <button
-                  key={ex.id}
-                  onClick={() => handleChonBai(ex)}
-                  style={{
-                    padding: '8px 16px', borderRadius: '20px',
-                    border: `1.5px solid ${isSelected ? mau.bg : '#B5D4F4'}`,
-                    backgroundColor: isSelected ? mau.bg : 'white',
-                    color: isSelected ? mau.text : '#378ADD',
-                    fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-                  }}
-                >
+                <button key={ex.id} onClick={() => handleChonBai(ex)} style={{
+                  padding: '8px 16px', borderRadius: '20px',
+                  border: `1.5px solid ${isSelected ? mau.bg : '#B5D4F4'}`,
+                  backgroundColor: isSelected ? mau.bg : 'white',
+                  color: isSelected ? mau.text : '#378ADD',
+                  fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
+                }}>
                   {ex.kyNang} · {ex.tenBaiTap}
                 </button>
               )
@@ -621,14 +770,12 @@ function TabTienDo({ userInfo }) {
         <p style={{ color: '#888', fontSize: '14px' }}>Lớp này chưa được giao bài tập nào.</p>
       )}
 
-      {/* Bảng tiến độ */}
       {selectedEx && (
         <div>
           {loading ? (
             <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải...</p>
           ) : (
             <>
-              {/* Tóm tắt */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 {[
                   { label: 'Tổng học viên', value: rows.length, bg: '#E6F1FB', color: '#0C447C' },
@@ -646,51 +793,38 @@ function TabTienDo({ userInfo }) {
                 ))}
               </div>
 
-              {/* Bảng */}
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #B5D4F4' }}>
-                {/* Header */}
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                  backgroundColor: '#185FA5',
-                  padding: '10px 16px', gap: '8px',
+                  display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                  backgroundColor: '#185FA5', padding: '10px 16px', gap: '8px',
                 }}>
                   {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
                     <span key={h} style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{h}</span>
                   ))}
                 </div>
 
-                {/* Rows */}
                 {rows.map((r, i) => {
                   const daDamRow = !!r.sub
                   const phanTram = r.sub?.diem != null
-                    ? Math.round(r.sub.diem / r.sub.tongCau * 100)
-                    : null
+                    ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
                   const formatNgay = (iso) => {
                     if (!iso) return '—'
                     const d = new Date(iso)
                     return `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
                   }
-
                   return (
-                    <div
-                      key={r.id}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                        padding: '10px 16px', gap: '8px',
-                        backgroundColor: i % 2 === 0 ? 'white' : '#F8FBFF',
-                        borderTop: '1px solid #E6F1FB',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <div key={r.id} style={{
+                      display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                      padding: '10px 16px', gap: '8px',
+                      backgroundColor: i % 2 === 0 ? 'white' : '#F8FBFF',
+                      borderTop: '1px solid #E6F1FB', alignItems: 'center',
+                    }}>
                       <span style={{ fontSize: '14px', fontWeight: '500', color: '#0C447C' }}>
                         {r.ho} {r.ten}
                       </span>
                       <span style={{ fontSize: '13px', color: '#555' }}>{r.lop}</span>
                       <span style={{
-                        fontSize: '12px', fontWeight: '500',
-                        padding: '3px 10px', borderRadius: '20px',
+                        fontSize: '12px', fontWeight: '500', padding: '3px 10px', borderRadius: '20px',
                         backgroundColor: daDamRow ? '#E1F5EE' : '#FCEBEB',
                         color: daDamRow ? '#085041' : '#791F1F',
                         alignSelf: 'center', justifySelf: 'start',
@@ -718,7 +852,7 @@ function TabTienDo({ userInfo }) {
   )
 }
 
-// ─── Shared Components ────────────────────────────────────────────────────────
+// ─── Shared ───────────────────────────────────────────────────────────────────
 function Overlay({ onClose, children, width = '420px' }) {
   return (
     <div style={{

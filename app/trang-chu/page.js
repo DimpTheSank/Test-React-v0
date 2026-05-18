@@ -18,16 +18,24 @@ const mauKyNang = {
   'Speaking':  { bg: '#A32D2D', text: 'white' },
 }
 
+const mauMucDo = {
+  'Cơ bản':    { bg: '#E1F5EE', text: '#085041' },
+  'Trung bình':{ bg: '#FAEEDA', text: '#633806' },
+  'Nâng cao':  { bg: '#FCEBEB', text: '#791F1F' },
+}
+
+const cacMucDo = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
+const cacTrangThai = ['Tất cả', 'Chưa làm', 'Đã làm']
+
 export default function TrangChu() {
   const router = useRouter()
   const [baiTapList, setBaiTapList] = useState([])
   const [loading, setLoading] = useState(true)
+  const [filterMucDo, setFilterMucDo] = useState('Tất cả')
+  const [filterTrangThai, setFilterTrangThai] = useState('Tất cả')
 
   useEffect(() => {
-    if (!Cookies.get('isLoggedIn')) {
-      router.push('/')
-      return
-    }
+    if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
     loadBaiTap()
   }, [])
 
@@ -37,19 +45,16 @@ export default function TrangChu() {
       const userInfo = JSON.parse(decodeURIComponent(raw))
       const taiKhoan = userInfo.taiKhoan
 
-      // 1. Lấy assignments của user
       const assignSnap = await getDocs(query(
         collection(db, 'assignments'),
         where('userId', '==', taiKhoan)
       ))
 
-      // 2. Lấy tất cả submissions của user (1 lần duy nhất)
       const subSnap = await getDocs(query(
         collection(db, 'submissions'),
         where('userId', '==', taiKhoan)
       ))
 
-      // Map: exerciseId -> submission có điểm cao nhất
       const subMap = {}
       subSnap.docs.forEach(d => {
         const data = d.data()
@@ -59,18 +64,12 @@ export default function TrangChu() {
         }
       })
 
-      // 3. Lấy chi tiết từng exercise
       const baiTapData = await Promise.all(
         assignSnap.docs.map(async (assignDoc) => {
           const assign = assignDoc.data()
           const exSnap = await getDoc(doc(db, 'exercises', assign.exerciseId))
+          if (!exSnap.exists()) return null
           const bestSub = subMap[assign.exerciseId]
-
-          const diem = bestSub?.diem ?? null
-          const tongCau = bestSub?.tongCau ?? null
-          const duocXemLai = bestSub
-            ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.5
-            : false
 
           return {
             id: assignDoc.id,
@@ -78,15 +77,21 @@ export default function TrangChu() {
             thoiGianGiao: assign.thoiGianGiao,
             ...exSnap.data(),
             trangThai: bestSub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
-            diem,
-            tongCau,
+            diem: bestSub?.diem ?? null,
+            tongCau: bestSub?.tongCau ?? null,
             thoiGianNop: bestSub?.thoiGianNop ?? null,
-            duocXemLai,
+            duocXemLai: bestSub
+              ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.5
+              : false,
           }
         })
       )
 
-      setBaiTapList(baiTapData)
+      const sorted = baiTapData
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.thoiGianGiao) - new Date(a.thoiGianGiao))
+
+      setBaiTapList(sorted)
     } catch (err) {
       console.error(err)
     } finally {
@@ -94,38 +99,87 @@ export default function TrangChu() {
     }
   }
 
+  const daDam = baiTapList.filter(b => b.trangThai === 'Đã làm').length
+  const chuaLam = baiTapList.filter(b => b.trangThai === 'Chưa làm').length
+
+  const filtered = baiTapList.filter(b => {
+    const okMucDo = filterMucDo === 'Tất cả' || b.mucDo === filterMucDo
+    const okTrangThai = filterTrangThai === 'Tất cả' || b.trangThai === filterTrangThai
+    return okMucDo && okTrangThai
+  })
+
   if (loading) return (
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
       <p style={{ color: '#185FA5' }}>Đang tải...</p>
     </main>
   )
 
-  const daDam = baiTapList.filter(b => b.trangThai === 'Đã làm').length
-  const chuaLam = baiTapList.filter(b => b.trangThai === 'Chưa làm').length
-
   return (
-    <main style={{ padding: '24px 16px', maxWidth: '860px', margin: '0 auto' }}>
+    <main style={{ padding: '24px 16px', maxWidth: '960px', margin: '0 auto' }}>
+
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, color: '#0C447C' }}>Bài tập của tôi</h2>
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
           <span style={{
             padding: '4px 12px', borderRadius: '20px',
             backgroundColor: '#E1F5EE', color: '#085041', fontSize: '13px', fontWeight: '500'
-          }}>
-            ✅ Đã làm: {daDam}
-          </span>
+          }}>✅ Đã làm: {daDam}</span>
           <span style={{
             padding: '4px 12px', borderRadius: '20px',
             backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '13px', fontWeight: '500'
-          }}>
-            ⏳ Chưa làm: {chuaLam}
-          </span>
+          }}>⏳ Chưa làm: {chuaLam}</span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-        {baiTapList.map(bai => <CardBaiTap key={bai.id} bai={bai} />)}
+      {/* Filter bar */}
+      <div style={{
+        display: 'flex', gap: '24px', marginBottom: '20px',
+        padding: '14px 16px', backgroundColor: 'white',
+        borderRadius: '12px', border: '1px solid #B5D4F4',
+        flexWrap: 'wrap', alignItems: 'center',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Mức độ:</span>
+          {cacMucDo.map(m => (
+            <button key={m} onClick={() => setFilterMucDo(m)} style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
+              border: `1.5px solid ${filterMucDo === m ? '#185FA5' : '#B5D4F4'}`,
+              backgroundColor: filterMucDo === m ? '#185FA5' : 'white',
+              color: filterMucDo === m ? 'white' : '#555',
+              fontWeight: filterMucDo === m ? '600' : '400',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>{m}</button>
+          ))}
+        </div>
+
+        <div style={{ width: '1px', height: '24px', backgroundColor: '#B5D4F4' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Trạng thái:</span>
+          {cacTrangThai.map(t => (
+            <button key={t} onClick={() => setFilterTrangThai(t)} style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
+              border: `1.5px solid ${filterTrangThai === t ? '#185FA5' : '#B5D4F4'}`,
+              backgroundColor: filterTrangThai === t ? '#185FA5' : 'white',
+              color: filterTrangThai === t ? 'white' : '#555',
+              fontWeight: filterTrangThai === t ? '600' : '400',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>{t}</button>
+          ))}
+        </div>
       </div>
+
+      {/* Danh sách */}
+      {filtered.length === 0 ? (
+        <p style={{ color: '#888', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>
+          Không có bài tập nào phù hợp.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          {filtered.map(bai => <CardBaiTap key={bai.id} bai={bai} />)}
+        </div>
+      )}
     </main>
   )
 }
@@ -135,6 +189,7 @@ function CardBaiTap({ bai }) {
   const [hoverXem, setHoverXem] = useState(false)
   const mau = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
   const mauHeader = mauKyNang[bai.kyNang] || { bg: '#185FA5', text: 'white' }
+  const mauDo = mauMucDo[bai.mucDo] || null
   const router = useRouter()
   const daDam = bai.trangThai === 'Đã làm'
 
@@ -147,27 +202,30 @@ function CardBaiTap({ bai }) {
   return (
     <div style={{
       border: `1px solid ${daDam ? '#9FE1CB' : '#B5D4F4'}`,
-      borderRadius: '16px',
-      width: '160px',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: 'white',
-      overflow: 'hidden',
+      borderRadius: '16px', width: '160px',
+      display: 'flex', flexDirection: 'column',
+      backgroundColor: 'white', overflow: 'hidden',
     }}>
-      {/* Thanh tiêu đề kỹ năng */}
       <div style={{ backgroundColor: mauHeader.bg, padding: '8px 12px', textAlign: 'center' }}>
         <span style={{ color: mauHeader.text, fontSize: '12px', fontWeight: '600', letterSpacing: '0.5px' }}>
           {bai.loaiBai} · {bai.kyNang}
         </span>
       </div>
 
-      {/* Nội dung */}
-      <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+      <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
         <p style={{ margin: 0, fontWeight: '600', fontSize: '14px', color: '#0C447C', lineHeight: '1.4' }}>
           {bai.tenBaiTap}
         </p>
 
-        {/* Trạng thái */}
+        {mauDo && (
+          <span style={{
+            padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '500',
+            backgroundColor: mauDo.bg, color: mauDo.text, alignSelf: 'flex-start',
+          }}>
+            {bai.mucDo}
+          </span>
+        )}
+
         <div style={{
           padding: '3px 10px', borderRadius: '20px',
           backgroundColor: mau.bg, color: mau.text,
@@ -176,22 +234,19 @@ function CardBaiTap({ bai }) {
           {bai.trangThai}
         </div>
 
-        {/* Thời gian nộp nếu đã làm */}
         {bai.thoiGianNop && (
           <p style={{ margin: 0, fontSize: '11px', color: '#888' }}>
             🕐 {formatNgay(bai.thoiGianNop)}
           </p>
         )}
 
-        {/* Điểm */}
         <p style={{
-          margin: 0, fontSize: '13px',
-          color: bai.diem !== null ? '#1D9E75' : '#B5D4F4', fontWeight: '500',
+          margin: 0, fontSize: '13px', fontWeight: '500',
+          color: bai.diem !== null ? '#1D9E75' : '#B5D4F4',
         }}>
           {bai.diem !== null ? `${bai.diem} / ${bai.tongCau}` : '— / —'}
         </p>
 
-        {/* Nút làm bài (luôn hiện) + Xem lại (nếu đủ điều kiện) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
           <button
             onClick={() => router.push(`/bai-tap/${bai.exerciseId}`)}
@@ -203,9 +258,7 @@ function CardBaiTap({ bai }) {
               color: 'white', fontSize: '13px', fontWeight: '500',
               cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
             }}
-          >
-            Làm bài
-          </button>
+          >Làm bài</button>
 
           {bai.duocXemLai && (
             <button
@@ -219,9 +272,7 @@ function CardBaiTap({ bai }) {
                 color: '#1D9E75', fontSize: '13px', fontWeight: '500',
                 cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
               }}
-            >
-              Xem lại
-            </button>
+            >Xem lại</button>
           )}
         </div>
       </div>

@@ -72,7 +72,7 @@ export default function VocabPage({ params }) {
     try {
       const userInfo = getUserInfo()
       const taiKhoan = userInfo?.taiKhoan
-      const isListening = exercise?.loaiBai === 'Vocab Listening'
+      const isListening = exercise?.kyNang === 'Vocab Listening'
 
       let soCauDung = 0
       words.forEach((w, i) => {
@@ -123,7 +123,7 @@ export default function VocabPage({ params }) {
     </main>
   )
 
-  const isListening = exercise.loaiBai === 'Vocab Listening'
+  const isListening = exercise.kyNang === 'Vocab Listening'
   const soCauDaLam = Object.keys(answers).filter(k => answers[k]?.trim()).length
   const soCauChuaLam = words.length - soCauDaLam
   const mauHeader = isListening ? '#1D9E75' : '#378ADD'

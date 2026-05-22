@@ -251,7 +251,7 @@ function CardBaiTap({ bai }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
           <button
-            onClick={() => router.push(getExerciseRoute(bai.loaiBai, bai.exerciseId))}
+            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId))}
             onMouseEnter={() => setHoverLam(true)}
             onMouseLeave={() => setHoverLam(false)}
             style={{
@@ -264,7 +264,7 @@ function CardBaiTap({ bai }) {
 
           {bai.duocXemLai && (
             <button
-              onClick={() => router.push(getExerciseRoute(bai.loaiBai, bai.exerciseId, '?review=true'))}
+              onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, '?review=true'))}
               onMouseEnter={() => setHoverXem(true)}
               onMouseLeave={() => setHoverXem(false)}
               style={{

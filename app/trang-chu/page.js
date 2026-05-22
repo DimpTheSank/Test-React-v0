@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
+import { getExerciseRoute } from '@/lib/exerciseRoute'
 
 const mauTrangThai = {
   'Đã làm':   { bg: '#E1F5EE', text: '#085041' },
@@ -250,7 +251,7 @@ function CardBaiTap({ bai }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
           <button
-            onClick={() => router.push(`/bai-tap/${bai.exerciseId}`)}
+            onClick={() => router.push(getExerciseRoute(bai.loaiBai, bai.exerciseId))}
             onMouseEnter={() => setHoverLam(true)}
             onMouseLeave={() => setHoverLam(false)}
             style={{
@@ -263,7 +264,7 @@ function CardBaiTap({ bai }) {
 
           {bai.duocXemLai && (
             <button
-              onClick={() => router.push(`/bai-tap/${bai.exerciseId}?review=true`)}
+              onClick={() => router.push(getExerciseRoute(bai.loaiBai, bai.exerciseId, '?review=true'))}
               onMouseEnter={() => setHoverXem(true)}
               onMouseLeave={() => setHoverXem(false)}
               style={{

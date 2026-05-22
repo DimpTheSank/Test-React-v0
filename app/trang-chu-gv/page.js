@@ -420,14 +420,14 @@ function ModalTaoBai({ onClose, onCreated }) {
           <label style={labelStyle}>Loại bài</label>
           <select style={inputStyle} value={form.loaiBai}
             onChange={e => setForm(f => ({ ...f, loaiBai: e.target.value }))}>
-            {['IELTS', 'TOEIC', 'TOEFL', 'Vocab Reading', 'Vocab Listening', 'Khác'].map(v => <option key={v}>{v}</option>)}
+            {['IELTS', 'TOEIC', 'TOEFL', 'Vocabulary', 'Khác'].map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           <label style={labelStyle}>Kỹ năng</label>
           <select style={inputStyle} value={form.kyNang}
             onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
-            {['Reading', 'Listening', 'Writing', 'Speaking'].map(v => <option key={v}>{v}</option>)}
+            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening'].map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
       </div>

@@ -395,8 +395,8 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
     const utter = new SpeechSynthesisUtterance(correct)
-    utter.lang = 'en-US'
-    utter.rate = 0.85
+    utter.lang = 'en-GB'
+    utter.rate = 0.75
     utter.onstart = () => setSpeaking(true)
     utter.onend = () => setSpeaking(false)
     utter.onerror = () => setSpeaking(false)

@@ -6,6 +6,8 @@ import { db } from '@/lib/firebase'
 import { doc, getDoc, addDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore'
 import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
+import { useHighlight } from '@/lib/useHighlight'
+import HighlightToolbar from '@/app/components/HighlightToolbar'
 
 const mauKyNang = {
   'Reading':   '#378ADD',
@@ -28,6 +30,8 @@ export default function BaiTap({ params }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitDone, setSubmitDone] = useState(false)
   const [ketQua, setKetQua] = useState(null)
+
+  const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
 
   // Review mode
   const [reviewAnswers, setReviewAnswers] = useState({})
@@ -418,7 +422,9 @@ export default function BaiTap({ params }) {
         </div>
 
         {/* Vùng 2: Nội dung */}
-        <div style={{
+        <div
+          id="content-panel"
+          style={{
           flex: 1.2, borderRight: '1px solid #B5D4F4',
           padding: '20px', overflowY: 'auto',
           display: 'flex', flexDirection: 'column', gap: '16px',
@@ -447,10 +453,13 @@ export default function BaiTap({ params }) {
         </div>
 
         {/* Vùng 3: Câu hỏi & Đáp án */}
-        <div style={{
-          flex: 1, padding: '20px', overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', gap: '35px',
-        }}>
+        <div
+          id="question-panel"
+          style={{
+            flex: 1, padding: '20px', overflowY: 'auto',
+            display: 'flex', flexDirection: 'column', gap: '35px',
+          }}
+        >
           {questionsInGroup.map((q) => (
             <div
               key={q.globalIndex}
@@ -633,6 +642,11 @@ export default function BaiTap({ params }) {
         </div>
 
       </div>
+      <HighlightToolbar
+        toolbar={toolbar}
+        onHighlight={applyHighlight}
+        onClose={hideToolbar}
+      />
     </main>
   )
 }

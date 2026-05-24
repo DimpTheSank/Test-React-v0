@@ -219,7 +219,7 @@ export default function BaiTap({ params }) {
           gap: 35px;
         }
 
-        /* Desktop: vùng 2 và 3 xếp dọc (mặc định), có border phải giữa vùng 1 */
+        /* Desktop: vùng 2 và 3 nằm ngang cạnh nhau */
         @media (min-width: 769px) {
           .bt-vung1 {
             border-right: 1px solid #B5D4F4;
@@ -237,7 +237,7 @@ export default function BaiTap({ params }) {
           }
         }
 
-        /* Mobile: vùng 2 và 3 chia ngang (row), vùng 1 ở trái dạng thanh hẹp */
+        /* Mobile: vùng 1 ở trái hẹp, vùng 2 trên + vùng 3 dưới */
         @media (max-width: 768px) {
           .bt-vung1 {
             width: 48px !important;
@@ -250,19 +250,22 @@ export default function BaiTap({ params }) {
             font-size: 11px !important;
           }
           .bt-vung2-3 {
-            flex-direction: row;
+            flex-direction: column;
             flex: 1;
           }
           .bt-vung2 {
-            flex: 1;
-            border-right: 1px solid #B5D4F4;
-            border-bottom: none;
+            flex: none;
+            max-height: 40%;
+            border-right: none;
+            border-bottom: 1px solid #B5D4F4;
             padding: 12px;
+            overflow-y: auto;
           }
           .bt-vung3 {
             flex: 1;
             padding: 12px;
-            gap: 20px;
+            gap: 16px;
+            overflow-y: auto;
           }
           .bt-nav-btn {
             padding: 8px 4px !important;

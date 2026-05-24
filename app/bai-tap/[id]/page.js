@@ -33,7 +33,6 @@ export default function BaiTap({ params }) {
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
 
-  // Review mode
   const [reviewAnswers, setReviewAnswers] = useState({})
 
   useEffect(() => {
@@ -75,7 +74,6 @@ export default function BaiTap({ params }) {
       }))
       setQuestions(processedData)
 
-      // Nếu là review mode, load submission tốt nhất
       if (isReview) {
         const userInfo = getUserInfo()
         const subSnap = await getDocs(query(
@@ -103,7 +101,6 @@ export default function BaiTap({ params }) {
       const userInfo = getUserInfo()
       const taiKhoan = userInfo?.taiKhoan
 
-      // Tính điểm
       let soCauDung = 0
       questions.forEach((q) => {
         const correctRaw = q.Correct_Ans?.trim()
@@ -117,10 +114,8 @@ export default function BaiTap({ params }) {
           const userParts = (userAns || []).map(s => s.trim().toLowerCase())
           if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
         }
-        // fill_long không tự chấm
       })
 
-      // Tìm assignmentId
       const assignQuery = query(
         collection(db, 'assignments'),
         where('userId', '==', taiKhoan),
@@ -129,7 +124,6 @@ export default function BaiTap({ params }) {
       const assignSnap = await getDocs(assignQuery)
       const assignmentId = assignSnap.docs[0]?.id || null
 
-      // Lưu submission
       await addDoc(collection(db, 'submissions'), {
         userId: taiKhoan,
         exerciseId: id,
@@ -141,7 +135,6 @@ export default function BaiTap({ params }) {
         trangThai: 'Đã nộp',
       })
 
-      // Cập nhật trạng thái assignment nếu có
       if (assignmentId) {
         await updateDoc(doc(db, 'assignments', assignmentId), {
           trangThai: 'Đã làm',
@@ -159,18 +152,13 @@ export default function BaiTap({ params }) {
     }
   }
 
-  // Helper: lấy trạng thái từng câu khi review
   const getReviewBorderColor = (q, optKey) => {
     const userAns = reviewAnswers[q.globalIndex]
     const correct = q.Correct_Ans?.trim()
-
-    if (!userAns) {
-      // Chưa chọn: tất cả đáp án viền vàng
-      return '#F0A500'
-    }
-    if (optKey === correct) return '#1D9E75'         // đáp án đúng: xanh lá
-    if (optKey === userAns) return '#E24B4A'          // chọn sai: đỏ
-    return '#B5D4F4'                                  // các đáp án còn lại: bình thường
+    if (!userAns) return '#F0A500'
+    if (optKey === correct) return '#1D9E75'
+    if (optKey === userAns) return '#E24B4A'
+    return '#B5D4F4'
   }
 
   const currentCau = questions[cauHienTai]
@@ -199,23 +187,90 @@ export default function BaiTap({ params }) {
 
   return (
     <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-      <style>{`
-        .vung-chinh { display: flex; flex: 1; overflow: hidden; }
-        .vung-2 { flex: 1.2; border-right: 1px solid #B5D4F4; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-        .vung-3 { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 35px; }
 
-        @media (max-width: 768px) {
-          .vung-chinh { flex-direction: column; }
-          .vung-2-3-wrapper {
-            display: flex;
-            flex-direction: row;   /* ← 2 và 3 nằm ngang */
-            flex: 1;
-            overflow: hidden;
+      {/* ── Responsive styles ── */}
+      <style>{`
+        .bt-body {
+          display: flex;
+          flex: 1;
+          overflow: hidden;
+        }
+        .bt-vung2-3 {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+        }
+        .bt-vung2 {
+          flex: 1.2;
+          border-bottom: 1px solid #B5D4F4;
+          padding: 20px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .bt-vung3 {
+          flex: 1;
+          padding: 20px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 35px;
+        }
+
+        /* Desktop: vùng 2 và 3 xếp dọc (mặc định), có border phải giữa vùng 1 */
+        @media (min-width: 769px) {
+          .bt-vung1 {
+            border-right: 1px solid #B5D4F4;
           }
-          .vung-2 { flex: 1; border-right: 1px solid #B5D4F4; border-bottom: none; overflow-y: auto; }
-          .vung-3 { flex: 1; overflow-y: auto; }
+          .bt-vung2 {
+            border-right: 1px solid #B5D4F4;
+            border-bottom: none;
+            flex: 1.2;
+          }
+          .bt-vung2-3 {
+            flex-direction: row;
+          }
+          .bt-vung3 {
+            flex: 1;
+          }
+        }
+
+        /* Mobile: vùng 2 và 3 chia ngang (row), vùng 1 ở trái dạng thanh hẹp */
+        @media (max-width: 768px) {
+          .bt-vung1 {
+            width: 48px !important;
+            min-width: 48px !important;
+            border-right: 1px solid #B5D4F4;
+          }
+          .bt-vung1 .so-cau {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 11px !important;
+          }
+          .bt-vung2-3 {
+            flex-direction: row;
+            flex: 1;
+          }
+          .bt-vung2 {
+            flex: 1;
+            border-right: 1px solid #B5D4F4;
+            border-bottom: none;
+            padding: 12px;
+          }
+          .bt-vung3 {
+            flex: 1;
+            padding: 12px;
+            gap: 20px;
+          }
+          .bt-nav-btn {
+            padding: 8px 4px !important;
+            font-size: 12px !important;
+          }
         }
       `}</style>
+
       {/* Dialog xác nhận nộp bài */}
       {showConfirm && !submitDone && (
         <div style={{
@@ -225,57 +280,30 @@ export default function BaiTap({ params }) {
         }}>
           <div style={{
             backgroundColor: 'white', borderRadius: '16px',
-            padding: '32px', width: '340px',
+            padding: '32px', width: '340px', maxWidth: '90vw',
             display: 'flex', flexDirection: 'column', gap: '16px',
             boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
           }}>
             <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Xác nhận nộp bài</h3>
-
             {soCauChuaLam > 0 ? (
-              <div style={{
-                backgroundColor: '#FAEEDA', borderRadius: '10px',
-                padding: '12px 16px', textAlign: 'center',
-              }}>
+              <div style={{ backgroundColor: '#FAEEDA', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
                 <span style={{ color: '#633806', fontSize: '14px', fontWeight: '500' }}>
                   ⚠️ Bạn còn <strong>{soCauChuaLam}</strong> câu chưa làm.
                 </span>
               </div>
             ) : (
-              <div style={{
-                backgroundColor: '#E1F5EE', borderRadius: '10px',
-                padding: '12px 16px', textAlign: 'center',
-              }}>
+              <div style={{ backgroundColor: '#E1F5EE', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
                 <span style={{ color: '#085041', fontSize: '14px', fontWeight: '500' }}>
                   ✅ Bạn đã hoàn thành tất cả {questions.length} câu!
                 </span>
               </div>
             )}
-
             <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
               Sau khi nộp bạn không thể chỉnh sửa đáp án.
             </p>
-
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => setShowConfirm(false)}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '8px',
-                  border: '1px solid #B5D4F4', backgroundColor: 'white',
-                  color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
-                }}
-              >
-                Làm tiếp
-              </button>
-              <button
-                onClick={handleNopBai}
-                disabled={isSubmitting}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '8px',
-                  border: 'none', backgroundColor: '#1D9E75',
-                  color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px',
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
-              >
+              <button onClick={() => setShowConfirm(false)} style={btnSecondary}>Làm tiếp</button>
+              <button onClick={handleNopBai} disabled={isSubmitting} style={{ ...btnPrimary, backgroundColor: '#1D9E75', opacity: isSubmitting ? 0.7 : 1 }}>
                 {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
               </button>
             </div>
@@ -292,7 +320,7 @@ export default function BaiTap({ params }) {
         }}>
           <div style={{
             backgroundColor: 'white', borderRadius: '16px',
-            padding: '40px 32px', width: '340px',
+            padding: '40px 32px', width: '340px', maxWidth: '90vw',
             display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center',
             boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
           }}>
@@ -301,14 +329,7 @@ export default function BaiTap({ params }) {
             <p style={{ fontSize: '20px', fontWeight: '700', color: '#1D9E75', margin: 0 }}>
               {ketQua?.dung} / {ketQua?.tong} câu đúng
             </p>
-            <button
-              onClick={() => router.push('/trang-chu')}
-              style={{
-                width: '100%', padding: '12px', borderRadius: '8px',
-                border: 'none', backgroundColor: '#378ADD',
-                color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '15px',
-              }}
-            >
+            <button onClick={() => router.push('/trang-chu')} style={{ ...btnPrimary, width: '100%' }}>
               Về trang chủ
             </button>
           </div>
@@ -322,6 +343,7 @@ export default function BaiTap({ params }) {
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        flexShrink: 0,
       }}>
         <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
           {exercise.loaiBai} · {exercise.kyNang}
@@ -343,22 +365,14 @@ export default function BaiTap({ params }) {
           Câu {cauHienTai + 1} / {questions.length}
         </span>
 
-        {/* Nút nộp bài — ẩn khi review */}
         {!isReview && (
           <button
             onClick={() => setShowConfirm(true)}
             style={{
-              marginLeft: '12px',
-              padding: '7px 18px',
-              borderRadius: '8px',
-              border: '2px solid white',
-              backgroundColor: 'transparent',
-              color: 'white',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s',
-              whiteSpace: 'nowrap',
+              marginLeft: '12px', padding: '7px 18px', borderRadius: '8px',
+              border: '2px solid white', backgroundColor: 'transparent',
+              color: 'white', fontSize: '13px', fontWeight: '600',
+              cursor: 'pointer', transition: 'background-color 0.2s', whiteSpace: 'nowrap',
             }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -367,21 +381,22 @@ export default function BaiTap({ params }) {
           </button>
         )}
       </div>
-      <div className="vung-chinh"></div>
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-          {/* Vùng 1: Số câu */}
-          <div style={{
+      {/* ── Body: Vùng 1 + (Vùng 2 & 3) ── */}
+      <div className="bt-body">
+
+        {/* Vùng 1: Số câu */}
+        <div
+          className="bt-vung1"
+          style={{
             width: '72px', minWidth: '72px',
-            borderRight: '1px solid #B5D4F4', backgroundColor: '#E6F1FB',
+            backgroundColor: '#E6F1FB',
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             padding: '12px 0', gap: '6px', overflowY: 'auto',
-          }}>
+          }}
+        >
           {questions.map((q, i) => {
-            // Màu ô số câu khi review
-            let bgColor = 'white'
-            let textColor = '#378ADD'
-            let borderColor = '#B5D4F4'
+            let bgColor = 'white', textColor = '#378ADD', borderColor = '#B5D4F4'
 
             if (i === cauHienTai) {
               bgColor = '#185FA5'; textColor = 'white'; borderColor = '#185FA5'
@@ -402,6 +417,7 @@ export default function BaiTap({ params }) {
             return (
               <div
                 key={i}
+                className="so-cau"
                 onClick={() => setCauHienTai(i)}
                 style={{
                   width: '36px', height: '36px', borderRadius: '6px',
@@ -409,7 +425,7 @@ export default function BaiTap({ params }) {
                   fontSize: '13px', fontWeight: '500', cursor: 'pointer',
                   backgroundColor: bgColor, color: textColor,
                   border: `1px solid ${borderColor}`,
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
                 }}
               >
                 {i + 1}
@@ -417,15 +433,13 @@ export default function BaiTap({ params }) {
             )
           })}
 
-          {/* Nút nộp bài mini — ẩn khi review */}
           {!isReview && (
             <>
               <div style={{ flex: 1 }} />
               <button
                 onClick={() => setShowConfirm(true)}
                 style={{
-                  width: '48px', padding: '8px 0',
-                  borderRadius: '8px', border: 'none',
+                  width: '48px', padding: '8px 0', borderRadius: '8px', border: 'none',
                   backgroundColor: '#1D9E75', color: 'white',
                   fontSize: '11px', fontWeight: '600', cursor: 'pointer',
                   marginBottom: '4px', lineHeight: '1.3',
@@ -435,18 +449,13 @@ export default function BaiTap({ params }) {
               </button>
             </>
           )}
-          </div>
-        {/* Wrapper cho vùng 2 + 3 */}
-        <div className="vung-2-3-wrapper" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          <div className="vung-2" style={{}}>
-          {/* Vùng 2: Nội dung */}
-          <div
-            id="content-panel"
-            style={{
-            flex: 1.2, borderRight: '1px solid #B5D4F4',
-            padding: '20px', overflowY: 'auto',
-            display: 'flex', flexDirection: 'column', gap: '16px',
-          }}>
+        </div>
+
+        {/* Vùng 2 + Vùng 3 wrapper */}
+        <div className="bt-vung2-3">
+
+          {/* Vùng 2: Nội dung (audio / hình) */}
+          <div className="bt-vung2">
             {firstInGroup?.Audios?.map((src, i) => (
               <iframe
                 key={src + i}
@@ -468,27 +477,17 @@ export default function BaiTap({ params }) {
             {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
               <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
             )}
-            </div>
           </div>
-        <div className="vung-3" style={{}}></div>
+
           {/* Vùng 3: Câu hỏi & Đáp án */}
-          <div
-            id="question-panel"
-            style={{
-              flex: 1, padding: '20px', overflowY: 'auto',
-              display: 'flex', flexDirection: 'column', gap: '35px',
-            }}
-          >
+          <div className="bt-vung3">
             {questionsInGroup.map((q) => (
               <div
                 key={q.globalIndex}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
+                  display: 'flex', flexDirection: 'column', gap: '12px',
                   backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent',
-                  padding: '10px',
-                  borderRadius: '8px'
+                  padding: '10px', borderRadius: '8px',
                 }}
               >
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#185FA5' }}>
@@ -513,7 +512,6 @@ export default function BaiTap({ params }) {
                               : opt.key === reviewAnswers[q.globalIndex] ? '#791F1F'
                               : '#378ADD')
                             : (answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD')
-
                           return (
                             <div
                               key={opt.key}
@@ -521,8 +519,7 @@ export default function BaiTap({ params }) {
                               style={{
                                 padding: '10px 14px', borderRadius: '8px',
                                 border: `1.5px solid ${border}`,
-                                backgroundColor: bg,
-                                color,
+                                backgroundColor: bg, color,
                                 fontSize: '14px',
                                 cursor: isReview ? 'default' : 'pointer',
                                 transition: 'all 0.15s',
@@ -547,7 +544,6 @@ export default function BaiTap({ params }) {
                               : key === reviewAnswers[q.globalIndex] ? '#791F1F'
                               : '#888')
                             : (answers[q.globalIndex] === key ? '#0C447C' : '#888')
-
                           return (
                             <div
                               key={key}
@@ -555,10 +551,9 @@ export default function BaiTap({ params }) {
                               style={{
                                 padding: '10px 14px', borderRadius: '8px',
                                 border: `1.5px solid ${border}`,
-                                backgroundColor: bg,
-                                color,
+                                backgroundColor: bg, color,
                                 fontSize: '14px', cursor: isReview ? 'default' : 'pointer',
-                                fontWeight: '600', textAlign: 'center'
+                                fontWeight: '600', textAlign: 'center',
                               }}
                             >
                               {key}
@@ -568,100 +563,100 @@ export default function BaiTap({ params }) {
                     }
                   </div>
                 )}
-                
 
-              {q.Question_Type === 'fill_short' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
-                    <input
-                      key={i} type="text"
-                      placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
-                      value={isReview
-                        ? (reviewAnswers[q.globalIndex]?.[i] || '')
-                        : (answers[q.globalIndex]?.[i] || '')}
-                      readOnly={isReview}
-                      onChange={(e) => {
-                        if (isReview) return
-                        const prev = answers[q.globalIndex] || []
-                        const newArr = [...prev]
-                        newArr[i] = e.target.value
-                        setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
-                      }}
-                      style={{
-                        padding: '10px 14px', borderRadius: '8px',
-                        border: '1px solid #B5D4F4', outline: 'none',
-                        backgroundColor: isReview ? '#F8FBFF' : 'white',
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
+                {q.Question_Type === 'fill_short' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
+                      <input
+                        key={i} type="text"
+                        placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
+                        value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
+                        readOnly={isReview}
+                        onChange={(e) => {
+                          if (isReview) return
+                          const prev = answers[q.globalIndex] || []
+                          const newArr = [...prev]
+                          newArr[i] = e.target.value
+                          setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
+                        }}
+                        style={{
+                          padding: '10px 14px', borderRadius: '8px',
+                          border: '1px solid #B5D4F4', outline: 'none',
+                          backgroundColor: isReview ? '#F8FBFF' : 'white',
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
 
-              {q.Question_Type === 'fill_long' && (
-                <textarea
-                  placeholder="Nhập bài làm của bạn..."
-                  value={isReview
-                    ? (reviewAnswers[q.globalIndex] || '')
-                    : (answers[q.globalIndex] || '')}
-                  readOnly={isReview}
-                  onChange={(e) => {
-                    if (isReview) return
-                    setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value }))
-                  }}
+                {q.Question_Type === 'fill_long' && (
+                  <textarea
+                    placeholder="Nhập bài làm của bạn..."
+                    value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
+                    readOnly={isReview}
+                    onChange={(e) => {
+                      if (isReview) return
+                      setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value }))
+                    }}
+                    style={{
+                      padding: '10px 14px', borderRadius: '8px',
+                      border: '1px solid #B5D4F4', minHeight: '120px',
+                      resize: 'vertical', outline: 'none',
+                      backgroundColor: isReview ? '#F8FBFF' : 'white',
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+
+            {/* Nút điều hướng */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
+              <button
+                className="bt-nav-btn"
+                onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
+                disabled={cauHienTai === 0}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #B5D4F4',
+                  backgroundColor: 'white', color: '#378ADD',
+                  cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer',
+                  opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500',
+                }}
+              >
+                ← Trước
+              </button>
+
+              {!isReview && cauHienTai === questions.length - 1 ? (
+                <button
+                  className="bt-nav-btn"
+                  onClick={() => setShowConfirm(true)}
                   style={{
-                    padding: '10px 14px', borderRadius: '8px',
-                    border: '1px solid #B5D4F4', minHeight: '120px',
-                    resize: 'vertical', outline: 'none',
-                    backgroundColor: isReview ? '#F8FBFF' : 'white',
+                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                    backgroundColor: '#1D9E75', color: 'white',
+                    fontWeight: '600', cursor: 'pointer', fontSize: '14px',
                   }}
-                />
+                >
+                  Nộp bài ✓
+                </button>
+              ) : (
+                <button
+                  className="bt-nav-btn"
+                  onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
+                  disabled={cauHienTai === questions.length - 1}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                    backgroundColor: '#378ADD', color: 'white',
+                    cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer',
+                    opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500',
+                  }}
+                >
+                  Tiếp →
+                </button>
               )}
             </div>
-          ))}
-          
-          {/* Nút điều hướng */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
-            <button
-              onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
-              disabled={cauHienTai === 0}
-              style={{
-                flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #B5D4F4',
-                backgroundColor: 'white', color: '#378ADD', cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer',
-                opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500'
-              }}
-            >
-              ← Câu trước
-            </button>
-
-            {!isReview && cauHienTai === questions.length - 1 ? (
-              <button
-                onClick={() => setShowConfirm(true)}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                  backgroundColor: '#1D9E75', color: 'white',
-                  fontWeight: '600', cursor: 'pointer', fontSize: '14px',
-                }}
-              >
-                Nộp bài ✓
-              </button>
-            ) : (
-              <button
-                onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
-                disabled={cauHienTai === questions.length - 1}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                  backgroundColor: '#378ADD', color: 'white',
-                  fontWeight: '500', cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer',
-                  opacity: cauHienTai === questions.length - 1 ? 0.4 : 1,
-                }}
-              >
-                Câu tiếp →
-              </button>
-            )}
           </div>
-        </div>
-      </div>
-      </div>
+
+        </div>{/* end bt-vung2-3 */}
+      </div>{/* end bt-body */}
       <HighlightToolbar
         toolbar={toolbar}
         onHighlight={applyHighlight}
@@ -669,4 +664,16 @@ export default function BaiTap({ params }) {
       />
     </main>
   )
+}
+
+const btnPrimary = {
+  flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+  backgroundColor: '#185FA5', color: 'white',
+  fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+}
+
+const btnSecondary = {
+  flex: 1, padding: '12px', borderRadius: '8px',
+  border: '1px solid #B5D4F4', backgroundColor: 'white',
+  color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
 }

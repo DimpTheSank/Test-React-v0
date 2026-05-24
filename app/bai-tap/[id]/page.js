@@ -199,7 +199,23 @@ export default function BaiTap({ params }) {
 
   return (
     <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        .vung-chinh { display: flex; flex: 1; overflow: hidden; }
+        .vung-2 { flex: 1.2; border-right: 1px solid #B5D4F4; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .vung-3 { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 35px; }
 
+        @media (max-width: 768px) {
+          .vung-chinh { flex-direction: column; }
+          .vung-2-3-wrapper {
+            display: flex;
+            flex-direction: row;   /* ← 2 và 3 nằm ngang */
+            flex: 1;
+            overflow: hidden;
+          }
+          .vung-2 { flex: 1; border-right: 1px solid #B5D4F4; border-bottom: none; overflow-y: auto; }
+          .vung-3 { flex: 1; overflow-y: auto; }
+        }
+      `}</style>
       {/* Dialog xác nhận nộp bài */}
       {showConfirm && !submitDone && (
         <div style={{
@@ -351,16 +367,16 @@ export default function BaiTap({ params }) {
           </button>
         )}
       </div>
+      <div className="vung-chinh"></div>
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-
-        {/* Vùng 1: Số câu */}
-        <div style={{
-          width: '72px', minWidth: '72px',
-          borderRight: '1px solid #B5D4F4', backgroundColor: '#E6F1FB',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '12px 0', gap: '6px', overflowY: 'auto',
-        }}>
+          {/* Vùng 1: Số câu */}
+          <div style={{
+            width: '72px', minWidth: '72px',
+            borderRight: '1px solid #B5D4F4', backgroundColor: '#E6F1FB',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            padding: '12px 0', gap: '6px', overflowY: 'auto',
+          }}>
           {questions.map((q, i) => {
             // Màu ô số câu khi review
             let bgColor = 'white'
@@ -419,136 +435,140 @@ export default function BaiTap({ params }) {
               </button>
             </>
           )}
-        </div>
+          </div>
+        {/* Wrapper cho vùng 2 + 3 */}
+        <div className="vung-2-3-wrapper" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <div className="vung-2" style={{}}>
+          {/* Vùng 2: Nội dung */}
+          <div
+            id="content-panel"
+            style={{
+            flex: 1.2, borderRight: '1px solid #B5D4F4',
+            padding: '20px', overflowY: 'auto',
+            display: 'flex', flexDirection: 'column', gap: '16px',
+          }}>
+            {firstInGroup?.Audios?.map((src, i) => (
+              <iframe
+                key={src + i}
+                src={src}
+                width="100%" height="80"
+                style={{ border: 'none', borderRadius: '8px' }}
+              />
+            ))}
 
-        {/* Vùng 2: Nội dung */}
-        <div
-          id="content-panel"
-          style={{
-          flex: 1.2, borderRight: '1px solid #B5D4F4',
-          padding: '20px', overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', gap: '16px',
-        }}>
-          {firstInGroup?.Audios?.map((src, i) => (
-            <iframe
-              key={src + i}
-              src={src}
-              width="100%" height="80"
-              style={{ border: 'none', borderRadius: '8px' }}
-            />
-          ))}
+            {firstInGroup?.Contexts?.map((ctx, i) => (
+              <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
+                {ctx.startsWith('http')
+                  ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
+                  : ctx
+                }
+              </div>
+            ))}
 
-          {firstInGroup?.Contexts?.map((ctx, i) => (
-            <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
-              {ctx.startsWith('http')
-                ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
-                : ctx
-              }
+            {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
+              <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
+            )}
             </div>
-          ))}
+          </div>
+        <div className="vung-3" style={{}}></div>
+          {/* Vùng 3: Câu hỏi & Đáp án */}
+          <div
+            id="question-panel"
+            style={{
+              flex: 1, padding: '20px', overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: '35px',
+            }}
+          >
+            {questionsInGroup.map((q) => (
+              <div
+                key={q.globalIndex}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent',
+                  padding: '10px',
+                  borderRadius: '8px'
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#185FA5' }}>
+                  Câu {q.globalIndex + 1}: {q.Question}
+                </p>
 
-          {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
-            <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
-          )}
-        </div>
+                {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {q.Question_Type === 'mcq'
+                      ? getOptions(q).map(opt => {
+                          const border = isReview
+                            ? getReviewBorderColor(q, opt.key)
+                            : (answers[q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4')
+                          const bg = isReview
+                            ? (opt.key === q.Correct_Ans?.trim() ? '#E1F5EE'
+                              : opt.key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
+                              : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
+                              : 'white')
+                            : (answers[q.globalIndex] === opt.key ? '#E6F1FB' : 'white')
+                          const color = isReview
+                            ? (opt.key === q.Correct_Ans?.trim() ? '#085041'
+                              : opt.key === reviewAnswers[q.globalIndex] ? '#791F1F'
+                              : '#378ADD')
+                            : (answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD')
 
-        {/* Vùng 3: Câu hỏi & Đáp án */}
-        <div
-          id="question-panel"
-          style={{
-            flex: 1, padding: '20px', overflowY: 'auto',
-            display: 'flex', flexDirection: 'column', gap: '35px',
-          }}
-        >
-          {questionsInGroup.map((q) => (
-            <div
-              key={q.globalIndex}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent',
-                padding: '10px',
-                borderRadius: '8px'
-              }}
-            >
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#185FA5' }}>
-                Câu {q.globalIndex + 1}: {q.Question}
-              </p>
+                          return (
+                            <div
+                              key={opt.key}
+                              onClick={() => chonDapAn(q.globalIndex, opt.key)}
+                              style={{
+                                padding: '10px 14px', borderRadius: '8px',
+                                border: `1.5px solid ${border}`,
+                                backgroundColor: bg,
+                                color,
+                                fontSize: '14px',
+                                cursor: isReview ? 'default' : 'pointer',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {opt.key}. {opt.value}
+                            </div>
+                          )
+                        })
+                      : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
+                          const border = isReview
+                            ? getReviewBorderColor(q, key)
+                            : (answers[q.globalIndex] === key ? '#185FA5' : '#B5D4F4')
+                          const bg = isReview
+                            ? (key === q.Correct_Ans?.trim() ? '#E1F5EE'
+                              : key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
+                              : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
+                              : 'white')
+                            : (answers[q.globalIndex] === key ? '#E6F1FB' : 'white')
+                          const color = isReview
+                            ? (key === q.Correct_Ans?.trim() ? '#085041'
+                              : key === reviewAnswers[q.globalIndex] ? '#791F1F'
+                              : '#888')
+                            : (answers[q.globalIndex] === key ? '#0C447C' : '#888')
 
-              {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {q.Question_Type === 'mcq'
-                    ? getOptions(q).map(opt => {
-                        const border = isReview
-                          ? getReviewBorderColor(q, opt.key)
-                          : (answers[q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4')
-                        const bg = isReview
-                          ? (opt.key === q.Correct_Ans?.trim() ? '#E1F5EE'
-                            : opt.key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
-                            : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
-                            : 'white')
-                          : (answers[q.globalIndex] === opt.key ? '#E6F1FB' : 'white')
-                        const color = isReview
-                          ? (opt.key === q.Correct_Ans?.trim() ? '#085041'
-                            : opt.key === reviewAnswers[q.globalIndex] ? '#791F1F'
-                            : '#378ADD')
-                          : (answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD')
-
-                        return (
-                          <div
-                            key={opt.key}
-                            onClick={() => chonDapAn(q.globalIndex, opt.key)}
-                            style={{
-                              padding: '10px 14px', borderRadius: '8px',
-                              border: `1.5px solid ${border}`,
-                              backgroundColor: bg,
-                              color,
-                              fontSize: '14px',
-                              cursor: isReview ? 'default' : 'pointer',
-                              transition: 'all 0.15s',
-                            }}
-                          >
-                            {opt.key}. {opt.value}
-                          </div>
-                        )
-                      })
-                    : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
-                        const border = isReview
-                          ? getReviewBorderColor(q, key)
-                          : (answers[q.globalIndex] === key ? '#185FA5' : '#B5D4F4')
-                        const bg = isReview
-                          ? (key === q.Correct_Ans?.trim() ? '#E1F5EE'
-                            : key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
-                            : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
-                            : 'white')
-                          : (answers[q.globalIndex] === key ? '#E6F1FB' : 'white')
-                        const color = isReview
-                          ? (key === q.Correct_Ans?.trim() ? '#085041'
-                            : key === reviewAnswers[q.globalIndex] ? '#791F1F'
-                            : '#888')
-                          : (answers[q.globalIndex] === key ? '#0C447C' : '#888')
-
-                        return (
-                          <div
-                            key={key}
-                            onClick={() => chonDapAn(q.globalIndex, key)}
-                            style={{
-                              padding: '10px 14px', borderRadius: '8px',
-                              border: `1.5px solid ${border}`,
-                              backgroundColor: bg,
-                              color,
-                              fontSize: '14px', cursor: isReview ? 'default' : 'pointer',
-                              fontWeight: '600', textAlign: 'center'
-                            }}
-                          >
-                            {key}
-                          </div>
-                        )
-                      })
-                  }
-                </div>
-              )}
+                          return (
+                            <div
+                              key={key}
+                              onClick={() => chonDapAn(q.globalIndex, key)}
+                              style={{
+                                padding: '10px 14px', borderRadius: '8px',
+                                border: `1.5px solid ${border}`,
+                                backgroundColor: bg,
+                                color,
+                                fontSize: '14px', cursor: isReview ? 'default' : 'pointer',
+                                fontWeight: '600', textAlign: 'center'
+                              }}
+                            >
+                              {key}
+                            </div>
+                          )
+                        })
+                    }
+                  </div>
+                )}
+                
 
               {q.Question_Type === 'fill_short' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -598,7 +618,7 @@ export default function BaiTap({ params }) {
               )}
             </div>
           ))}
-
+          
           {/* Nút điều hướng */}
           <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
             <button
@@ -640,7 +660,7 @@ export default function BaiTap({ params }) {
             )}
           </div>
         </div>
-
+      </div>
       </div>
       <HighlightToolbar
         toolbar={toolbar}

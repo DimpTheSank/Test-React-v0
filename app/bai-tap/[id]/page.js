@@ -458,7 +458,7 @@ export default function BaiTap({ params }) {
         <div className="bt-vung2-3">
 
           {/* Vùng 2: Nội dung (audio / hình) */}
-          <div className="bt-vung2">
+          <div className="bt-vung2" id="content-panel">
             {firstInGroup?.Audios?.map((src, i) => (
               <iframe
                 key={src + i}
@@ -483,7 +483,7 @@ export default function BaiTap({ params }) {
           </div>
 
           {/* Vùng 3: Câu hỏi & Đáp án */}
-          <div className="bt-vung3">
+          <div className="bt-vung3" id="question-panel">
             {questionsInGroup.map((q) => (
               <div
                 key={q.globalIndex}

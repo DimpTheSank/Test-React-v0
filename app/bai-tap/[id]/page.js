@@ -61,6 +61,14 @@ export default function BaiTap({ params }) {
   const [reviewAnswers, setReviewAnswers] = useState({})
 
   useEffect(() => {
+    const el = document.getElementById('content-panel')
+    if (!el) return
+    const handler = (e) => e.preventDefault()
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
+  
+  useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
     loadInfo()
   }, [])
@@ -727,10 +735,3 @@ const btnSecondary = {
   border: '1px solid #B5D4F4', backgroundColor: 'white',
   color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
 }
-useEffect(() => {
-  const el = document.getElementById('content-panel')
-  if (!el) return
-  const handler = (e) => e.preventDefault()
-  el.addEventListener('wheel', handler, { passive: false })
-  return () => el.removeEventListener('wheel', handler)
-}, [])

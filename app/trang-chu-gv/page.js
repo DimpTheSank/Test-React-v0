@@ -202,7 +202,7 @@ export default function BaiTap({ params }) {
           overflow: hidden;
         }
         .bt-vung2 {
-          flex: 1.5;
+          flex: 1.2;
           border-bottom: 1px solid #B5D4F4;
           padding: 20px;
           overflow-y: auto;

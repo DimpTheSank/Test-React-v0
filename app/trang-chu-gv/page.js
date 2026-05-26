@@ -1,958 +1,671 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, use, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
-import {
-  collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc
-} from 'firebase/firestore'
+import { doc, getDoc, addDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore'
+import Papa from 'papaparse'
+import { convertDriveLink } from '@/lib/driveUtils'
+import { useHighlight } from '@/lib/useHighlight'
+import HighlightToolbar from '@/app/components/HighlightToolbar'
 
 const mauKyNang = {
-  'Reading':   { bg: '#378ADD', text: 'white' },
-  'Listening': { bg: '#1D9E75', text: 'white' },
-  'Writing':   { bg: '#BA7517', text: 'white' },
-  'Speaking':  { bg: '#A32D2D', text: 'white' },
+  'Reading':   '#378ADD',
+  'Listening': '#1D9E75',
+  'Writing':   '#BA7517',
+  'Speaking':  '#A32D2D',
 }
 
-const mauMucDo = {
-  'Cơ bản':    { bg: '#E1F5EE', text: '#085041' },
-  'Trung bình':{ bg: '#FAEEDA', text: '#633806' },
-  'Nâng cao':  { bg: '#FCEBEB', text: '#791F1F' },
-}
-
-const cacMucDo = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
-const cacKyNang = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking']
-
-const getUserInfo = () => {
-  try {
-    const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
-    return JSON.parse(decodeURIComponent(raw))
-  } catch { return null }
-}
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
-export default function TrangChuGV() {
+export default function BaiTap({ params }) {
+  const { id } = use(params)
   const router = useRouter()
-  const [tab, setTab] = useState('baiTap')
-  const [userInfo, setUserInfo] = useState(null)
+  const searchParams = useSearchParams()
+  const isReview = searchParams.get('review') === 'true'
+
+  const [exercise, setExercise] = useState(null)
+  const [questions, setQuestions] = useState([])
+  const [cauHienTai, setCauHienTai] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitDone, setSubmitDone] = useState(false)
+  const [ketQua, setKetQua] = useState(null)
+
+  const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
+
+  const [reviewAnswers, setReviewAnswers] = useState({})
 
   useEffect(() => {
-    if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
-    const info = getUserInfo()
-    if (!info || info.vaiTro !== 'Giáo viên') { router.push('/trang-chu'); return }
-    setUserInfo(info)
+    if (!Cookies.get('isLoggedIn')) router.push('/')
+    loadInfo()
   }, [])
 
-  if (!userInfo) return (
-    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
-      <p style={{ color: '#185FA5' }}>Đang tải...</p>
-    </main>
-  )
-
-  return (
-    <main style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: '#F0F7FF' }}>
-      <div style={{
-        backgroundColor: 'white', borderBottom: '1px solid #B5D4F4',
-        display: 'flex', paddingLeft: '24px',
-      }}>
-        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: '14px 24px', border: 'none',
-            borderBottom: tab === t.key ? '3px solid #185FA5' : '3px solid transparent',
-            backgroundColor: 'transparent',
-            color: tab === t.key ? '#185FA5' : '#888',
-            fontWeight: tab === t.key ? '600' : '400',
-            fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
-          }}>{t.label}</button>
-        ))}
-      </div>
-
-      <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-        {tab === 'baiTap' && <TabBaiTap userInfo={userInfo} />}
-        {tab === 'tienDo' && <TabTienDo userInfo={userInfo} />}
-      </div>
-    </main>
-  )
-}
-
-// ─── TAB BÀI TẬP ─────────────────────────────────────────────────────────────
-function TabBaiTap({ userInfo }) {
-  const [exercises, setExercises] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [showAssign, setShowAssign] = useState(false)
-  const [selected, setSelected] = useState(new Set()) // exerciseId được chọn
-  const [filterMucDo, setFilterMucDo] = useState('Tất cả')
-  const [filterKyNang, setFilterKyNang] = useState('Tất cả')
-  const [showDelete, setShowDelete] = useState(false)
-  const [deletingEx, setDeletingEx] = useState(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const loadExercises = async () => {
-    setLoading(true)
+  const getUserInfo = () => {
     try {
-      const snap = await getDocs(collection(db, 'exercises'))
-      setExercises(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+      const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
+      return JSON.parse(decodeURIComponent(raw))
+    } catch { return null }
   }
 
-  const handleXoaBai = async () => {
-    if (!deletingEx) return
-    setIsDeleting(true)
+  const loadInfo = async () => {
     try {
-      // Xoá tất cả assignments liên quan
-      const assignSnap = await getDocs(query(
-        collection(db, 'assignments'),
-        where('exerciseId', '==', deletingEx.id)
-      ))
-      await Promise.all(assignSnap.docs.map(d => deleteDoc(d.ref)))
+      const exSnap = await getDoc(doc(db, 'exercises', id))
+      if (!exSnap.exists()) return
+      const exData = exSnap.data()
+      setExercise(exData)
 
-      // Xoá exercise
-      await deleteDoc(doc(db, 'exercises', deletingEx.id))
+      const fileId = exData.linkDrive.match(/\/d\/([a-zA-Z0-9_-]+)/)[1]
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`
+      const response = await fetch(csvUrl)
+      const text = await response.text()
 
-      setShowDelete(false)
-      setDeletingEx(null)
-      loadExercises()
-    } catch (err) {
-      console.error('Lỗi khi xoá bài:', err)
-      alert('Có lỗi khi xoá bài. Thử lại sau!')
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  useEffect(() => { loadExercises() }, [])
-
-  const toggleSelect = (id) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
-  const filtered = exercises.filter(ex => {
-    const okMucDo = filterMucDo === 'Tất cả' || ex.mucDo === filterMucDo
-    const okKyNang = filterKyNang === 'Tất cả' || ex.kyNang === filterKyNang
-    return okMucDo && okKyNang
-  })
-
-  const selectedExercises = exercises.filter(ex => selected.has(ex.id))
-
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '10px', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, color: '#0C447C' }}>Danh sách bài tập</h2>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          {selected.size > 0 && (
-            <button
-              onClick={() => setShowAssign(true)}
-              style={{
-                padding: '10px 20px', borderRadius: '8px', border: 'none',
-                backgroundColor: '#1D9E75', color: 'white',
-                fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-              }}
-            >
-              Giao {selected.size} bài đã chọn
-            </button>
-          )}
-          <button
-            onClick={() => setShowCreate(true)}
-            style={{
-              padding: '10px 20px', borderRadius: '8px', border: 'none',
-              backgroundColor: '#185FA5', color: 'white',
-              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-            }}
-          >
-            + Tạo bài mới
-          </button>
-        </div>
-      </div>
-
-      {/* Filter bar */}
-      <div style={{
-        display: 'flex', gap: '24px', marginBottom: '20px',
-        padding: '14px 16px', backgroundColor: 'white',
-        borderRadius: '12px', border: '1px solid #B5D4F4',
-        flexWrap: 'wrap', alignItems: 'center',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Mức độ:</span>
-          {cacMucDo.map(m => (
-            <button key={m} onClick={() => setFilterMucDo(m)} style={{
-              padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
-              border: `1.5px solid ${filterMucDo === m ? '#185FA5' : '#B5D4F4'}`,
-              backgroundColor: filterMucDo === m ? '#185FA5' : 'white',
-              color: filterMucDo === m ? 'white' : '#555',
-              fontWeight: filterMucDo === m ? '600' : '400',
-              cursor: 'pointer', transition: 'all 0.15s',
-            }}>{m}</button>
-          ))}
-        </div>
-
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#B5D4F4' }} />
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Kỹ năng:</span>
-          {cacKyNang.map(k => (
-            <button key={k} onClick={() => setFilterKyNang(k)} style={{
-              padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
-              border: `1.5px solid ${filterKyNang === k ? '#185FA5' : '#B5D4F4'}`,
-              backgroundColor: filterKyNang === k ? '#185FA5' : 'white',
-              color: filterKyNang === k ? 'white' : '#555',
-              fontWeight: filterKyNang === k ? '600' : '400',
-              cursor: 'pointer', transition: 'all 0.15s',
-            }}>{k}</button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <p style={{ color: '#185FA5' }}>Đang tải...</p>
-      ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-          {filtered.map(ex => (
-            <CardBaiTapGV
-              key={ex.id}
-              ex={ex}
-              isSelected={selected.has(ex.id)}
-              onToggle={() => toggleSelect(ex.id)}
-              onGiaoNhanh={() => {
-                setSelected(new Set([ex.id]))
-                setShowAssign(true)
-              }}
-              onXoa={() => {
-                setDeletingEx(ex)
-                setShowDelete(true)
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {showCreate && (
-        <ModalTaoBai
-          onClose={() => setShowCreate(false)}
-          onCreated={() => { setShowCreate(false); loadExercises() }}
-        />
-      )}
-
-      {showDelete && deletingEx && (
-        <Overlay onClose={() => { setShowDelete(false); setDeletingEx(null) }}>
-          <h3 style={{ margin: 0, color: '#0C447C' }}>Xác nhận xoá bài tập</h3>
-          <div style={{
-            backgroundColor: '#FCEBEB', borderRadius: '10px',
-            padding: '12px 16px', textAlign: 'center',
-          }}>
-            <span style={{ color: '#791F1F', fontSize: '14px', fontWeight: '500' }}>
-              ⚠️ Bạn sắp xoá bài <strong>"{deletingEx.tenBaiTap}"</strong>.<br/>
-              Tất cả assignment liên quan cũng sẽ bị xoá vĩnh viễn.
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => { setShowDelete(false); setDeletingEx(null) }}
-              style={btnSecondary}
-            >
-              Huỷ
-            </button>
-            <button
-              onClick={handleXoaBai}
-              disabled={isDeleting}
-              style={{
-                ...btnPrimary,
-                backgroundColor: '#E24B4A',
-                opacity: isDeleting ? 0.7 : 1,
-              }}
-            >
-              {isDeleting ? 'Đang xoá...' : 'Xoá bài'}
-            </button>
-          </div>
-        </Overlay>
-      )}        
-
-      {showAssign && (
-        <ModalGiaoBai
-          exercises={selectedExercises}
-          userInfo={userInfo}
-          onClose={() => { setShowAssign(false); setSelected(new Set()) }}
-        />
-      )}
-    </div>
-  )
-}
-
-function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
-  const [hover, setHover] = useState(false)
-  const mauHeader = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
-  const mauDo = mauMucDo[ex.mucDo] || null
-  const [hoverXoa, setHoverXoa] = useState(false)
-
-  return (
-    <div
-      onClick={onToggle}
-      style={{
-        border: `2px solid ${isSelected ? '#185FA5' : '#B5D4F4'}`,
-        borderRadius: '16px', width: '180px',
-        display: 'flex', flexDirection: 'column',
-        backgroundColor: isSelected ? '#F0F7FF' : 'white',
-        overflow: 'hidden', cursor: 'pointer',
-        transition: 'all 0.15s',
-        boxShadow: isSelected ? '0 0 0 3px rgba(24,95,165,0.15)' : 'none',
-      }}
-    >
-      {/* Checkbox góc + header */}
-      <div style={{ position: 'relative' }}>
-        <div style={{ backgroundColor: mauHeader.bg, padding: '8px 12px', textAlign: 'center' }}>
-          <span style={{ color: mauHeader.text, fontSize: '12px', fontWeight: '600' }}>
-            {ex.loaiBai} · {ex.kyNang}
-          </span>
-        </div>
-        {/* Checkbox */}
-        <div style={{
-          position: 'absolute', top: '6px', right: '8px',
-          width: '16px', height: '16px', borderRadius: '4px',
-          border: `2px solid ${isSelected ? 'white' : 'rgba(255,255,255,0.6)'}`,
-          backgroundColor: isSelected ? 'white' : 'transparent',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {isSelected && <span style={{ color: '#185FA5', fontSize: '10px', fontWeight: '700' }}>✓</span>}
-        </div>
-      </div>
-
-      <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-        <p style={{ margin: 0, fontWeight: '600', fontSize: '14px', color: '#0C447C', lineHeight: '1.4' }}>
-          {ex.tenBaiTap}
-        </p>
-
-        {mauDo && (
-          <span style={{
-            padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '500',
-            backgroundColor: mauDo.bg, color: mauDo.text, alignSelf: 'flex-start',
-          }}>
-            {ex.mucDo}
-          </span>
-        )}
-
-        <button
-          onClick={e => { e.stopPropagation(); onGiaoNhanh() }}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          style={{
-            marginTop: 'auto', padding: '8px', borderRadius: '8px', border: 'none',
-            backgroundColor: hover ? '#0C447C' : '#378ADD',
-            color: 'white', fontSize: '13px', fontWeight: '500',
-            cursor: 'pointer', transition: 'background-color 0.2s',
-          }}
-        >
-          Giao bài
-        </button>
-        <button
-          onClick={e => { e.stopPropagation(); onXoa() }}
-          onMouseEnter={() => setHoverXoa(true)}
-          onMouseLeave={() => setHoverXoa(false)}
-          style={{
-            marginTop: '8px', padding: '8px', borderRadius: '8px', border: 'none',
-            backgroundColor: hoverXoa ? '#E24B4A' : '#F0F0F0',
-            color: hoverXoa ? 'white' : '#333',
-            fontSize: '13px', fontWeight: '500',
-            cursor: 'pointer', transition: 'all 0.2s',
-          }}
-        >
-          Xoá bài
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─── MODAL TẠO BÀI ───────────────────────────────────────────────────────────
-function ModalTaoBai({ onClose, onCreated }) {
-  const [form, setForm] = useState({
-    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'IELTS',
-    mucDo: 'Cơ bản', linkDrive: ''
-  })
-  const [saving, setSaving] = useState(false)
-  const [loi, setLoi] = useState('')
-
-  const handleSave = async () => {
-    if (!form.tenBaiTap.trim() || !form.linkDrive.trim()) {
-      setLoi('Vui lòng điền đầy đủ thông tin'); return
-    }
-    setSaving(true)
-    try {
-      await addDoc(collection(db, 'exercises'), {
-        tenBaiTap: form.tenBaiTap.trim(),
-        kyNang: form.kyNang,
-        loaiBai: form.loaiBai,
-        mucDo: form.mucDo,
-        linkDrive: form.linkDrive.trim(),
+      const { data } = Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transform: (val, col) => (col === 'Group' ? val.trim() : val)
       })
-      onCreated()
-    } catch (err) {
-      setLoi('Lỗi khi tạo bài, thử lại sau')
-      console.error(err)
-    } finally { setSaving(false) }
-  }
+      const splitMedia = (raw, type) =>
+        (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
+      const processedData = data.map((item, index) => ({
+        ...item,
+        globalIndex: index,
+        Contexts: splitMedia(item.Context, 'image'),
+        Audios:   splitMedia(item.Audio, 'audio'),
+      }))
+      setQuestions(processedData)
 
-  const inputStyle = {
-    padding: '10px 12px', borderRadius: '8px',
-    border: '1px solid #85B7EB', fontSize: '14px',
-    backgroundColor: 'white', outline: 'none', width: '100%',
-    boxSizing: 'border-box',
-  }
-  const labelStyle = { color: '#185FA5', fontSize: '13px', fontWeight: '500' }
-
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: 0, color: '#0C447C' }}>Tạo bài tập mới</h3>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <label style={labelStyle}>Tên bài tập</label>
-        <input style={inputStyle} placeholder="Nhập tên bài tập"
-          value={form.tenBaiTap} onChange={e => setForm(f => ({ ...f, tenBaiTap: e.target.value }))} />
-      </div>
-
-      <div style={{ display: 'flex', gap: '12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-          <label style={labelStyle}>Loại bài</label>
-          <select style={inputStyle} value={form.loaiBai}
-            onChange={e => setForm(f => ({ ...f, loaiBai: e.target.value }))}>
-            {['IELTS', 'TOEIC', 'TOEFL', 'Khác'].map(v => <option key={v}>{v}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-          <label style={labelStyle}>Kỹ năng</label>
-          <select style={inputStyle} value={form.kyNang}
-            onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
-            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening'].map(v => <option key={v}>{v}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <label style={labelStyle}>Mức độ</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['Cơ bản', 'Trung bình', 'Nâng cao'].map(m => {
-            const mau = mauMucDo[m]
-            const isSelected = form.mucDo === m
-            return (
-              <button key={m} onClick={() => setForm(f => ({ ...f, mucDo: m }))} style={{
-                flex: 1, padding: '8px', borderRadius: '8px',
-                border: `1.5px solid ${isSelected ? mau.text : '#B5D4F4'}`,
-                backgroundColor: isSelected ? mau.bg : 'white',
-                color: isSelected ? mau.text : '#888',
-                fontSize: '13px', fontWeight: isSelected ? '600' : '400',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>{m}</button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <label style={labelStyle}>Link Google Drive (Excel)</label>
-        <input style={inputStyle} placeholder="https://docs.google.com/spreadsheets/..."
-          value={form.linkDrive} onChange={e => setForm(f => ({ ...f, linkDrive: e.target.value }))} />
-      </div>
-
-      {loi && <p style={{ margin: 0, color: '#E24B4A', fontSize: '13px' }}>{loi}</p>}
-
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <button onClick={onClose} style={btnSecondary}>Huỷ</button>
-        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
-          {saving ? 'Đang lưu...' : 'Tạo bài'}
-        </button>
-      </div>
-    </Overlay>
-  )
-}
-
-// ─── MODAL GIAO BÀI (nhiều bài, nhiều lớp) ───────────────────────────────────
-function ModalGiaoBai({ exercises, userInfo, onClose }) {
-  const [classes, setClasses] = useState([])
-  const [selectedLops, setSelectedLops] = useState(new Set()) // lop names
-  const [hocViensByLop, setHocViensByLop] = useState({})     // lopId -> [{id, ...}]
-  const [selectedHVs, setSelectedHVs] = useState(new Set())  // userId
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [done, setDone] = useState(false)
-
-  useEffect(() => { loadClasses() }, [])
-
-  const loadClasses = async () => {
-    try {
-      const snap = await getDocs(query(
-        collection(db, 'classes'),
-        where('giaoVienId', '==', userInfo.taiKhoan)
-      ))
-      setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
-  }
-
-  const handleToggleLop = async (cls) => {
-    const lopName = cls.lop
-    const next = new Set(selectedLops)
-
-    if (next.has(lopName)) {
-      // Bỏ chọn lớp → bỏ học viên của lớp đó
-      next.delete(lopName)
-      const hvIds = (hocViensByLop[lopName] || []).map(h => h.id)
-      setSelectedHVs(prev => {
-        const s = new Set(prev)
-        hvIds.forEach(id => s.delete(id))
-        return s
-      })
-    } else {
-      next.add(lopName)
-      // Load học viên nếu chưa có
-      if (!hocViensByLop[lopName] && cls.hocVienIds?.length) {
-        const hvData = await Promise.all(
-          cls.hocVienIds.map(async uid => {
-            const snap = await getDoc(doc(db, 'users', uid))
-            return snap.exists() ? { id: uid, ...snap.data() } : null
-          })
-        )
-        const hvs = hvData.filter(Boolean)
-        setHocViensByLop(prev => ({ ...prev, [lopName]: hvs }))
-        // Mặc định chọn tất cả học viên của lớp mới
-        setSelectedHVs(prev => {
-          const s = new Set(prev)
-          hvs.forEach(h => s.add(h.id))
-          return s
-        })
-      } else if (hocViensByLop[lopName]) {
-        // Đã load rồi, chọn lại tất cả
-        setSelectedHVs(prev => {
-          const s = new Set(prev)
-          hocViensByLop[lopName].forEach(h => s.add(h.id))
-          return s
-        })
+      if (isReview) {
+        const userInfo = getUserInfo()
+        const subSnap = await getDocs(query(
+          collection(db, 'submissions'),
+          where('userId', '==', userInfo?.taiKhoan),
+          where('exerciseId', '==', id)
+        ))
+        if (!subSnap.empty) {
+          const best = subSnap.docs
+            .map(d => d.data())
+            .reduce((a, b) => (a.diem ?? -1) >= (b.diem ?? -1) ? a : b)
+          setReviewAnswers(best.answers || {})
+        }
       }
+    } catch (error) {
+      console.error("Lỗi khi tải bài tập:", error)
     }
-    setSelectedLops(next)
   }
 
-  const toggleHV = (uid) => {
-    setSelectedHVs(prev => {
-      const s = new Set(prev)
-      s.has(uid) ? s.delete(uid) : s.add(uid)
-      return s
-    })
-  }
+  const soCauChuaLam = questions.length - Object.keys(answers).length
 
-  // Tất cả học viên đã load từ các lớp được chọn
-  const allHVs = [...selectedLops].flatMap(lopName => hocViensByLop[lopName] || [])
-  // Dedupe theo id
-  const uniqueHVs = [...new Map(allHVs.map(h => [h.id, h])).values()]
-
-  const handleGiao = async () => {
-    if (!selectedHVs.size || !exercises.length) return
-    setSaving(true)
+  const handleNopBai = async () => {
+    setIsSubmitting(true)
     try {
-      const thoiGianGiao = new Date().toISOString()
-      // Với mỗi bài × mỗi học viên → tạo assignment
-      await Promise.all(
-        exercises.flatMap(ex =>
-          [...selectedHVs].map(uid => {
-            // Tìm lớp của học viên này trong các lớp đã chọn
-            const lopName = [...selectedLops].find(lopName =>
-              (hocViensByLop[lopName] || []).some(h => h.id === uid)
-            ) || ''
-            return addDoc(collection(db, 'assignments'), {
-              userId: uid,
-              exerciseId: ex.id,
-              lopId: lopName,
-              thoiGianGiao,
-              trangThai: 'Chưa làm',
-            })
-          })
-        )
-      )
-      setDone(true)
-    } catch (err) { console.error(err) }
-    finally { setSaving(false) }
-  }
+      const userInfo = getUserInfo()
+      const taiKhoan = userInfo?.taiKhoan
 
-  return (
-    <Overlay onClose={onClose} width="520px">
-      {done ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div style={{ fontSize: '48px' }}>✅</div>
-          <h3 style={{ margin: 0, color: '#0C447C' }}>Giao bài thành công!</h3>
-          <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
-            Đã giao <strong>{exercises.length}</strong> bài cho <strong>{selectedHVs.size}</strong> học viên.
-          </p>
-          <button onClick={onClose} style={{ ...btnPrimary, width: '100%' }}>Đóng</button>
-        </div>
-      ) : (
-        <>
-          <h3 style={{ margin: 0, color: '#0C447C' }}>
-            Giao bài ({exercises.length} bài đã chọn)
-          </h3>
+      let soCauDung = 0
+      questions.forEach((q) => {
+        const correctRaw = q.Correct_Ans?.trim()
+        if (!correctRaw) return
+        const userAns = answers[q.globalIndex]
 
-          {/* Danh sách bài được giao */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {exercises.map(ex => {
-              const mau = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
-              return (
-                <span key={ex.id} style={{
-                  padding: '4px 10px', borderRadius: '20px',
-                  backgroundColor: mau.bg, color: mau.text,
-                  fontSize: '12px', fontWeight: '500',
-                }}>
-                  {ex.tenBaiTap}
-                </span>
-              )
-            })}
-          </div>
-
-          {loading ? (
-            <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải lớp...</p>
-          ) : (
-            <>
-              {/* Chọn lớp (multi) */}
-              <div>
-                <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>
-                  Chọn lớp
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {classes.map(cls => (
-                    <button
-                      key={cls.id}
-                      onClick={() => handleToggleLop(cls)}
-                      style={{
-                        padding: '7px 16px', borderRadius: '20px',
-                        border: `1.5px solid ${selectedLops.has(cls.lop) ? '#185FA5' : '#B5D4F4'}`,
-                        backgroundColor: selectedLops.has(cls.lop) ? '#185FA5' : 'white',
-                        color: selectedLops.has(cls.lop) ? 'white' : '#378ADD',
-                        fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.15s',
-                      }}
-                    >
-                      {cls.lop}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Danh sách học viên */}
-              {uniqueHVs.length > 0 && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <p style={{ margin: 0, color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>
-                      Học viên ({selectedHVs.size}/{uniqueHVs.length})
-                    </p>
-                    <button
-                      onClick={() => {
-                        if (selectedHVs.size === uniqueHVs.length) setSelectedHVs(new Set())
-                        else setSelectedHVs(new Set(uniqueHVs.map(h => h.id)))
-                      }}
-                      style={{
-                        marginLeft: 'auto', padding: '4px 12px', borderRadius: '6px',
-                        border: '1px solid #B5D4F4', backgroundColor: 'white',
-                        color: '#378ADD', fontSize: '12px', cursor: 'pointer',
-                      }}
-                    >
-                      {selectedHVs.size === uniqueHVs.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                    </button>
-                  </div>
-
-                  <div style={{
-                    maxHeight: '260px', overflowY: 'auto',
-                    border: '1px solid #B5D4F4', borderRadius: '10px',
-                  }}>
-                    {uniqueHVs.map((hv, i) => (
-                      <div
-                        key={hv.id}
-                        onClick={() => toggleHV(hv.id)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          padding: '10px 14px', cursor: 'pointer',
-                          borderBottom: i < uniqueHVs.length - 1 ? '1px solid #E6F1FB' : 'none',
-                          backgroundColor: selectedHVs.has(hv.id) ? '#F0F7FF' : 'white',
-                          transition: 'background-color 0.15s',
-                        }}
-                      >
-                        <div style={{
-                          width: '18px', height: '18px', borderRadius: '4px',
-                          border: `2px solid ${selectedHVs.has(hv.id) ? '#185FA5' : '#B5D4F4'}`,
-                          backgroundColor: selectedHVs.has(hv.id) ? '#185FA5' : 'white',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0, transition: 'all 0.15s',
-                        }}>
-                          {selectedHVs.has(hv.id) && (
-                            <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>✓</span>
-                          )}
-                        </div>
-                        <div>
-                          <p style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#0C447C' }}>
-                            {hv.ho} {hv.ten}
-                          </p>
-                          <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>
-                            {hv.lop} · {hv.taiKhoan}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={onClose} style={btnSecondary}>Huỷ</button>
-                <button
-                  onClick={handleGiao}
-                  disabled={saving || !selectedHVs.size || !selectedLops.size}
-                  style={{ ...btnPrimary, opacity: (!selectedHVs.size || !selectedLops.size) ? 0.5 : 1 }}
-                >
-                  {saving ? 'Đang giao...' : `Giao cho ${selectedHVs.size} học viên`}
-                </button>
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </Overlay>
-  )
-}
-
-// ─── TAB TIẾN ĐỘ ─────────────────────────────────────────────────────────────
-function TabTienDo({ userInfo }) {
-  const [classes, setClasses] = useState([])
-  const [selectedLop, setSelectedLop] = useState(null)
-  const [exercises, setExercises] = useState([])
-  const [selectedEx, setSelectedEx] = useState(null)
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [loadingClasses, setLoadingClasses] = useState(true)
-
-  useEffect(() => { loadClasses() }, [])
-
-  const loadClasses = async () => {
-    try {
-      const snap = await getDocs(query(
-        collection(db, 'classes'),
-        where('giaoVienId', '==', userInfo.taiKhoan)
-      ))
-      setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    } catch (err) { console.error(err) }
-    finally { setLoadingClasses(false) }
-  }
-
-  const handleChonLop = async (cls) => {
-    setSelectedLop(cls)
-    setSelectedEx(null)
-    setRows([])
-    setExercises([])
-    try {
-      const snap = await getDocs(query(
-        collection(db, 'assignments'),
-        where('lopId', '==', cls.lop)
-      ))
-      const exIds = [...new Set(snap.docs.map(d => d.data().exerciseId))]
-      const exData = await Promise.all(
-        exIds.map(async exId => {
-          const s = await getDoc(doc(db, 'exercises', exId))
-          return s.exists() ? { id: exId, ...s.data() } : null
-        })
-      )
-      setExercises(exData.filter(Boolean))
-    } catch (err) { console.error(err) }
-  }
-
-  const handleChonBai = async (ex) => {
-    setSelectedEx(ex)
-    setRows([])
-    setLoading(true)
-    try {
-      const hvData = await Promise.all(
-        (selectedLop.hocVienIds || []).map(async uid => {
-          const s = await getDoc(doc(db, 'users', uid))
-          return s.exists() ? { id: uid, ...s.data() } : null
-        })
-      )
-      const hvs = hvData.filter(Boolean)
-
-      const subSnap = await getDocs(query(
-        collection(db, 'submissions'),
-        where('exerciseId', '==', ex.id)
-      ))
-      const subMap = {}
-      subSnap.docs.forEach(d => {
-        const data = d.data()
-        if (!subMap[data.userId] || (data.diem ?? -1) > (subMap[data.userId].diem ?? -1)) {
-          subMap[data.userId] = data
+        if (q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') {
+          if (userAns === correctRaw) soCauDung++
+        } else if (q.Question_Type === 'fill_short') {
+          const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
+          const userParts = (userAns || []).map(s => s.trim().toLowerCase())
+          if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
         }
       })
 
-      setRows(hvs.map(hv => ({ ...hv, sub: subMap[hv.id] || null })))
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+      const assignQuery = query(
+        collection(db, 'assignments'),
+        where('userId', '==', taiKhoan),
+        where('exerciseId', '==', id)
+      )
+      const assignSnap = await getDocs(assignQuery)
+      const assignmentId = assignSnap.docs[0]?.id || null
+
+      await addDoc(collection(db, 'submissions'), {
+        userId: taiKhoan,
+        exerciseId: id,
+        assignmentId,
+        answers,
+        diem: soCauDung,
+        tongCau: questions.length,
+        thoiGianNop: new Date().toISOString(),
+        trangThai: 'Đã nộp',
+      })
+
+      if (assignmentId) {
+        await updateDoc(doc(db, 'assignments', assignmentId), {
+          trangThai: 'Đã làm',
+          thoiGianNop: new Date().toISOString(),
+        })
+      }
+
+      setKetQua({ dung: soCauDung, tong: questions.length })
+      setSubmitDone(true)
+    } catch (err) {
+      console.error('Lỗi khi nộp bài:', err)
+      alert('Có lỗi xảy ra khi nộp bài. Vui lòng thử lại!')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const daDam = rows.filter(r => r.sub).length
-  const chuaLam = rows.filter(r => !r.sub).length
-  const diemTB = rows.filter(r => r.sub?.diem != null).length > 0
-    ? (rows.filter(r => r.sub?.diem != null)
-        .reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0)
-      / rows.filter(r => r.sub?.diem != null).length).toFixed(0)
-    : null
+  const getReviewBorderColor = (q, optKey) => {
+    const userAns = reviewAnswers[q.globalIndex]
+    const correct = q.Correct_Ans?.trim()
+    if (!userAns) return '#F0A500'
+    if (optKey === correct) return '#1D9E75'
+    if (optKey === userAns) return '#E24B4A'
+    return '#B5D4F4'
+  }
+
+  const currentCau = questions[cauHienTai]
+  const currentGroup = currentCau?.Group
+  const questionsInGroup = questions.filter(q => q.Group === currentGroup)
+  const firstInGroup = questionsInGroup[0]
+  const mauHeader = mauKyNang[exercise?.kyNang] || '#185FA5'
+
+  const getOptions = (q) => {
+    if (!q) return []
+    return ['A', 'B', 'C', 'D', 'E']
+      .map(k => ({ key: k, value: q[`Opt_${k}`] }))
+      .filter(o => o.value && o.value.trim() !== '')
+  }
+
+  const chonDapAn = (index, key) => {
+    if (isReview) return
+    setAnswers(prev => ({ ...prev, [index]: key }))
+  }
+
+  if (!exercise || questions.length === 0) return (
+    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
+      <p style={{ color: '#185FA5' }}>Đang tải bài tập...</p>
+    </main>
+  )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <h2 style={{ margin: 0, color: '#0C447C' }}>Tiến độ học viên</h2>
+    <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
-      {loadingClasses ? (
-        <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải lớp...</p>
-      ) : (
-        <div>
-          <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>Chọn lớp</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {classes.map(cls => (
-              <button key={cls.id} onClick={() => handleChonLop(cls)} style={{
-                padding: '8px 20px', borderRadius: '20px',
-                border: `1.5px solid ${selectedLop?.id === cls.id ? '#185FA5' : '#B5D4F4'}`,
-                backgroundColor: selectedLop?.id === cls.id ? '#185FA5' : 'white',
-                color: selectedLop?.id === cls.id ? 'white' : '#378ADD',
-                fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-              }}>{cls.lop}</button>
-            ))}
+      {/* ── Responsive styles ── */}
+      <style>{`
+        .bt-body {
+          display: flex;
+          flex: 1;
+          overflow: hidden;
+        }
+        .bt-vung2-3 {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+        }
+        .bt-vung2 {
+          flex: 1.5;
+          border-bottom: 1px solid #B5D4F4;
+          padding: 20px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .bt-vung3 {
+          flex: 1;
+          padding: 20px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 35px;
+        }
+
+        /* Desktop: vùng 2 và 3 nằm ngang cạnh nhau */
+        @media (min-width: 769px) {
+          .bt-vung1 {
+            border-right: 1px solid #B5D4F4;
+          }
+          .bt-vung2 {
+            border-right: 1px solid #B5D4F4;
+            border-bottom: none;
+            flex: 1.2;
+          }
+          .bt-vung2-3 {
+            flex-direction: row;
+          }
+          .bt-vung3 {
+            flex: 1;
+          }
+        }
+
+        /* Mobile: vùng 1 ở trái hẹp, vùng 2 trên + vùng 3 dưới */
+        @media (max-width: 768px) {
+          .bt-vung1 {
+            width: 48px !important;
+            min-width: 48px !important;
+            border-right: 1px solid #B5D4F4;
+          }
+          .bt-vung1 .so-cau {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 11px !important;
+          }
+          .bt-vung2-3 {
+            flex-direction: column;
+            flex: 1;
+          }
+          .bt-vung2 {
+            flex: none;
+            max-height: 40%;
+            border-right: none;
+            border-bottom: 1px solid #B5D4F4;
+            padding: 12px;
+            overflow-y: auto;
+          }
+          .bt-vung3 {
+            flex: 1;
+            padding: 12px;
+            gap: 16px;
+            overflow-y: auto;
+          }
+          .bt-nav-btn {
+            padding: 8px 4px !important;
+            font-size: 12px !important;
+          }
+        }
+      `}</style>
+
+      {/* Dialog xác nhận nộp bài */}
+      {showConfirm && !submitDone && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          backgroundColor: 'rgba(12,68,124,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px',
+            padding: '32px', width: '340px', maxWidth: '90vw',
+            display: 'flex', flexDirection: 'column', gap: '16px',
+            boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
+          }}>
+            <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Xác nhận nộp bài</h3>
+            {soCauChuaLam > 0 ? (
+              <div style={{ backgroundColor: '#FAEEDA', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
+                <span style={{ color: '#633806', fontSize: '14px', fontWeight: '500' }}>
+                  ⚠️ Bạn còn <strong>{soCauChuaLam}</strong> câu chưa làm.
+                </span>
+              </div>
+            ) : (
+              <div style={{ backgroundColor: '#E1F5EE', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
+                <span style={{ color: '#085041', fontSize: '14px', fontWeight: '500' }}>
+                  ✅ Bạn đã hoàn thành tất cả {questions.length} câu!
+                </span>
+              </div>
+            )}
+            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
+              Sau khi nộp bạn không thể chỉnh sửa đáp án.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowConfirm(false)} style={btnSecondary}>Làm tiếp</button>
+              <button onClick={handleNopBai} disabled={isSubmitting} style={{ ...btnPrimary, backgroundColor: '#1D9E75', opacity: isSubmitting ? 0.7 : 1 }}>
+                {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {selectedLop && exercises.length > 0 && (
-        <div>
-          <p style={{ margin: '0 0 8px', color: '#185FA5', fontSize: '13px', fontWeight: '500' }}>Chọn bài tập</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {exercises.map(ex => {
-              const mau = mauKyNang[ex.kyNang] || { bg: '#185FA5', text: 'white' }
-              const isSelected = selectedEx?.id === ex.id
-              return (
-                <button key={ex.id} onClick={() => handleChonBai(ex)} style={{
-                  padding: '8px 16px', borderRadius: '20px',
-                  border: `1.5px solid ${isSelected ? mau.bg : '#B5D4F4'}`,
-                  backgroundColor: isSelected ? mau.bg : 'white',
-                  color: isSelected ? mau.text : '#378ADD',
-                  fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-                }}>
-                  {ex.kyNang} · {ex.tenBaiTap}
-                </button>
-              )
-            })}
+      {/* Dialog nộp thành công */}
+      {submitDone && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          backgroundColor: 'rgba(12,68,124,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px',
+            padding: '40px 32px', width: '340px', maxWidth: '90vw',
+            display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center',
+            boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
+          }}>
+            <div style={{ fontSize: '48px' }}>🎉</div>
+            <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Nộp bài thành công!</h3>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#1D9E75', margin: 0 }}>
+              {ketQua?.dung} / {ketQua?.tong} câu đúng
+            </p>
+            <button onClick={() => router.push('/trang-chu')} style={{ ...btnPrimary, width: '100%' }}>
+              Về trang chủ
+            </button>
           </div>
         </div>
       )}
 
-      {selectedLop && exercises.length === 0 && !loading && (
-        <p style={{ color: '#888', fontSize: '14px' }}>Lớp này chưa được giao bài tập nào.</p>
-      )}
+      {/* Header bài tập */}
+      <div style={{
+        backgroundColor: isReview ? '#6B7280' : mauHeader,
+        padding: '10px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexShrink: 0,
+      }}>
+        <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
+          {exercise.loaiBai} · {exercise.kyNang}
+        </span>
+        <span style={{ color: 'rgba(255,255,255,0.7)' }}>—</span>
+        <span style={{ color: 'white', fontSize: '14px' }}>{exercise.tenBaiTap}</span>
 
-      {selectedEx && (
-        <div>
-          {loading ? (
-            <p style={{ color: '#185FA5', fontSize: '14px' }}>Đang tải...</p>
-          ) : (
+        {isReview && (
+          <span style={{
+            padding: '3px 10px', borderRadius: '20px',
+            backgroundColor: 'rgba(255,255,255,0.2)', color: 'white',
+            fontSize: '12px', fontWeight: '500',
+          }}>
+            Chế độ xem lại
+          </span>
+        )}
+
+        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+          Câu {cauHienTai + 1} / {questions.length}
+        </span>
+
+        {!isReview && (
+          <button
+            onClick={() => setShowConfirm(true)}
+            style={{
+              marginLeft: '12px', padding: '7px 18px', borderRadius: '8px',
+              border: '2px solid white', backgroundColor: 'transparent',
+              color: 'white', fontSize: '13px', fontWeight: '600',
+              cursor: 'pointer', transition: 'background-color 0.2s', whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            Nộp bài ✓
+          </button>
+        )}
+      </div>
+
+      {/* ── Body: Vùng 1 + (Vùng 2 & 3) ── */}
+      <div className="bt-body">
+
+        {/* Vùng 1: Số câu */}
+        <div
+          className="bt-vung1"
+          style={{
+            width: '72px', minWidth: '72px',
+            backgroundColor: '#E6F1FB',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            padding: '12px 0', gap: '6px', overflowY: 'auto',
+          }}
+        >
+          {questions.map((q, i) => {
+            let bgColor = 'white', textColor = '#378ADD', borderColor = '#B5D4F4'
+
+            if (i === cauHienTai) {
+              bgColor = '#185FA5'; textColor = 'white'; borderColor = '#185FA5'
+            } else if (isReview) {
+              const userAns = reviewAnswers[i]
+              const correct = q.Correct_Ans?.trim()
+              if (!userAns) {
+                bgColor = '#FEF3C7'; textColor = '#92400E'; borderColor = '#F0A500'
+              } else if (userAns === correct) {
+                bgColor = '#E1F5EE'; textColor = '#085041'; borderColor = '#9FE1CB'
+              } else {
+                bgColor = '#FCEBEB'; textColor = '#791F1F'; borderColor = '#F9A8A8'
+              }
+            } else if (answers[i]) {
+              bgColor = '#E1F5EE'; textColor = '#085041'; borderColor = '#9FE1CB'
+            }
+
+            return (
+              <div
+                key={i}
+                className="so-cau"
+                onClick={() => setCauHienTai(i)}
+                style={{
+                  width: '36px', height: '36px', borderRadius: '6px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                  backgroundColor: bgColor, color: textColor,
+                  border: `1px solid ${borderColor}`,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {i + 1}
+              </div>
+            )
+          })}
+
+          {!isReview && (
             <>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {[
-                  { label: 'Tổng học viên', value: rows.length, bg: '#E6F1FB', color: '#0C447C' },
-                  { label: 'Đã làm', value: daDam, bg: '#E1F5EE', color: '#085041' },
-                  { label: 'Chưa làm', value: chuaLam, bg: '#FCEBEB', color: '#791F1F' },
-                  { label: 'Điểm TB', value: diemTB ? `${diemTB}%` : '—', bg: '#FAEEDA', color: '#633806' },
-                ].map(s => (
-                  <div key={s.label} style={{
-                    padding: '12px 20px', borderRadius: '12px',
-                    backgroundColor: s.bg, display: 'flex', flexDirection: 'column', gap: '2px',
-                  }}>
-                    <span style={{ fontSize: '12px', color: s.color, fontWeight: '500' }}>{s.label}</span>
-                    <span style={{ fontSize: '22px', fontWeight: '700', color: s.color }}>{s.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #B5D4F4' }}>
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                  backgroundColor: '#185FA5', padding: '10px 16px', gap: '8px',
-                }}>
-                  {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
-                    <span key={h} style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{h}</span>
-                  ))}
-                </div>
-
-                {rows.map((r, i) => {
-                  const daDamRow = !!r.sub
-                  const phanTram = r.sub?.diem != null
-                    ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
-                  const formatNgay = (iso) => {
-                    if (!iso) return '—'
-                    const d = new Date(iso)
-                    return `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
-                  }
-                  return (
-                    <div key={r.id} style={{
-                      display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                      padding: '10px 16px', gap: '8px',
-                      backgroundColor: i % 2 === 0 ? 'white' : '#F8FBFF',
-                      borderTop: '1px solid #E6F1FB', alignItems: 'center',
-                    }}>
-                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#0C447C' }}>
-                        {r.ho} {r.ten}
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#555' }}>{r.lop}</span>
-                      <span style={{
-                        fontSize: '12px', fontWeight: '500', padding: '3px 10px', borderRadius: '20px',
-                        backgroundColor: daDamRow ? '#E1F5EE' : '#FCEBEB',
-                        color: daDamRow ? '#085041' : '#791F1F',
-                        alignSelf: 'center', justifySelf: 'start',
-                      }}>
-                        {daDamRow ? 'Đã làm' : 'Chưa làm'}
-                      </span>
-                      <span style={{
-                        fontSize: '14px', fontWeight: '600',
-                        color: phanTram >= 50 ? '#1D9E75' : phanTram != null ? '#E24B4A' : '#B5D4F4',
-                      }}>
-                        {r.sub?.diem != null ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)` : '—'}
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#888' }}>
-                        {formatNgay(r.sub?.thoiGianNop)}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+              <div style={{ flex: 1 }} />
+              <button
+                onClick={() => setShowConfirm(true)}
+                style={{
+                  width: '48px', padding: '8px 0', borderRadius: '8px', border: 'none',
+                  backgroundColor: '#1D9E75', color: 'white',
+                  fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+                  marginBottom: '4px', lineHeight: '1.3',
+                }}
+              >
+                Nộp<br/>bài
+              </button>
             </>
           )}
         </div>
-      )}
-    </div>
-  )
-}
 
-// ─── Shared ───────────────────────────────────────────────────────────────────
-function Overlay({ onClose, children, width = '420px' }) {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 2000,
-      backgroundColor: 'rgba(12,68,124,0.4)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div style={{
-        backgroundColor: 'white', borderRadius: '16px',
-        padding: '32px', width, maxWidth: '95vw',
-        display: 'flex', flexDirection: 'column', gap: '16px',
-        boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
-        {children}
-      </div>
-    </div>
+        {/* Vùng 2 + Vùng 3 wrapper */}
+        <div className="bt-vung2-3">
+
+          {/* Vùng 2: Nội dung (audio / hình) */}
+          <div className="bt-vung2" id="content-panel">
+            {firstInGroup?.Audios?.map((src, i) => (
+              <iframe
+                key={src + i}
+                src={src}
+                width="100%" height="80"
+                style={{ border: 'none', borderRadius: '8px' }}
+              />
+            ))}
+
+            {firstInGroup?.Contexts?.map((ctx, i) => (
+              <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
+                {ctx.startsWith('http')
+                  ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
+                  : ctx
+                }
+              </div>
+            ))}
+
+            {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
+              <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
+            )}
+          </div>
+
+          {/* Vùng 3: Câu hỏi & Đáp án */}
+          <div className="bt-vung3" id="question-panel">
+            {questionsInGroup.map((q) => (
+              <div
+                key={q.globalIndex}
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: '12px',
+                  backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent',
+                  padding: '10px', borderRadius: '8px',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#185FA5' }}>
+                  Câu {q.globalIndex + 1}: {q.Question}
+                </p>
+
+                {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {q.Question_Type === 'mcq'
+                      ? getOptions(q).map(opt => {
+                          const border = isReview
+                            ? getReviewBorderColor(q, opt.key)
+                            : (answers[q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4')
+                          const bg = isReview
+                            ? (opt.key === q.Correct_Ans?.trim() ? '#E1F5EE'
+                              : opt.key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
+                              : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
+                              : 'white')
+                            : (answers[q.globalIndex] === opt.key ? '#E6F1FB' : 'white')
+                          const color = isReview
+                            ? (opt.key === q.Correct_Ans?.trim() ? '#085041'
+                              : opt.key === reviewAnswers[q.globalIndex] ? '#791F1F'
+                              : '#378ADD')
+                            : (answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD')
+                          return (
+                            <div
+                              key={opt.key}
+                              onClick={() => chonDapAn(q.globalIndex, opt.key)}
+                              style={{
+                                padding: '10px 14px', borderRadius: '8px',
+                                border: `1.5px solid ${border}`,
+                                backgroundColor: bg, color,
+                                fontSize: '14px',
+                                cursor: isReview ? 'default' : 'pointer',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {opt.key}. {opt.value}
+                            </div>
+                          )
+                        })
+                      : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
+                          const border = isReview
+                            ? getReviewBorderColor(q, key)
+                            : (answers[q.globalIndex] === key ? '#185FA5' : '#B5D4F4')
+                          const bg = isReview
+                            ? (key === q.Correct_Ans?.trim() ? '#E1F5EE'
+                              : key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
+                              : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
+                              : 'white')
+                            : (answers[q.globalIndex] === key ? '#E6F1FB' : 'white')
+                          const color = isReview
+                            ? (key === q.Correct_Ans?.trim() ? '#085041'
+                              : key === reviewAnswers[q.globalIndex] ? '#791F1F'
+                              : '#888')
+                            : (answers[q.globalIndex] === key ? '#0C447C' : '#888')
+                          return (
+                            <div
+                              key={key}
+                              onClick={() => chonDapAn(q.globalIndex, key)}
+                              style={{
+                                padding: '10px 14px', borderRadius: '8px',
+                                border: `1.5px solid ${border}`,
+                                backgroundColor: bg, color,
+                                fontSize: '14px', cursor: isReview ? 'default' : 'pointer',
+                                fontWeight: '600', textAlign: 'center',
+                              }}
+                            >
+                              {key}
+                            </div>
+                          )
+                        })
+                    }
+                  </div>
+                )}
+
+                {q.Question_Type === 'fill_short' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
+                      <input
+                        key={i} type="text"
+                        placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
+                        value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
+                        readOnly={isReview}
+                        onChange={(e) => {
+                          if (isReview) return
+                          const prev = answers[q.globalIndex] || []
+                          const newArr = [...prev]
+                          newArr[i] = e.target.value
+                          setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
+                        }}
+                        style={{
+                          padding: '10px 14px', borderRadius: '8px',
+                          border: '1px solid #B5D4F4', outline: 'none',
+                          backgroundColor: isReview ? '#F8FBFF' : 'white',
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {q.Question_Type === 'fill_long' && (
+                  <textarea
+                    placeholder="Nhập bài làm của bạn..."
+                    value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
+                    readOnly={isReview}
+                    onChange={(e) => {
+                      if (isReview) return
+                      setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value }))
+                    }}
+                    style={{
+                      padding: '10px 14px', borderRadius: '8px',
+                      border: '1px solid #B5D4F4', minHeight: '120px',
+                      resize: 'vertical', outline: 'none',
+                      backgroundColor: isReview ? '#F8FBFF' : 'white',
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+
+            {/* Nút điều hướng */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
+              <button
+                className="bt-nav-btn"
+                onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
+                disabled={cauHienTai === 0}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #B5D4F4',
+                  backgroundColor: 'white', color: '#378ADD',
+                  cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer',
+                  opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500',
+                }}
+              >
+                ← Trước
+              </button>
+
+              {!isReview && cauHienTai === questions.length - 1 ? (
+                <button
+                  className="bt-nav-btn"
+                  onClick={() => setShowConfirm(true)}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                    backgroundColor: '#1D9E75', color: 'white',
+                    fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+                  }}
+                >
+                  Nộp bài ✓
+                </button>
+              ) : (
+                <button
+                  className="bt-nav-btn"
+                  onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
+                  disabled={cauHienTai === questions.length - 1}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                    backgroundColor: '#378ADD', color: 'white',
+                    cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer',
+                    opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500',
+                  }}
+                >
+                  Tiếp →
+                </button>
+              )}
+            </div>
+          </div>
+
+        </div>{/* end bt-vung2-3 */}
+      </div>{/* end bt-body */}
+      <HighlightToolbar
+        toolbar={toolbar}
+        onHighlight={applyHighlight}
+        onClose={hideToolbar}
+      />
+    </main>
   )
 }
 

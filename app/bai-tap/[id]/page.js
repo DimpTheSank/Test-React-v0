@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, use, useState } from 'react'
+import { useEffect, use, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
@@ -14,6 +14,30 @@ const mauKyNang = {
   'Listening': '#1D9E75',
   'Writing':   '#BA7517',
   'Speaking':  '#A32D2D',
+}
+function useZoomPan() {
+  const [scale, setScale] = useState(1)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const dragging = useRef(false)
+  const startRef = useRef({ x: 0, y: 0 })
+
+  const onWheel = (e) => {
+    e.preventDefault()
+    setScale(s => Math.min(4, Math.max(1, s - e.deltaY * 0.001)))
+  }
+  const onMouseDown = (e) => {
+    if (scale <= 1) return
+    dragging.current = true
+    startRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
+  }
+  const onMouseMove = (e) => {
+    if (!dragging.current) return
+    setPos({ x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y })
+  }
+  const onMouseUp = () => { dragging.current = false }
+  const reset = () => { setScale(1); setPos({ x: 0, y: 0 }) }
+
+  return { scale, pos, reset, dragging, handlers: { onWheel, onMouseDown, onMouseMove, onMouseUp, onMouseLeave: onMouseUp } }
 }
 
 export default function BaiTap({ params }) {
@@ -32,6 +56,7 @@ export default function BaiTap({ params }) {
   const [ketQua, setKetQua] = useState(null)
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
+  const { scale, pos, reset, dragging, handlers: zoomHandlers } = useZoomPan()
 
   const [reviewAnswers, setReviewAnswers] = useState({})
 
@@ -202,7 +227,7 @@ export default function BaiTap({ params }) {
           overflow: hidden;
         }
         .bt-vung2 {
-          flex: 1.2;
+          flex: 1.5;
           border-bottom: 1px solid #B5D4F4;
           padding: 20px;
           overflow-y: auto;
@@ -458,7 +483,29 @@ export default function BaiTap({ params }) {
         <div className="bt-vung2-3">
 
           {/* Vùng 2: Nội dung (audio / hình) */}
-          <div className="bt-vung2" id="content-panel">
+          <div className="bt-vung2" id="content-panel"
+          {...zoomHandlers}
+          style={{ cursor: scale > 1 ? 'grab' : 'default', overflow: 'hidden', position: 'relative' }}>
+              {scale > 1 && (
+                <button
+                  onClick={reset}
+                  style={{
+                    position: 'absolute', top: 8, right: 8, zIndex: 10,
+                    padding: '4px 10px', borderRadius: '6px',
+                    border: '1px solid #B5D4F4', backgroundColor: 'white',
+                    color: '#378ADD', fontSize: '12px', cursor: 'pointer',
+                  }}
+                >
+                  ↺ Reset zoom
+                </button>
+              )}
+
+              <div style={{
+                transform: `scale(${scale}) translate(${pos.x / scale}px, ${pos.y / scale}px)`,
+                transformOrigin: 'top left',
+                transition: dragging.current ? 'none' : 'transform 0.15s',
+                display: 'flex', flexDirection: 'column', gap: '16px',
+              }}></div>
             {firstInGroup?.Audios?.map((src, i) => (
               <iframe
                 key={src + i}
@@ -680,3 +727,10 @@ const btnSecondary = {
   border: '1px solid #B5D4F4', backgroundColor: 'white',
   color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
 }
+useEffect(() => {
+  const el = document.getElementById('content-panel')
+  if (!el) return
+  const handler = (e) => e.preventDefault()
+  el.addEventListener('wheel', handler, { passive: false })
+  return () => el.removeEventListener('wheel', handler)
+}, [])

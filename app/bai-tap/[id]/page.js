@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, use, useState } from 'react'
+import { useEffect, use, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
@@ -30,15 +30,67 @@ export default function BaiTap({ params }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitDone, setSubmitDone] = useState(false)
   const [ketQua, setKetQua] = useState(null)
+  const [draftSaved, setDraftSaved] = useState(false) // hiện "Đã lưu nháp"
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
 
   const [reviewAnswers, setReviewAnswers] = useState({})
 
+  // Ref để debounce lưu draft
+  const saveDraftTimeout = useRef(null)
+  // Ref lưu assignmentId để dùng trong useEffect lưu draft
+  const assignmentIdRef = useRef(null)
+  // Ref tránh lưu draft khi vừa load xong (lần đầu)
+  const isFirstLoad = useRef(true)
+
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
     loadInfo()
   }, [])
+
+  // ── Auto-save draft khi answers thay đổi ──────────────────────────────────
+  useEffect(() => {
+    if (isReview) return
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+      return
+    }
+    if (Object.keys(answers).length === 0) return
+
+    clearTimeout(saveDraftTimeout.current)
+    saveDraftTimeout.current = setTimeout(async () => {
+      try {
+        const userInfo = getUserInfo()
+        if (!userInfo) return
+
+        let assignId = assignmentIdRef.current
+        // Nếu chưa có assignmentId, query lại
+        if (!assignId) {
+          const assignSnap = await getDocs(query(
+            collection(db, 'assignments'),
+            where('userId', '==', userInfo.taiKhoan),
+            where('exerciseId', '==', id)
+          ))
+          assignId = assignSnap.docs[0]?.id || null
+          assignmentIdRef.current = assignId
+        }
+
+        if (assignId) {
+          await updateDoc(doc(db, 'assignments', assignId), {
+            trangThai: 'Đang làm',
+            answers,
+            thoiGianLuuNhap: new Date().toISOString(),
+          })
+          setDraftSaved(true)
+          setTimeout(() => setDraftSaved(false), 2000) // ẩn sau 2s
+        }
+      } catch (err) {
+        console.error('Lỗi lưu nháp:', err)
+      }
+    }, 1500) // debounce 1.5s
+
+    return () => clearTimeout(saveDraftTimeout.current)
+  }, [answers])
 
   const getUserInfo = () => {
     try {
@@ -74,11 +126,14 @@ export default function BaiTap({ params }) {
       }))
       setQuestions(processedData)
 
+      // ── Load draft hoặc review answers ────────────────────────────────────
+      const userInfo = getUserInfo()
+      if (!userInfo) return
+
       if (isReview) {
-        const userInfo = getUserInfo()
         const subSnap = await getDocs(query(
           collection(db, 'submissions'),
-          where('userId', '==', userInfo?.taiKhoan),
+          where('userId', '==', userInfo.taiKhoan),
           where('exerciseId', '==', id)
         ))
         if (!subSnap.empty) {
@@ -86,6 +141,21 @@ export default function BaiTap({ params }) {
             .map(d => d.data())
             .reduce((a, b) => (a.diem ?? -1) >= (b.diem ?? -1) ? a : b)
           setReviewAnswers(best.answers || {})
+        }
+      } else {
+        // Khôi phục draft nếu có
+        const assignSnap = await getDocs(query(
+          collection(db, 'assignments'),
+          where('userId', '==', userInfo.taiKhoan),
+          where('exerciseId', '==', id)
+        ))
+        const assignDoc = assignSnap.docs[0]
+        if (assignDoc) {
+          assignmentIdRef.current = assignDoc.id
+          const assignData = assignDoc.data()
+          if (assignData.trangThai === 'Đang làm' && assignData.answers) {
+            setAnswers(assignData.answers)
+          }
         }
       }
     } catch (error) {
@@ -139,6 +209,9 @@ export default function BaiTap({ params }) {
         await updateDoc(doc(db, 'assignments', assignmentId), {
           trangThai: 'Đã làm',
           thoiGianNop: new Date().toISOString(),
+          // Xóa draft fields
+          answers: null,
+          thoiGianLuuNhap: null,
         })
       }
 
@@ -219,7 +292,6 @@ export default function BaiTap({ params }) {
           gap: 35px;
         }
 
-        /* Desktop: vùng 2 và 3 nằm ngang cạnh nhau */
         @media (min-width: 769px) {
           .bt-vung1 {
             border-right: 1px solid #B5D4F4;
@@ -237,7 +309,6 @@ export default function BaiTap({ params }) {
           }
         }
 
-        /* Mobile: vùng 1 ở trái hẹp, vùng 2 trên + vùng 3 dưới */
         @media (max-width: 768px) {
           .bt-vung1 {
             width: 48px !important;
@@ -271,6 +342,16 @@ export default function BaiTap({ params }) {
             padding: 8px 4px !important;
             font-size: 12px !important;
           }
+        }
+
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(4px); }
+          20% { opacity: 1; transform: translateY(0); }
+          80% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .draft-saved-toast {
+          animation: fadeInOut 2s ease forwards;
         }
       `}</style>
 
@@ -347,6 +428,7 @@ export default function BaiTap({ params }) {
         alignItems: 'center',
         gap: '12px',
         flexShrink: 0,
+        position: 'relative',
       }}>
         <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
           {exercise.loaiBai} · {exercise.kyNang}
@@ -361,6 +443,19 @@ export default function BaiTap({ params }) {
             fontSize: '12px', fontWeight: '500',
           }}>
             Chế độ xem lại
+          </span>
+        )}
+
+        {/* Toast "Đã lưu nháp" */}
+        {draftSaved && (
+          <span
+            className="draft-saved-toast"
+            style={{
+              fontSize: '12px', color: 'rgba(255,255,255,0.85)',
+              display: 'flex', alignItems: 'center', gap: '4px',
+            }}
+          >
+            ✓ Đã lưu nháp
           </span>
         )}
 
@@ -660,6 +755,7 @@ export default function BaiTap({ params }) {
 
         </div>{/* end bt-vung2-3 */}
       </div>{/* end bt-body */}
+
       <HighlightToolbar
         toolbar={toolbar}
         onHighlight={applyHighlight}

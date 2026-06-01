@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, use, useState, useRef } from 'react'
+import { useEffect, use, useState, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
@@ -16,6 +16,227 @@ const mauKyNang = {
   'Speaking':  '#A32D2D',
 }
 
+// ─── FillBlankQuestion Component ─────────────────────────────────────────────
+/**
+ * Render một câu fill_blank với drag & drop từ word bank.
+ *
+ * Sheet format:
+ *   Question   : "Can you do me ___ ? I need someone to ___ at the shop."
+ *   Correct_Ans: "a favor|take over"         (thứ tự theo ô trống)
+ *   Word_Bank  : "a favor|take over|schedule|customer|update"
+ *
+ * answers[globalIndex] = ["a favor", "take over"]   (mảng theo thứ tự blank)
+ */
+function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) {
+  // Parse
+  const correctParts = (q.Correct_Ans || '').split('|').map(s => s.trim())
+  const wordBankRaw  = (q.Word_Bank   || '').split('|').map(s => s.trim()).filter(Boolean)
+
+  // userAnswer là mảng slot, mỗi phần tử là từ đã điền hoặc null
+  const slots = userAnswer || correctParts.map(() => null)
+
+  // Tính từ còn trong bank (chưa dùng)
+  const usedWords = slots.filter(Boolean)
+  const bankWords = wordBankRaw.filter(w => {
+    const usedCount  = usedWords.filter(u => u === w).length
+    const totalCount = wordBankRaw.filter(x => x === w).length
+    return usedCount < totalCount
+  })
+
+  // Drag state
+  const [dragging, setDragging] = useState(null) // { word, from: 'bank'|slotIndex }
+  const [dragOver, setDragOver] = useState(null) // 'bank' | slotIndex
+
+  const handleDragStart = (word, from) => setDragging({ word, from })
+  const handleDragEnd   = () => { setDragging(null); setDragOver(null) }
+
+  const dropToSlot = (slotIdx) => {
+    if (!dragging || isReview) return
+    const newSlots = [...slots]
+
+    // Nếu kéo từ slot khác
+    if (typeof dragging.from === 'number') {
+      // Hoán đổi
+      const displaced = newSlots[slotIdx]
+      newSlots[dragging.from] = displaced   // slot cũ nhận từ bị đẩy ra (có thể null)
+      newSlots[slotIdx]        = dragging.word
+    } else {
+      // Kéo từ bank vào slot
+      // Nếu slot đó đã có từ → trả từ đó về bank tự động (chỉ xóa khỏi slot)
+      newSlots[slotIdx] = dragging.word
+    }
+    onChange(newSlots)
+  }
+
+  const dropToBank = () => {
+    if (!dragging || isReview) return
+    if (typeof dragging.from === 'number') {
+      // Trả từ về bank
+      const newSlots = [...slots]
+      newSlots[dragging.from] = null
+      onChange(newSlots)
+    }
+  }
+
+  // Parse câu hỏi thành segments: [{type:'text',val}] | [{type:'blank',idx}]
+  const segments = []
+  let blankIdx = 0
+  const parts = q.Question.split('___')
+  parts.forEach((part, i) => {
+    if (part) segments.push({ type: 'text', val: part })
+    if (i < parts.length - 1) {
+      segments.push({ type: 'blank', idx: blankIdx++ })
+    }
+  })
+
+  const getSlotStyle = (slotIdx) => {
+    const filled  = slots[slotIdx]
+    const isDragTarget = dragOver === slotIdx
+
+    if (isReview) {
+      const correct = correctParts[slotIdx]
+      const revAns  = (reviewAnswer || [])[slotIdx]
+      if (!revAns)               return { bg: '#FFFBEB', border: '#F0A500', color: '#92400E' }
+      if (revAns === correct)    return { bg: '#E1F5EE', border: '#1D9E75', color: '#085041' }
+      return                            { bg: '#FCEBEB', border: '#E24B4A', color: '#791F1F' }
+    }
+    if (isDragTarget) return { bg: '#EFF6FF', border: '#185FA5', color: '#0C447C' }
+    if (filled)       return { bg: '#E6F1FB', border: '#378ADD', color: '#0C447C' }
+    return                   { bg: 'white',   border: '#B5D4F4', color: '#B5D4F4' }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+      {/* Đoạn văn với các ô trống */}
+      <div style={{
+        fontSize: '14px', lineHeight: '2.2', color: '#1a1a1a',
+        padding: '14px 18px', borderRadius: '10px',
+        border: '1px solid #E6F1FB', backgroundColor: '#F8FBFF',
+      }}>
+        {segments.map((seg, si) => {
+          if (seg.type === 'text') {
+            return <span key={si}>{seg.val}</span>
+          }
+          const idx   = seg.idx
+          const style = getSlotStyle(idx)
+          const filled = isReview
+            ? (reviewAnswer || [])[idx]
+            : slots[idx]
+
+          return (
+            <span
+              key={si}
+              draggable={!!filled && !isReview}
+              onDragStart={() => filled && handleDragStart(filled, idx)}
+              onDragEnd={handleDragEnd}
+              onDragOver={e => { e.preventDefault(); !isReview && setDragOver(idx) }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={e => { e.preventDefault(); dropToSlot(idx) }}
+              style={{
+                display: 'inline-block',
+                minWidth: '90px',
+                padding: '3px 12px',
+                margin: '0 4px',
+                borderRadius: '6px',
+                border: `1.5px dashed ${style.border}`,
+                backgroundColor: style.bg,
+                color: style.color,
+                fontSize: '13px',
+                fontWeight: filled ? '600' : '400',
+                cursor: filled && !isReview ? 'grab' : 'default',
+                textAlign: 'center',
+                verticalAlign: 'middle',
+                transition: 'all 0.15s',
+                userSelect: 'none',
+              }}
+            >
+              {filled || <span style={{ opacity: 0.4, fontStyle: 'italic', fontWeight: 400 }}>kéo vào đây</span>}
+              {/* Review: hiện đáp án đúng nếu sai */}
+              {isReview && filled && filled !== correctParts[idx] && (
+                <span style={{
+                  marginLeft: '6px', color: '#1D9E75',
+                  fontWeight: '600', fontSize: '12px',
+                }}>→ {correctParts[idx]}</span>
+              )}
+            </span>
+          )
+        })}
+      </div>
+
+      {/* Word bank */}
+      {!isReview && (
+        <div
+          onDragOver={e => { e.preventDefault(); setDragOver('bank') }}
+          onDragLeave={() => setDragOver(null)}
+          onDrop={e => { e.preventDefault(); dropToBank(); setDragOver(null) }}
+          style={{
+            display: 'flex', flexWrap: 'wrap', gap: '8px',
+            padding: '12px 14px', borderRadius: '10px',
+            border: `1.5px dashed ${dragOver === 'bank' ? '#185FA5' : '#B5D4F4'}`,
+            backgroundColor: dragOver === 'bank' ? '#EFF6FF' : '#F0F7FF',
+            minHeight: '48px',
+            transition: 'all 0.15s',
+          }}
+        >
+          {bankWords.length === 0 && (
+            <span style={{ color: '#B5D4F4', fontSize: '13px', fontStyle: 'italic' }}>
+              Kéo từ vào đây để trả về
+            </span>
+          )}
+          {bankWords.map((word, wi) => (
+            <span
+              key={`${word}-${wi}`}
+              draggable
+              onDragStart={() => handleDragStart(word, 'bank')}
+              onDragEnd={handleDragEnd}
+              style={{
+                padding: '6px 14px', borderRadius: '20px',
+                border: '1.5px solid #B5D4F4',
+                backgroundColor: dragging?.word === word && dragging?.from === 'bank'
+                  ? '#E6F1FB' : 'white',
+                color: '#185FA5',
+                fontSize: '13px', fontWeight: '500',
+                cursor: 'grab', userSelect: 'none',
+                transition: 'all 0.15s',
+                opacity: dragging?.word === word && dragging?.from === 'bank' ? 0.5 : 1,
+                boxShadow: '0 1px 3px rgba(24,95,165,0.1)',
+              }}
+            >
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Review: word bank readonly để xem đáp án */}
+      {isReview && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: '8px',
+          padding: '10px 14px', borderRadius: '10px',
+          border: '1px solid #E6F1FB', backgroundColor: '#F8FBFF',
+        }}>
+          <span style={{ color: '#888', fontSize: '12px', marginRight: '4px', alignSelf: 'center' }}>
+            Word bank:
+          </span>
+          {wordBankRaw.map((word, wi) => (
+            <span key={wi} style={{
+              padding: '4px 12px', borderRadius: '20px',
+              border: '1px solid #B5D4F4',
+              backgroundColor: 'white',
+              color: correctParts.includes(word) ? '#1D9E75' : '#888',
+              fontSize: '12px', fontWeight: correctParts.includes(word) ? '600' : '400',
+            }}>
+              {word}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BaiTap({ params }) {
   const { id } = use(params)
   const router = useRouter()
@@ -30,31 +251,24 @@ export default function BaiTap({ params }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitDone, setSubmitDone] = useState(false)
   const [ketQua, setKetQua] = useState(null)
-  const [draftSaved, setDraftSaved] = useState(false) // hiện "Đã lưu nháp"
+  const [draftSaved, setDraftSaved] = useState(false)
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
-
   const [reviewAnswers, setReviewAnswers] = useState({})
 
-  // Ref để debounce lưu draft
   const saveDraftTimeout = useRef(null)
-  // Ref lưu assignmentId để dùng trong useEffect lưu draft
-  const assignmentIdRef = useRef(null)
-  // Ref tránh lưu draft khi vừa load xong (lần đầu)
-  const isFirstLoad = useRef(true)
+  const assignmentIdRef  = useRef(null)
+  const isFirstLoad      = useRef(true)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
     loadInfo()
   }, [])
 
-  // ── Auto-save draft khi answers thay đổi ──────────────────────────────────
+  // Auto-save draft
   useEffect(() => {
     if (isReview) return
-    if (isFirstLoad.current) {
-      isFirstLoad.current = false
-      return
-    }
+    if (isFirstLoad.current) { isFirstLoad.current = false; return }
     if (Object.keys(answers).length === 0) return
 
     clearTimeout(saveDraftTimeout.current)
@@ -62,9 +276,7 @@ export default function BaiTap({ params }) {
       try {
         const userInfo = getUserInfo()
         if (!userInfo) return
-
         let assignId = assignmentIdRef.current
-        // Nếu chưa có assignmentId, query lại
         if (!assignId) {
           const assignSnap = await getDocs(query(
             collection(db, 'assignments'),
@@ -74,7 +286,6 @@ export default function BaiTap({ params }) {
           assignId = assignSnap.docs[0]?.id || null
           assignmentIdRef.current = assignId
         }
-
         if (assignId) {
           await updateDoc(doc(db, 'assignments', assignId), {
             trangThai: 'Đang làm',
@@ -82,12 +293,10 @@ export default function BaiTap({ params }) {
             thoiGianLuuNhap: new Date().toISOString(),
           })
           setDraftSaved(true)
-          setTimeout(() => setDraftSaved(false), 2000) // ẩn sau 2s
+          setTimeout(() => setDraftSaved(false), 2000)
         }
-      } catch (err) {
-        console.error('Lỗi lưu nháp:', err)
-      }
-    }, 1500) // debounce 1.5s
+      } catch (err) { console.error('Lỗi lưu nháp:', err) }
+    }, 1500)
 
     return () => clearTimeout(saveDraftTimeout.current)
   }, [answers])
@@ -122,11 +331,10 @@ export default function BaiTap({ params }) {
         ...item,
         globalIndex: index,
         Contexts: splitMedia(item.Context, 'image'),
-        Audios:   splitMedia(item.Audio, 'audio'),
+        Audios:   splitMedia(item.Audio,   'audio'),
       }))
       setQuestions(processedData)
 
-      // ── Load draft hoặc review answers ────────────────────────────────────
       const userInfo = getUserInfo()
       if (!userInfo) return
 
@@ -143,7 +351,6 @@ export default function BaiTap({ params }) {
           setReviewAnswers(best.answers || {})
         }
       } else {
-        // Khôi phục draft nếu có
         const assignSnap = await getDocs(query(
           collection(db, 'assignments'),
           where('userId', '==', userInfo.taiKhoan),
@@ -163,8 +370,17 @@ export default function BaiTap({ params }) {
     }
   }
 
-  const soCauChuaLam = questions.length - Object.keys(answers).length
+  // ── Tính số câu chưa làm (hỗ trợ fill_blank) ──────────────────────────────
+  const soCauChuaLam = questions.filter(q => {
+    const ans = answers[q.globalIndex]
+    if (q.Question_Type === 'fill_blank') {
+      const numBlanks = (q.Question.match(/___/g) || []).length
+      return !ans || (Array.isArray(ans) && ans.filter(Boolean).length < numBlanks)
+    }
+    return !ans
+  }).length
 
+  // ── Chấm điểm ─────────────────────────────────────────────────────────────
   const handleNopBai = async () => {
     setIsSubmitting(true)
     try {
@@ -181,37 +397,30 @@ export default function BaiTap({ params }) {
           if (userAns === correctRaw) soCauDung++
         } else if (q.Question_Type === 'fill_short') {
           const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
-          const userParts = (userAns || []).map(s => s.trim().toLowerCase())
+          const userParts    = (userAns || []).map(s => s.trim().toLowerCase())
+          if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
+        } else if (q.Question_Type === 'fill_blank') {
+          // Mỗi blank đúng tính 1 điểm con; cả câu đúng hết mới tính 1 điểm câu
+          const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
+          const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
           if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
         }
       })
 
-      const assignQuery = query(
-        collection(db, 'assignments'),
-        where('userId', '==', taiKhoan),
-        where('exerciseId', '==', id)
-      )
-      const assignSnap = await getDocs(assignQuery)
+      const assignQuery  = query(collection(db, 'assignments'), where('userId', '==', taiKhoan), where('exerciseId', '==', id))
+      const assignSnap   = await getDocs(assignQuery)
       const assignmentId = assignSnap.docs[0]?.id || null
 
       await addDoc(collection(db, 'submissions'), {
-        userId: taiKhoan,
-        exerciseId: id,
-        assignmentId,
-        answers,
-        diem: soCauDung,
-        tongCau: questions.length,
-        thoiGianNop: new Date().toISOString(),
-        trangThai: 'Đã nộp',
+        userId: taiKhoan, exerciseId: id, assignmentId,
+        answers, diem: soCauDung, tongCau: questions.length,
+        thoiGianNop: new Date().toISOString(), trangThai: 'Đã nộp',
       })
 
       if (assignmentId) {
         await updateDoc(doc(db, 'assignments', assignmentId), {
-          trangThai: 'Đã làm',
-          thoiGianNop: new Date().toISOString(),
-          // Xóa draft fields
-          answers: null,
-          thoiGianLuuNhap: null,
+          trangThai: 'Đã làm', thoiGianNop: new Date().toISOString(),
+          answers: null, thoiGianLuuNhap: null,
         })
       }
 
@@ -220,9 +429,7 @@ export default function BaiTap({ params }) {
     } catch (err) {
       console.error('Lỗi khi nộp bài:', err)
       alert('Có lỗi xảy ra khi nộp bài. Vui lòng thử lại!')
-    } finally {
-      setIsSubmitting(false)
-    }
+    } finally { setIsSubmitting(false) }
   }
 
   const getReviewBorderColor = (q, optKey) => {
@@ -234,11 +441,11 @@ export default function BaiTap({ params }) {
     return '#B5D4F4'
   }
 
-  const currentCau = questions[cauHienTai]
-  const currentGroup = currentCau?.Group
+  const currentCau       = questions[cauHienTai]
+  const currentGroup     = currentCau?.Group
   const questionsInGroup = questions.filter(q => q.Group === currentGroup)
-  const firstInGroup = questionsInGroup[0]
-  const mauHeader = mauKyNang[exercise?.kyNang] || '#185FA5'
+  const firstInGroup     = questionsInGroup[0]
+  const mauHeader        = mauKyNang[exercise?.kyNang] || '#185FA5'
 
   const getOptions = (q) => {
     if (!q) return []
@@ -261,130 +468,57 @@ export default function BaiTap({ params }) {
   return (
     <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Responsive styles ── */}
       <style>{`
-        .bt-body {
-          display: flex;
-          flex: 1;
-          overflow: hidden;
-        }
-        .bt-vung2-3 {
-          display: flex;
-          flex-direction: column;
-          flex: 1;
-          overflow: hidden;
-        }
+        .bt-body { display: flex; flex: 1; overflow: hidden; }
+        .bt-vung2-3 { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
         .bt-vung2 {
-          flex: 1.2;
-          border-bottom: 1px solid #B5D4F4;
-          padding: 20px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
+          flex: 1.2; border-bottom: 1px solid #B5D4F4;
+          padding: 20px; overflow-y: auto;
+          display: flex; flex-direction: column; gap: 16px;
         }
         .bt-vung3 {
-          flex: 1;
-          padding: 20px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 35px;
+          flex: 1; padding: 20px; overflow-y: auto;
+          display: flex; flex-direction: column; gap: 35px;
         }
-
         @media (min-width: 769px) {
-          .bt-vung1 {
-            border-right: 1px solid #B5D4F4;
-          }
-          .bt-vung2 {
-            border-right: 1px solid #B5D4F4;
-            border-bottom: none;
-            flex: 1.2;
-          }
-          .bt-vung2-3 {
-            flex-direction: row;
-          }
-          .bt-vung3 {
-            flex: 1;
-          }
+          .bt-vung1 { border-right: 1px solid #B5D4F4; }
+          .bt-vung2 { border-right: 1px solid #B5D4F4; border-bottom: none; flex: 1.2; }
+          .bt-vung2-3 { flex-direction: row; }
+          .bt-vung3 { flex: 1; }
         }
-
         @media (max-width: 768px) {
-          .bt-vung1 {
-            width: 48px !important;
-            min-width: 48px !important;
-            border-right: 1px solid #B5D4F4;
-          }
-          .bt-vung1 .so-cau {
-            width: 28px !important;
-            height: 28px !important;
-            font-size: 11px !important;
-          }
-          .bt-vung2-3 {
-            flex-direction: column;
-            flex: 1;
-          }
-          .bt-vung2 {
-            flex: none;
-            max-height: 40%;
-            border-right: none;
-            border-bottom: 1px solid #B5D4F4;
-            padding: 12px;
-            overflow-y: auto;
-          }
-          .bt-vung3 {
-            flex: 1;
-            padding: 12px;
-            gap: 16px;
-            overflow-y: auto;
-          }
-          .bt-nav-btn {
-            padding: 8px 4px !important;
-            font-size: 12px !important;
-          }
+          .bt-vung1 { width: 48px !important; min-width: 48px !important; border-right: 1px solid #B5D4F4; }
+          .bt-vung1 .so-cau { width: 28px !important; height: 28px !important; font-size: 11px !important; }
+          .bt-vung2-3 { flex-direction: column; flex: 1; }
+          .bt-vung2 { flex: none; max-height: 40%; border-right: none; border-bottom: 1px solid #B5D4F4; padding: 12px; overflow-y: auto; }
+          .bt-vung3 { flex: 1; padding: 12px; gap: 16px; overflow-y: auto; }
+          .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
         }
-
         @keyframes fadeInOut {
-          0% { opacity: 0; transform: translateY(4px); }
-          20% { opacity: 1; transform: translateY(0); }
-          80% { opacity: 1; }
+          0%   { opacity: 0; transform: translateY(4px); }
+          20%  { opacity: 1; transform: translateY(0); }
+          80%  { opacity: 1; }
           100% { opacity: 0; }
         }
-        .draft-saved-toast {
-          animation: fadeInOut 2s ease forwards;
-        }
+        .draft-saved-toast { animation: fadeInOut 2s ease forwards; }
+        [draggable="true"] { -webkit-user-drag: element; }
       `}</style>
 
       {/* Dialog xác nhận nộp bài */}
       {showConfirm && !submitDone && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 2000,
-          backgroundColor: 'rgba(12,68,124,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div style={{
-            backgroundColor: 'white', borderRadius: '16px',
-            padding: '32px', width: '340px', maxWidth: '90vw',
-            display: 'flex', flexDirection: 'column', gap: '16px',
-            boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
-          }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'rgba(12,68,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '32px', width: '340px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 8px 32px rgba(12,68,124,0.2)' }}>
             <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Xác nhận nộp bài</h3>
             {soCauChuaLam > 0 ? (
               <div style={{ backgroundColor: '#FAEEDA', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
-                <span style={{ color: '#633806', fontSize: '14px', fontWeight: '500' }}>
-                  ⚠️ Bạn còn <strong>{soCauChuaLam}</strong> câu chưa làm.
-                </span>
+                <span style={{ color: '#633806', fontSize: '14px', fontWeight: '500' }}>⚠️ Bạn còn <strong>{soCauChuaLam}</strong> câu chưa làm.</span>
               </div>
             ) : (
               <div style={{ backgroundColor: '#E1F5EE', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
-                <span style={{ color: '#085041', fontSize: '14px', fontWeight: '500' }}>
-                  ✅ Bạn đã hoàn thành tất cả {questions.length} câu!
-                </span>
+                <span style={{ color: '#085041', fontSize: '14px', fontWeight: '500' }}>✅ Bạn đã hoàn thành tất cả {questions.length} câu!</span>
               </div>
             )}
-            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
-              Sau khi nộp bạn không thể chỉnh sửa đáp án.
-            </p>
+            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>Sau khi nộp bạn không thể chỉnh sửa đáp án.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowConfirm(false)} style={btnSecondary}>Làm tiếp</button>
               <button onClick={handleNopBai} disabled={isSubmitting} style={{ ...btnPrimary, backgroundColor: '#1D9E75', opacity: isSubmitting ? 0.7 : 1 }}>
@@ -397,81 +531,32 @@ export default function BaiTap({ params }) {
 
       {/* Dialog nộp thành công */}
       {submitDone && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 2000,
-          backgroundColor: 'rgba(12,68,124,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div style={{
-            backgroundColor: 'white', borderRadius: '16px',
-            padding: '40px 32px', width: '340px', maxWidth: '90vw',
-            display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center',
-            boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
-          }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'rgba(12,68,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '40px 32px', width: '340px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', boxShadow: '0 8px 32px rgba(12,68,124,0.2)' }}>
             <div style={{ fontSize: '48px' }}>🎉</div>
             <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Nộp bài thành công!</h3>
-            <p style={{ fontSize: '20px', fontWeight: '700', color: '#1D9E75', margin: 0 }}>
-              {ketQua?.dung} / {ketQua?.tong} câu đúng
-            </p>
-            <button onClick={() => router.push('/trang-chu')} style={{ ...btnPrimary, width: '100%' }}>
-              Về trang chủ
-            </button>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#1D9E75', margin: 0 }}>{ketQua?.dung} / {ketQua?.tong} câu đúng</p>
+            <button onClick={() => router.push('/trang-chu')} style={{ ...btnPrimary, width: '100%' }}>Về trang chủ</button>
           </div>
         </div>
       )}
 
-      {/* Header bài tập */}
-      <div style={{
-        backgroundColor: isReview ? '#6B7280' : mauHeader,
-        padding: '10px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        flexShrink: 0,
-        position: 'relative',
-      }}>
-        <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
-          {exercise.loaiBai} · {exercise.kyNang}
-        </span>
+      {/* Header */}
+      <div style={{ backgroundColor: isReview ? '#6B7280' : mauHeader, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, position: 'relative' }}>
+        <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>{exercise.loaiBai} · {exercise.kyNang}</span>
         <span style={{ color: 'rgba(255,255,255,0.7)' }}>—</span>
         <span style={{ color: 'white', fontSize: '14px' }}>{exercise.tenBaiTap}</span>
-
         {isReview && (
-          <span style={{
-            padding: '3px 10px', borderRadius: '20px',
-            backgroundColor: 'rgba(255,255,255,0.2)', color: 'white',
-            fontSize: '12px', fontWeight: '500',
-          }}>
-            Chế độ xem lại
-          </span>
+          <span style={{ padding: '3px 10px', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', fontSize: '12px', fontWeight: '500' }}>Chế độ xem lại</span>
         )}
-
-        {/* Toast "Đã lưu nháp" */}
         {draftSaved && (
-          <span
-            className="draft-saved-toast"
-            style={{
-              fontSize: '12px', color: 'rgba(255,255,255,0.85)',
-              display: 'flex', alignItems: 'center', gap: '4px',
-            }}
-          >
-            ✓ Đã lưu nháp
-          </span>
+          <span className="draft-saved-toast" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '4px' }}>✓ Đã lưu nháp</span>
         )}
-
-        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
-          Câu {cauHienTai + 1} / {questions.length}
-        </span>
-
+        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>Câu {cauHienTai + 1} / {questions.length}</span>
         {!isReview && (
           <button
             onClick={() => setShowConfirm(true)}
-            style={{
-              marginLeft: '12px', padding: '7px 18px', borderRadius: '8px',
-              border: '2px solid white', backgroundColor: 'transparent',
-              color: 'white', fontSize: '13px', fontWeight: '600',
-              cursor: 'pointer', transition: 'background-color 0.2s', whiteSpace: 'nowrap',
-            }}
+            style={{ marginLeft: '12px', padding: '7px 18px', borderRadius: '8px', border: '2px solid white', backgroundColor: 'transparent', color: 'white', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s', whiteSpace: 'nowrap' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
@@ -480,51 +565,38 @@ export default function BaiTap({ params }) {
         )}
       </div>
 
-      {/* ── Body: Vùng 1 + (Vùng 2 & 3) ── */}
+      {/* Body */}
       <div className="bt-body">
 
         {/* Vùng 1: Số câu */}
-        <div
-          className="bt-vung1"
-          style={{
-            width: '72px', minWidth: '72px',
-            backgroundColor: '#E6F1FB',
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '12px 0', gap: '6px', overflowY: 'auto',
-          }}
-        >
+        <div className="bt-vung1" style={{ width: '72px', minWidth: '72px', backgroundColor: '#E6F1FB', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: '6px', overflowY: 'auto' }}>
           {questions.map((q, i) => {
             let bgColor = 'white', textColor = '#378ADD', borderColor = '#B5D4F4'
-
             if (i === cauHienTai) {
               bgColor = '#185FA5'; textColor = 'white'; borderColor = '#185FA5'
             } else if (isReview) {
               const userAns = reviewAnswers[i]
               const correct = q.Correct_Ans?.trim()
-              if (!userAns) {
-                bgColor = '#FEF3C7'; textColor = '#92400E'; borderColor = '#F0A500'
-              } else if (userAns === correct) {
-                bgColor = '#E1F5EE'; textColor = '#085041'; borderColor = '#9FE1CB'
+              if (q.Question_Type === 'fill_blank') {
+                const correctParts = (correct || '').split('|').map(s => s.trim().toLowerCase())
+                const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
+                const allCorrect   = correctParts.every((c, ci) => c === userParts[ci])
+                const anyFilled    = (userAns || []).some(Boolean)
+                if (!anyFilled)      { bgColor = '#FEF3C7'; textColor = '#92400E'; borderColor = '#F0A500' }
+                else if (allCorrect) { bgColor = '#E1F5EE'; textColor = '#085041'; borderColor = '#9FE1CB' }
+                else                 { bgColor = '#FCEBEB'; textColor = '#791F1F'; borderColor = '#F9A8A8' }
               } else {
-                bgColor = '#FCEBEB'; textColor = '#791F1F'; borderColor = '#F9A8A8'
+                if (!userAns)               { bgColor = '#FEF3C7'; textColor = '#92400E'; borderColor = '#F0A500' }
+                else if (userAns === correct){ bgColor = '#E1F5EE'; textColor = '#085041'; borderColor = '#9FE1CB' }
+                else                         { bgColor = '#FCEBEB'; textColor = '#791F1F'; borderColor = '#F9A8A8' }
               }
             } else if (answers[i]) {
               bgColor = '#E1F5EE'; textColor = '#085041'; borderColor = '#9FE1CB'
             }
 
             return (
-              <div
-                key={i}
-                className="so-cau"
-                onClick={() => setCauHienTai(i)}
-                style={{
-                  width: '36px', height: '36px', borderRadius: '6px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '13px', fontWeight: '500', cursor: 'pointer',
-                  backgroundColor: bgColor, color: textColor,
-                  border: `1px solid ${borderColor}`,
-                  transition: 'all 0.2s',
-                }}
+              <div key={i} className="so-cau" onClick={() => setCauHienTai(i)}
+                style={{ width: '36px', height: '36px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '500', cursor: 'pointer', backgroundColor: bgColor, color: textColor, border: `1px solid ${borderColor}`, transition: 'all 0.2s' }}
               >
                 {i + 1}
               </div>
@@ -534,44 +606,26 @@ export default function BaiTap({ params }) {
           {!isReview && (
             <>
               <div style={{ flex: 1 }} />
-              <button
-                onClick={() => setShowConfirm(true)}
-                style={{
-                  width: '48px', padding: '8px 0', borderRadius: '8px', border: 'none',
-                  backgroundColor: '#1D9E75', color: 'white',
-                  fontSize: '11px', fontWeight: '600', cursor: 'pointer',
-                  marginBottom: '4px', lineHeight: '1.3',
-                }}
-              >
+              <button onClick={() => setShowConfirm(true)} style={{ width: '48px', padding: '8px 0', borderRadius: '8px', border: 'none', backgroundColor: '#1D9E75', color: 'white', fontSize: '11px', fontWeight: '600', cursor: 'pointer', marginBottom: '4px', lineHeight: '1.3' }}>
                 Nộp<br/>bài
               </button>
             </>
           )}
         </div>
 
-        {/* Vùng 2 + Vùng 3 wrapper */}
+        {/* Vùng 2 + 3 */}
         <div className="bt-vung2-3">
 
-          {/* Vùng 2: Nội dung (audio / hình) */}
+          {/* Vùng 2: Nội dung */}
           <div className="bt-vung2" id="content-panel">
             {firstInGroup?.Audios?.map((src, i) => (
-              <iframe
-                key={src + i}
-                src={src}
-                width="100%" height="80"
-                style={{ border: 'none', borderRadius: '8px' }}
-              />
+              <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
             ))}
-
             {firstInGroup?.Contexts?.map((ctx, i) => (
               <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: '#0C447C', whiteSpace: 'pre-wrap' }}>
-                {ctx.startsWith('http')
-                  ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
-                  : ctx
-                }
+                {ctx.startsWith('http') ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} /> : ctx}
               </div>
             ))}
-
             {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
               <p style={{ color: '#B5D4F4', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
             )}
@@ -580,80 +634,33 @@ export default function BaiTap({ params }) {
           {/* Vùng 3: Câu hỏi & Đáp án */}
           <div className="bt-vung3" id="question-panel">
             {questionsInGroup.map((q) => (
-              <div
-                key={q.globalIndex}
-                style={{
-                  display: 'flex', flexDirection: 'column', gap: '12px',
-                  backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent',
-                  padding: '10px', borderRadius: '8px',
-                }}
-              >
+              <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? '#F8FBFF' : 'transparent', padding: '10px', borderRadius: '8px' }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#185FA5' }}>
-                  Câu {q.globalIndex + 1}: {q.Question}
+                  Câu {q.globalIndex + 1}:{' '}
+                  {/* Với fill_blank, tiêu đề không lặp lại toàn bộ câu (câu được render trong component) */}
+                  {q.Question_Type !== 'fill_blank' ? q.Question : ''}
                 </p>
 
+                {/* MCQ */}
                 {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {q.Question_Type === 'mcq'
                       ? getOptions(q).map(opt => {
-                          const border = isReview
-                            ? getReviewBorderColor(q, opt.key)
-                            : (answers[q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4')
-                          const bg = isReview
-                            ? (opt.key === q.Correct_Ans?.trim() ? '#E1F5EE'
-                              : opt.key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
-                              : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
-                              : 'white')
-                            : (answers[q.globalIndex] === opt.key ? '#E6F1FB' : 'white')
-                          const color = isReview
-                            ? (opt.key === q.Correct_Ans?.trim() ? '#085041'
-                              : opt.key === reviewAnswers[q.globalIndex] ? '#791F1F'
-                              : '#378ADD')
-                            : (answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD')
+                          const border = isReview ? getReviewBorderColor(q, opt.key) : (answers[q.globalIndex] === opt.key ? '#185FA5' : '#B5D4F4')
+                          const bg     = isReview ? (opt.key === q.Correct_Ans?.trim() ? '#E1F5EE' : opt.key === reviewAnswers[q.globalIndex] ? '#FCEBEB' : !reviewAnswers[q.globalIndex] ? '#FFFBEB' : 'white') : (answers[q.globalIndex] === opt.key ? '#E6F1FB' : 'white')
+                          const color  = isReview ? (opt.key === q.Correct_Ans?.trim() ? '#085041' : opt.key === reviewAnswers[q.globalIndex] ? '#791F1F' : '#378ADD') : (answers[q.globalIndex] === opt.key ? '#0C447C' : '#378ADD')
                           return (
-                            <div
-                              key={opt.key}
-                              onClick={() => chonDapAn(q.globalIndex, opt.key)}
-                              style={{
-                                padding: '10px 14px', borderRadius: '8px',
-                                border: `1.5px solid ${border}`,
-                                backgroundColor: bg, color,
-                                fontSize: '14px',
-                                cursor: isReview ? 'default' : 'pointer',
-                                transition: 'all 0.15s',
-                              }}
-                            >
+                            <div key={opt.key} onClick={() => chonDapAn(q.globalIndex, opt.key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: '14px', cursor: isReview ? 'default' : 'pointer', transition: 'all 0.15s' }}>
                               {opt.key}. {opt.value}
                             </div>
                           )
                         })
                       : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
-                          const border = isReview
-                            ? getReviewBorderColor(q, key)
-                            : (answers[q.globalIndex] === key ? '#185FA5' : '#B5D4F4')
-                          const bg = isReview
-                            ? (key === q.Correct_Ans?.trim() ? '#E1F5EE'
-                              : key === reviewAnswers[q.globalIndex] ? '#FCEBEB'
-                              : !reviewAnswers[q.globalIndex] ? '#FFFBEB'
-                              : 'white')
-                            : (answers[q.globalIndex] === key ? '#E6F1FB' : 'white')
-                          const color = isReview
-                            ? (key === q.Correct_Ans?.trim() ? '#085041'
-                              : key === reviewAnswers[q.globalIndex] ? '#791F1F'
-                              : '#888')
-                            : (answers[q.globalIndex] === key ? '#0C447C' : '#888')
+                          const border = isReview ? getReviewBorderColor(q, key) : (answers[q.globalIndex] === key ? '#185FA5' : '#B5D4F4')
+                          const bg     = isReview ? (key === q.Correct_Ans?.trim() ? '#E1F5EE' : key === reviewAnswers[q.globalIndex] ? '#FCEBEB' : !reviewAnswers[q.globalIndex] ? '#FFFBEB' : 'white') : (answers[q.globalIndex] === key ? '#E6F1FB' : 'white')
+                          const color  = isReview ? (key === q.Correct_Ans?.trim() ? '#085041' : key === reviewAnswers[q.globalIndex] ? '#791F1F' : '#888') : (answers[q.globalIndex] === key ? '#0C447C' : '#888')
                           return (
-                            <div
-                              key={key}
-                              onClick={() => chonDapAn(q.globalIndex, key)}
-                              style={{
-                                padding: '10px 14px', borderRadius: '8px',
-                                border: `1.5px solid ${border}`,
-                                backgroundColor: bg, color,
-                                fontSize: '14px', cursor: isReview ? 'default' : 'pointer',
-                                fontWeight: '600', textAlign: 'center',
-                              }}
-                            >
+                            <div key={key} onClick={() => chonDapAn(q.globalIndex, key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: '14px', cursor: isReview ? 'default' : 'pointer', fontWeight: '600', textAlign: 'center' }}>
                               {key}
                             </div>
                           )
@@ -662,46 +669,45 @@ export default function BaiTap({ params }) {
                   </div>
                 )}
 
+                {/* Fill short */}
                 {q.Question_Type === 'fill_short' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
-                      <input
-                        key={i} type="text"
+                      <input key={i} type="text"
                         placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
                         value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
                         readOnly={isReview}
                         onChange={(e) => {
                           if (isReview) return
                           const prev = answers[q.globalIndex] || []
-                          const newArr = [...prev]
-                          newArr[i] = e.target.value
+                          const newArr = [...prev]; newArr[i] = e.target.value
                           setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
                         }}
-                        style={{
-                          padding: '10px 14px', borderRadius: '8px',
-                          border: '1px solid #B5D4F4', outline: 'none',
-                          backgroundColor: isReview ? '#F8FBFF' : 'white',
-                        }}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #B5D4F4', outline: 'none', backgroundColor: isReview ? '#F8FBFF' : 'white' }}
                       />
                     ))}
                   </div>
                 )}
 
+                {/* Fill long */}
                 {q.Question_Type === 'fill_long' && (
                   <textarea
                     placeholder="Nhập bài làm của bạn..."
                     value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
                     readOnly={isReview}
-                    onChange={(e) => {
-                      if (isReview) return
-                      setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value }))
-                    }}
-                    style={{
-                      padding: '10px 14px', borderRadius: '8px',
-                      border: '1px solid #B5D4F4', minHeight: '120px',
-                      resize: 'vertical', outline: 'none',
-                      backgroundColor: isReview ? '#F8FBFF' : 'white',
-                    }}
+                    onChange={(e) => { if (isReview) return; setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value })) }}
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #B5D4F4', minHeight: '120px', resize: 'vertical', outline: 'none', backgroundColor: isReview ? '#F8FBFF' : 'white' }}
+                  />
+                )}
+
+                {/* ── Fill blank (kéo thả) ── */}
+                {q.Question_Type === 'fill_blank' && (
+                  <FillBlankQuestion
+                    q={q}
+                    isReview={isReview}
+                    userAnswer={isReview ? null : answers[q.globalIndex]}
+                    reviewAnswer={isReview ? reviewAnswers[q.globalIndex] : null}
+                    onChange={(newSlots) => setAnswers(a => ({ ...a, [q.globalIndex]: newSlots }))}
                   />
                 )}
               </div>
@@ -709,58 +715,31 @@ export default function BaiTap({ params }) {
 
             {/* Nút điều hướng */}
             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
-              <button
-                className="bt-nav-btn"
+              <button className="bt-nav-btn"
                 onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
                 disabled={cauHienTai === 0}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #B5D4F4',
-                  backgroundColor: 'white', color: '#378ADD',
-                  cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer',
-                  opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500',
-                }}
-              >
-                ← Trước
-              </button>
+                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #B5D4F4', backgroundColor: 'white', color: '#378ADD', cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer', opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500' }}
+              >← Trước</button>
 
               {!isReview && cauHienTai === questions.length - 1 ? (
-                <button
-                  className="bt-nav-btn"
+                <button className="bt-nav-btn"
                   onClick={() => setShowConfirm(true)}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                    backgroundColor: '#1D9E75', color: 'white',
-                    fontWeight: '600', cursor: 'pointer', fontSize: '14px',
-                  }}
-                >
-                  Nộp bài ✓
-                </button>
+                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#1D9E75', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+                >Nộp bài ✓</button>
               ) : (
-                <button
-                  className="bt-nav-btn"
+                <button className="bt-nav-btn"
                   onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
                   disabled={cauHienTai === questions.length - 1}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                    backgroundColor: '#378ADD', color: 'white',
-                    cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer',
-                    opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500',
-                  }}
-                >
-                  Tiếp →
-                </button>
+                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#378ADD', color: 'white', cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer', opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500' }}
+                >Tiếp →</button>
               )}
             </div>
           </div>
 
-        </div>{/* end bt-vung2-3 */}
-      </div>{/* end bt-body */}
+        </div>
+      </div>
 
-      <HighlightToolbar
-        toolbar={toolbar}
-        onHighlight={applyHighlight}
-        onClose={hideToolbar}
-      />
+      <HighlightToolbar toolbar={toolbar} onHighlight={applyHighlight} onClose={hideToolbar} />
     </main>
   )
 }
@@ -770,7 +749,6 @@ const btnPrimary = {
   backgroundColor: '#185FA5', color: 'white',
   fontWeight: '600', cursor: 'pointer', fontSize: '14px',
 }
-
 const btnSecondary = {
   flex: 1, padding: '12px', borderRadius: '8px',
   border: '1px solid #B5D4F4', backgroundColor: 'white',

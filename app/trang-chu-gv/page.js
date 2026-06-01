@@ -92,7 +92,26 @@ function TabBaiTap({ userInfo }) {
     setLoading(true)
     try {
       const snap = await getDocs(collection(db, 'exercises'))
-      setExercises(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+      const kyNangOrder = { 'Listening': 0, 'Reading': 1, 'Speaking': 2, 'Writing': 3 }
+
+      list.sort((a, b) => {
+        // 1. TOEIC lên đầu, còn lại alphabet
+        const loaiA = a.loaiBai === 'TOEIC' ? '' : a.loaiBai
+        const loaiB = b.loaiBai === 'TOEIC' ? '' : b.loaiBai
+        if (loaiA !== loaiB) return loaiA.localeCompare(loaiB)
+
+        // 2. Kỹ năng theo thứ tự L-R-S-W
+        const kyA = kyNangOrder[a.kyNang] ?? 99
+        const kyB = kyNangOrder[b.kyNang] ?? 99
+        if (kyA !== kyB) return kyA - kyB
+
+        // 3. Tên bài theo alphabet
+        return a.tenBaiTap.localeCompare(b.tenBaiTap, 'vi')
+      })
+
+      setExercises(list)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }

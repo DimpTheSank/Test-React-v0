@@ -119,14 +119,14 @@ export default function VocabPage({ params }) {
 
   if (!exercise || words.length === 0) return (
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
-      <p style={{ color: '#185FA5' }}>Đang tải bài tập...</p>
+      <p style={{ color: 'var(--c-primary)' }}>Đang tải bài tập...</p>
     </main>
   )
 
   const isListening = exercise.kyNang === 'Vocab Listening'
   const soCauDaLam = Object.keys(answers).filter(k => answers[k]?.trim()).length
   const soCauChuaLam = words.length - soCauDaLam
-  const mauHeader = isListening ? '#1D9E75' : '#378ADD'
+  const mauHeader = isListening ? 'var(--c-success)' : 'var(--c-primary-mid)'
 
   return (
     <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
@@ -135,35 +135,35 @@ export default function VocabPage({ params }) {
       {showConfirm && !submitDone && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 2000,
-          backgroundColor: 'rgba(12,68,124,0.4)',
+          backgroundColor: 'var(--c-overlay)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{
-            backgroundColor: 'white', borderRadius: '16px',
+            backgroundColor: 'var(--c-surface)', borderRadius: '16px',
             padding: '32px', width: '340px',
             display: 'flex', flexDirection: 'column', gap: '16px',
             boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
           }}>
-            <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Xác nhận nộp bài</h3>
+            <h3 style={{ margin: 0, color: 'var(--c-primary-dark)', textAlign: 'center' }}>Xác nhận nộp bài</h3>
             {soCauChuaLam > 0 ? (
-              <div style={{ backgroundColor: '#FAEEDA', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
-                <span style={{ color: '#633806', fontSize: '14px', fontWeight: '500' }}>
+              <div style={{ backgroundColor: 'var(--c-warn-bg)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
+                <span style={{ color: 'var(--c-warn-text)', fontSize: '14px', fontWeight: '500' }}>
                   ⚠️ Bạn còn <strong>{soCauChuaLam}</strong> từ chưa điền.
                 </span>
               </div>
             ) : (
-              <div style={{ backgroundColor: '#E1F5EE', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
-                <span style={{ color: '#085041', fontSize: '14px', fontWeight: '500' }}>
+              <div style={{ backgroundColor: 'var(--c-success-bg)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
+                <span style={{ color: 'var(--c-success-text)', fontSize: '14px', fontWeight: '500' }}>
                   ✅ Bạn đã điền đủ tất cả {words.length} từ!
                 </span>
               </div>
             )}
-            <p style={{ margin: 0, color: '#555', fontSize: '14px', textAlign: 'center' }}>
+            <p style={{ margin: 0, color: 'var(--c-text-soft)', fontSize: '14px', textAlign: 'center' }}>
               Sau khi nộp bạn không thể chỉnh sửa đáp án.
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowConfirm(false)} style={btnSecondary}>Làm tiếp</button>
-              <button onClick={handleNopBai} disabled={isSubmitting} style={{ ...btnPrimary, backgroundColor: '#1D9E75', opacity: isSubmitting ? 0.7 : 1 }}>
+              <button onClick={handleNopBai} disabled={isSubmitting} style={{ ...btnPrimary, backgroundColor: 'var(--c-success)', opacity: isSubmitting ? 0.7 : 1 }}>
                 {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
               </button>
             </div>
@@ -175,18 +175,18 @@ export default function VocabPage({ params }) {
       {submitDone && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 2000,
-          backgroundColor: 'rgba(12,68,124,0.4)',
+          backgroundColor: 'var(--c-overlay)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{
-            backgroundColor: 'white', borderRadius: '16px',
+            backgroundColor: 'var(--c-surface)', borderRadius: '16px',
             padding: '40px 32px', width: '340px',
             display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center',
             boxShadow: '0 8px 32px rgba(12,68,124,0.2)',
           }}>
             <div style={{ fontSize: '48px' }}>🎉</div>
-            <h3 style={{ margin: 0, color: '#0C447C', textAlign: 'center' }}>Nộp bài thành công!</h3>
-            <p style={{ fontSize: '20px', fontWeight: '700', color: '#1D9E75', margin: 0 }}>
+            <h3 style={{ margin: 0, color: 'var(--c-primary-dark)', textAlign: 'center' }}>Nộp bài thành công!</h3>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: 'var(--c-success)', margin: 0 }}>
               {ketQua?.dung} / {ketQua?.tong} từ đúng
             </p>
             <button onClick={() => router.push('/trang-chu')} style={{ ...btnPrimary, width: '100%' }}>
@@ -198,21 +198,21 @@ export default function VocabPage({ params }) {
 
       {/* Header */}
       <div style={{
-        backgroundColor: isReview ? '#6B7280' : mauHeader,
+        backgroundColor: isReview ? 'var(--c-text-muted)' : mauHeader,
         padding: '10px 20px',
         display: 'flex', alignItems: 'center', gap: '12px',
         flexShrink: 0,
       }}>
-        <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
+        <span style={{ color: 'var(--c-surface)', fontWeight: '600', fontSize: '14px' }}>
           {exercise.loaiBai} · {exercise.kyNang}
         </span>
         <span style={{ color: 'rgba(255,255,255,0.7)' }}>—</span>
-        <span style={{ color: 'white', fontSize: '14px' }}>{exercise.tenBaiTap}</span>
+        <span style={{ color: 'var(--c-surface)', fontSize: '14px' }}>{exercise.tenBaiTap}</span>
 
         {isReview && (
           <span style={{
             padding: '3px 10px', borderRadius: '20px',
-            backgroundColor: 'rgba(255,255,255,0.2)', color: 'white',
+            backgroundColor: 'rgba(255,255,255,0.2)', color: 'var(--c-surface)',
             fontSize: '12px', fontWeight: '500',
           }}>Chế độ xem lại</span>
         )}
@@ -231,7 +231,7 @@ export default function VocabPage({ params }) {
               marginLeft: isReview ? 'auto' : '12px',
               padding: '7px 18px', borderRadius: '8px',
               border: '2px solid white', backgroundColor: 'transparent',
-              color: 'white', fontSize: '13px', fontWeight: '600',
+              color: 'var(--c-surface)', fontSize: '13px', fontWeight: '600',
               cursor: 'pointer', whiteSpace: 'nowrap',
             }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
@@ -280,7 +280,7 @@ export default function VocabPage({ params }) {
                 onClick={() => setShowConfirm(true)}
                 style={{
                   padding: '12px 32px', borderRadius: '10px', border: 'none',
-                  backgroundColor: '#1D9E75', color: 'white',
+                  backgroundColor: 'var(--c-success)', color: 'var(--c-surface)',
                   fontSize: '15px', fontWeight: '600', cursor: 'pointer',
                 }}
               >
@@ -301,14 +301,14 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
   const isWrong = isReview && userAnswer?.trim() && !isCorrect
   const isEmpty = isReview && !userAnswer?.trim()
 
-  let borderColor = '#B5D4F4'
-  let bgColor = 'white'
+  let borderColor = 'var(--c-primary-pale)'
+  let bgColor = 'var(--c-surface)'
   if (isReview) {
-    if (isCorrect) { borderColor = '#1D9E75'; bgColor = '#E1F5EE' }
-    else if (isWrong) { borderColor = '#E24B4A'; bgColor = '#FCEBEB' }
-    else { borderColor = '#F0A500'; bgColor = '#FFFBEB' }
+    if (isCorrect) { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+    else if (isWrong) { borderColor = 'var(--c-danger)'; bgColor = 'var(--c-danger-bg)' }
+    else { borderColor = 'var(--c-warn)'; bgColor = 'var(--c-warn-bgsoft)' }
   } else if (userAnswer?.trim()) {
-    borderColor = '#378ADD'; bgColor = '#F0F7FF'
+    borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bgsoft)'
   }
 
   return (
@@ -320,12 +320,12 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
       transition: 'all 0.2s',
     }}>
       {/* Index */}
-      <span style={{ color: '#B5D4F4', fontSize: '13px', fontWeight: '600', minWidth: '24px' }}>
+      <span style={{ color: 'var(--c-primary-pale)', fontSize: '13px', fontWeight: '600', minWidth: '24px' }}>
         {index + 1}
       </span>
 
       {/* Vietnamese meaning */}
-      <span style={{ flex: 1, fontSize: '15px', color: '#0C447C', fontWeight: '500' }}>
+      <span style={{ flex: 1, fontSize: '15px', color: 'var(--c-primary-dark)', fontWeight: '500' }}>
         {word.Vietnamese}
       </span>
 
@@ -339,10 +339,10 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
         style={{
           width: '220px', padding: '8px 12px',
           borderRadius: '8px',
-          border: `1px solid ${isReview ? 'transparent' : '#B5D4F4'}`,
-          backgroundColor: isReview ? 'transparent' : 'white',
+          border: `1px solid ${isReview ? 'transparent' : 'var(--c-primary-pale)'}`,
+          backgroundColor: isReview ? 'transparent' : 'var(--c-surface)',
           fontSize: '14px', outline: 'none',
-          color: isReview ? (isCorrect ? '#085041' : '#791F1F') : '#0C447C',
+          color: isReview ? (isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)') : 'var(--c-primary-dark)',
           fontWeight: isReview ? '600' : '400',
         }}
       />
@@ -354,7 +354,7 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
           {isWrong && (
             <>
               <span style={{ fontSize: '18px' }}>❌</span>
-              <span style={{ fontSize: '13px', color: '#1D9E75', fontWeight: '600' }}>
+              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
                 → {correct}
               </span>
             </>
@@ -362,7 +362,7 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
           {isEmpty && (
             <>
               <span style={{ fontSize: '18px' }}>⚠️</span>
-              <span style={{ fontSize: '13px', color: '#1D9E75', fontWeight: '600' }}>
+              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
                 → {correct}
               </span>
             </>
@@ -381,14 +381,14 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
   const isEmpty = isReview && !userAnswer?.trim()
   const [speaking, setSpeaking] = useState(false)
 
-  let borderColor = '#B5D4F4'
-  let bgColor = 'white'
+  let borderColor = 'var(--c-primary-pale)'
+  let bgColor = 'var(--c-surface)'
   if (isReview) {
-    if (isCorrect) { borderColor = '#1D9E75'; bgColor = '#E1F5EE' }
-    else if (isWrong) { borderColor = '#E24B4A'; bgColor = '#FCEBEB' }
-    else { borderColor = '#F0A500'; bgColor = '#FFFBEB' }
+    if (isCorrect) { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+    else if (isWrong) { borderColor = 'var(--c-danger)'; bgColor = 'var(--c-danger-bg)' }
+    else { borderColor = 'var(--c-warn)'; bgColor = 'var(--c-warn-bgsoft)' }
   } else if (userAnswer?.trim()) {
-    borderColor = '#1D9E75'; bgColor = '#F0FBF7'
+    borderColor = 'var(--c-success)'; bgColor = '#F0FBF7'
   }
 
   const speak = () => {
@@ -412,7 +412,7 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
       transition: 'all 0.2s',
     }}>
       {/* Index */}
-      <span style={{ color: '#B5D4F4', fontSize: '13px', fontWeight: '600', minWidth: '24px' }}>
+      <span style={{ color: 'var(--c-primary-pale)', fontSize: '13px', fontWeight: '600', minWidth: '24px' }}>
         {index + 1}
       </span>
 
@@ -423,8 +423,8 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
         style={{
           width: '44px', height: '44px', borderRadius: '50%',
           border: 'none', cursor: 'pointer',
-          backgroundColor: speaking ? '#1D9E75' : '#E6F1FB',
-          color: speaking ? 'white' : '#185FA5',
+          backgroundColor: speaking ? 'var(--c-success)' : 'var(--c-primary-bg)',
+          color: speaking ? 'var(--c-surface)' : 'var(--c-primary)',
           fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.2s',
           flexShrink: 0,
@@ -444,10 +444,10 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
         style={{
           flex: 1, padding: '8px 12px',
           borderRadius: '8px',
-          border: `1px solid ${isReview ? 'transparent' : '#B5D4F4'}`,
-          backgroundColor: isReview ? 'transparent' : 'white',
+          border: `1px solid ${isReview ? 'transparent' : 'var(--c-primary-pale)'}`,
+          backgroundColor: isReview ? 'transparent' : 'var(--c-surface)',
           fontSize: '14px', outline: 'none',
-          color: isReview ? (isCorrect ? '#085041' : '#791F1F') : '#0C447C',
+          color: isReview ? (isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)') : 'var(--c-primary-dark)',
           fontWeight: isReview ? '600' : '400',
         }}
       />
@@ -459,7 +459,7 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
           {isWrong && (
             <>
               <span style={{ fontSize: '18px' }}>❌</span>
-              <span style={{ fontSize: '13px', color: '#1D9E75', fontWeight: '600' }}>
+              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
                 → {correct}
               </span>
             </>
@@ -467,7 +467,7 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
           {isEmpty && (
             <>
               <span style={{ fontSize: '18px' }}>⚠️</span>
-              <span style={{ fontSize: '13px', color: '#1D9E75', fontWeight: '600' }}>
+              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
                 → {correct}
               </span>
             </>
@@ -481,12 +481,12 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const btnPrimary = {
   flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-  backgroundColor: '#185FA5', color: 'white',
+  backgroundColor: 'var(--c-primary)', color: 'var(--c-surface)',
   fontWeight: '600', cursor: 'pointer', fontSize: '14px',
 }
 
 const btnSecondary = {
   flex: 1, padding: '12px', borderRadius: '8px',
-  border: '1px solid #B5D4F4', backgroundColor: 'white',
-  color: '#378ADD', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
+  border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
+  color: 'var(--c-primary-mid)', fontWeight: '500', cursor: 'pointer', fontSize: '14px',
 }

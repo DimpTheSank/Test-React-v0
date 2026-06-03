@@ -7,22 +7,22 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { getExerciseRoute } from '@/lib/exerciseRoute'
 
 const mauTrangThai = {
-  'Đã làm':   { bg: '#E1F5EE', text: '#085041' },
-  'Đang làm': { bg: '#FAEEDA', text: '#633806' },
-  'Chưa làm': { bg: '#FCEBEB', text: '#791F1F' },
+  'Đã làm':   { bg: 'var(--c-success-bg)', text: 'var(--c-success-text)' },
+  'Đang làm': { bg: 'var(--c-warn-bg)', text: 'var(--c-warn-text)' },
+  'Chưa làm': { bg: 'var(--c-danger-bg)', text: 'var(--c-danger-text)' },
 }
 
 const mauKyNang = {
-  'Reading':   { bg: '#378ADD', text: 'white' },
-  'Listening': { bg: '#1D9E75', text: 'white' },
-  'Writing':   { bg: '#BA7517', text: 'white' },
-  'Speaking':  { bg: '#A32D2D', text: 'white' },
+  'Reading':   { bg: 'var(--c-primary-mid)', text: 'var(--c-surface)' },
+  'Listening': { bg: 'var(--c-success)', text: 'var(--c-surface)' },
+  'Writing':   { bg: 'var(--c-writing)', text: 'var(--c-surface)' },
+  'Speaking':  { bg: 'var(--c-speaking)', text: 'var(--c-surface)' },
 }
 
 const mauMucDo = {
-  'Cơ bản':    { bg: '#E1F5EE', text: '#085041' },
-  'Trung bình':{ bg: '#FAEEDA', text: '#633806' },
-  'Nâng cao':  { bg: '#FCEBEB', text: '#791F1F' },
+  'Cơ bản':    { bg: 'var(--c-success-bg)', text: 'var(--c-success-text)' },
+  'Trung bình':{ bg: 'var(--c-warn-bg)', text: 'var(--c-warn-text)' },
+  'Nâng cao':  { bg: 'var(--c-danger-bg)', text: 'var(--c-danger-text)' },
 }
 
 const cacMucDo = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
@@ -112,7 +112,7 @@ export default function TrangChu() {
 
   if (loading) return (
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
-      <p style={{ color: '#185FA5' }}>Đang tải...</p>
+      <p style={{ color: 'var(--c-primary)' }}>Đang tải...</p>
     </main>
   )
 
@@ -121,15 +121,15 @@ export default function TrangChu() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, color: '#0C447C' }}>Bài tập của tôi</h2>
+        <h2 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Bài tập của tôi</h2>
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
           <span style={{
             padding: '4px 12px', borderRadius: '20px',
-            backgroundColor: '#E1F5EE', color: '#085041', fontSize: '13px', fontWeight: '500'
+            backgroundColor: 'var(--c-success-bg)', color: 'var(--c-success-text)', fontSize: '13px', fontWeight: '500'
           }}>✅ Đã làm: {daDam}</span>
           <span style={{
             padding: '4px 12px', borderRadius: '20px',
-            backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '13px', fontWeight: '500'
+            backgroundColor: 'var(--c-danger-bg)', color: 'var(--c-danger-text)', fontSize: '13px', fontWeight: '500'
           }}>⏳ Chưa làm: {chuaLam}</span>
         </div>
       </div>
@@ -137,34 +137,34 @@ export default function TrangChu() {
       {/* Filter bar */}
       <div style={{
         display: 'flex', gap: '24px', marginBottom: '20px',
-        padding: '14px 16px', backgroundColor: 'white',
-        borderRadius: '12px', border: '1px solid #B5D4F4',
+        padding: '14px 16px', backgroundColor: 'var(--c-surface)',
+        borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
         flexWrap: 'wrap', alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Mức độ:</span>
+          <span style={{ fontSize: '13px', color: 'var(--c-primary)', fontWeight: '500', whiteSpace: 'nowrap' }}>Mức độ:</span>
           {cacMucDo.map(m => (
             <button key={m} onClick={() => setFilterMucDo(m)} style={{
               padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
-              border: `1.5px solid ${filterMucDo === m ? '#185FA5' : '#B5D4F4'}`,
-              backgroundColor: filterMucDo === m ? '#185FA5' : 'white',
-              color: filterMucDo === m ? 'white' : '#555',
+              border: `1.5px solid ${filterMucDo === m ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+              backgroundColor: filterMucDo === m ? 'var(--c-primary)' : 'var(--c-surface)',
+              color: filterMucDo === m ? 'var(--c-surface)' : 'var(--c-text-soft)',
               fontWeight: filterMucDo === m ? '600' : '400',
               cursor: 'pointer', transition: 'all 0.15s',
             }}>{m}</button>
           ))}
         </div>
 
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#B5D4F4' }} />
+        <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--c-primary-pale)' }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: '#185FA5', fontWeight: '500', whiteSpace: 'nowrap' }}>Trạng thái:</span>
+          <span style={{ fontSize: '13px', color: 'var(--c-primary)', fontWeight: '500', whiteSpace: 'nowrap' }}>Trạng thái:</span>
           {cacTrangThai.map(t => (
             <button key={t} onClick={() => setFilterTrangThai(t)} style={{
               padding: '5px 14px', borderRadius: '20px', fontSize: '13px',
-              border: `1.5px solid ${filterTrangThai === t ? '#185FA5' : '#B5D4F4'}`,
-              backgroundColor: filterTrangThai === t ? '#185FA5' : 'white',
-              color: filterTrangThai === t ? 'white' : '#555',
+              border: `1.5px solid ${filterTrangThai === t ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+              backgroundColor: filterTrangThai === t ? 'var(--c-primary)' : 'var(--c-surface)',
+              color: filterTrangThai === t ? 'var(--c-surface)' : 'var(--c-text-soft)',
               fontWeight: filterTrangThai === t ? '600' : '400',
               cursor: 'pointer', transition: 'all 0.15s',
             }}>{t}</button>
@@ -174,7 +174,7 @@ export default function TrangChu() {
 
       {/* Danh sách */}
       {filtered.length === 0 ? (
-        <p style={{ color: '#888', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>
+        <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>
           Không có bài tập nào phù hợp.
         </p>
       ) : (
@@ -190,7 +190,7 @@ function CardBaiTap({ bai }) {
   const [hoverLam, setHoverLam] = useState(false)
   const [hoverXem, setHoverXem] = useState(false)
   const mau = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
-  const mauHeader = mauKyNang[bai.kyNang] || { bg: '#185FA5', text: 'white' }
+  const mauHeader = mauKyNang[bai.kyNang] || { bg: 'var(--c-primary)', text: 'var(--c-surface)' }
   const mauDo = mauMucDo[bai.mucDo] || null
   const router = useRouter()
   const daDam = bai.trangThai === 'Đã làm'
@@ -203,10 +203,10 @@ function CardBaiTap({ bai }) {
 
   return (
     <div style={{
-      border: `1px solid ${daDam ? '#9FE1CB' : '#B5D4F4'}`,
+      border: `1px solid ${daDam ? 'var(--c-success-border)' : 'var(--c-primary-pale)'}`,
       borderRadius: '16px', width: '160px',
       display: 'flex', flexDirection: 'column',
-      backgroundColor: 'white', overflow: 'hidden',
+      backgroundColor: 'var(--c-surface)', overflow: 'hidden',
     }}>
       <div style={{ backgroundColor: mauHeader.bg, padding: '8px 12px', textAlign: 'center' }}>
         <span style={{ color: mauHeader.text, fontSize: '12px', fontWeight: '600', letterSpacing: '0.5px' }}>
@@ -215,7 +215,7 @@ function CardBaiTap({ bai }) {
       </div>
 
       <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-        <p style={{ margin: 0, fontWeight: '600', fontSize: '14px', color: '#0C447C', lineHeight: '1.4' }}>
+        <p style={{ margin: 0, fontWeight: '600', fontSize: '14px', color: 'var(--c-primary-dark)', lineHeight: '1.4' }}>
           {bai.tenBaiTap}
         </p>
 
@@ -237,14 +237,14 @@ function CardBaiTap({ bai }) {
         </div>
 
         {bai.thoiGianNop && (
-          <p style={{ margin: 0, fontSize: '11px', color: '#888' }}>
+          <p style={{ margin: 0, fontSize: '11px', color: 'var(--c-text-muted)' }}>
             🕐 {formatNgay(bai.thoiGianNop)}
           </p>
         )}
 
         <p style={{
           margin: 0, fontSize: '13px', fontWeight: '500',
-          color: bai.diem !== null ? '#1D9E75' : '#B5D4F4',
+          color: bai.diem !== null ? 'var(--c-success)' : 'var(--c-primary-pale)',
         }}>
           {bai.diem !== null ? `${bai.diem} / ${bai.tongCau}` : '— / —'}
         </p>
@@ -256,8 +256,8 @@ function CardBaiTap({ bai }) {
             onMouseLeave={() => setHoverLam(false)}
             style={{
               padding: '8px', borderRadius: '8px', border: 'none',
-              backgroundColor: hoverLam ? '#0C447C' : '#378ADD',
-              color: 'white', fontSize: '13px', fontWeight: '500',
+              backgroundColor: hoverLam ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)',
+              color: 'var(--c-surface)', fontSize: '13px', fontWeight: '500',
               cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
             }}
           >Làm bài</button>
@@ -269,9 +269,9 @@ function CardBaiTap({ bai }) {
               onMouseLeave={() => setHoverXem(false)}
               style={{
                 padding: '8px', borderRadius: '8px',
-                border: '1px solid #1D9E75',
-                backgroundColor: hoverXem ? '#E1F5EE' : 'white',
-                color: '#1D9E75', fontSize: '13px', fontWeight: '500',
+                border: '1px solid var(--c-success)',
+                backgroundColor: hoverXem ? 'var(--c-success-bg)' : 'var(--c-surface)',
+                color: 'var(--c-success)', fontSize: '13px', fontWeight: '500',
                 cursor: 'pointer', transition: 'background-color 0.2s', width: '100%',
               }}
             >Xem lại</button>

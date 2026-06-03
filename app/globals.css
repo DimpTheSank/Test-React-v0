@@ -1,3 +1,135 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Light mode (default) ─────────────────────────────────────── */
+:root {
+  /* Brand blues */
+  --c-primary:        #185FA5;
+  --c-primary-dark:   #0C447C;
+  --c-primary-mid:    #378ADD;
+  --c-primary-light:  #85B7EB;
+  --c-primary-pale:   #B5D4F4;
+  --c-primary-bg:     #E6F1FB;
+  --c-primary-bgsoft: #F0F7FF;
+  --c-primary-barest: #F8FBFF;
+
+  /* Semantic */
+  --c-success:        #1D9E75;
+  --c-success-bg:     #E1F5EE;
+  --c-success-text:   #085041;
+  --c-success-border: #9FE1CB;
+
+  --c-warn:           #F0A500;
+  --c-warn-bg:        #FAEEDA;
+  --c-warn-text:      #633806;
+  --c-warn-bgsoft:    #FFFBEB;
+  --c-warn-textsoft:  #92400E;
+  --c-warn-border:    #F0A500;
+
+  --c-danger:         #E24B4A;
+  --c-danger-bg:      #FCEBEB;
+  --c-danger-text:    #791F1F;
+  --c-danger-border:  #F9A8A8;
+
+  /* Skill colors */
+  --c-reading:        #378ADD;
+  --c-listening:      #1D9E75;
+  --c-writing:        #BA7517;
+  --c-speaking:       #A32D2D;
+
+  /* Neutrals */
+  --c-surface:        #ffffff;
+  --c-surface-raise:  #F8FBFF;
+  --c-surface-mid:    #F0F7FF;
+  --c-border:         #B5D4F4;
+  --c-border-soft:    #E6F1FB;
+  --c-text:           #1a1a1a;
+  --c-text-mid:       #0C447C;
+  --c-text-soft:      #555555;
+  --c-text-muted:     #888888;
+  --c-text-pale:      #B5D4F4;
+  --c-bg:             #F0F7FF;
+  --c-bg-page:        #ffffff;
+
+  /* Header */
+  --c-header-bg:      #185FA5;
+  --c-header-text:    #ffffff;
+  --c-header-sub:     rgba(255,255,255,0.7);
+  --c-header-btn:     rgba(255,255,255,0.15);
+  --c-header-btnhov:  #0C447C;
+
+  /* Sidebar số câu */
+  --c-sidebar-bg:     #E6F1FB;
+
+  /* Review overlay */
+  --c-overlay:        rgba(12,68,124,0.4);
+
+  /* Shadow */
+  --shadow-modal:     0 8px 32px rgba(12,68,124,0.2);
+}
+
+/* ─── Dark mode ────────────────────────────────────────────────── */
+html.dark {
+  --c-primary:        #4A9EE0;
+  --c-primary-dark:   #7DC0F5;
+  --c-primary-mid:    #4A9EE0;
+  --c-primary-light:  #2D6FA3;
+  --c-primary-pale:   #1E3F5C;
+  --c-primary-bg:     #1A2F45;
+  --c-primary-bgsoft: #152535;
+  --c-primary-barest: #111E2B;
+
+  --c-success:        #2CC68F;
+  --c-success-bg:     #0D2B22;
+  --c-success-text:   #6EEABF;
+  --c-success-border: #1A5C42;
+
+  --c-warn:           #F5B942;
+  --c-warn-bg:        #2B1F08;
+  --c-warn-text:      #F5B942;
+  --c-warn-bgsoft:    #221A07;
+  --c-warn-textsoft:  #D4A032;
+  --c-warn-border:    #7A5010;
+
+  --c-danger:         #F06B6A;
+  --c-danger-bg:      #2B1212;
+  --c-danger-text:    #F9A8A8;
+  --c-danger-border:  #5C2020;
+
+  --c-reading:        #4A9EE0;
+  --c-listening:      #2CC68F;
+  --c-writing:        #D4943A;
+  --c-speaking:       #D05050;
+
+  --c-surface:        #1C2A38;
+  --c-surface-raise:  #1C2A38;
+  --c-surface-mid:    #152535;
+  --c-border:         #1E3F5C;
+  --c-border-soft:    #1A2F45;
+  --c-text:           #E8F1FA;
+  --c-text-mid:       #7DC0F5;
+  --c-text-soft:      #A0BDD4;
+  --c-text-muted:     #6A8FA8;
+  --c-text-pale:      #1E3F5C;
+  --c-bg:             #0F1C28;
+  --c-bg-page:        #0F1C28;
+
+  --c-header-bg:      #0F1C28;
+  --c-header-text:    #E8F1FA;
+  --c-header-sub:     rgba(232,241,250,0.5);
+  --c-header-btn:     rgba(255,255,255,0.08);
+  --c-header-btnhov:  #1A2F45;
+
+  --c-sidebar-bg:     #152535;
+
+  --c-overlay:        rgba(0,0,0,0.6);
+  --shadow-modal:     0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* ─── Base reset ───────────────────────────────────────────────── */
+body {
+  background-color: var(--c-bg-page);
+  color: var(--c-text);
+  transition: background-color 0.2s, color 0.2s;
+}

@@ -428,7 +428,7 @@ export default function BaiTap({ params }) {
   )
 
   return (
-    <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
+    <main style={{ minHeight: 'calc(100vh - 56px)', height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
       <style>{`
         .bt-body { display: flex; flex: 1; overflow: hidden; }
@@ -451,9 +451,10 @@ export default function BaiTap({ params }) {
         @media (max-width: 768px) {
           .bt-vung1 { width: 48px !important; min-width: 48px !important; border-right: 1px solid #B5D4F4; }
           .bt-vung1 .so-cau { width: 28px !important; height: 28px !important; font-size: 11px !important; }
-          .bt-vung2-3 { flex-direction: column; flex: 1; }
-          .bt-vung2 { flex: none; max-height: 40%; border-right: none; border-bottom: 1px solid #B5D4F4; padding: 12px; overflow-y: auto; }
-          .bt-vung3 { flex: 1; padding: 12px; gap: 16px; overflow-y: auto; }
+          .bt-body { overflow-y: auto; align-items: flex-start; }
+          .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; }
+          .bt-vung2 { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid #B5D4F4; padding: 12px; }
+          .bt-vung3 { flex: none; overflow: visible; padding: 12px; gap: 16px; }
           .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
         }
         @keyframes fadeInOut {

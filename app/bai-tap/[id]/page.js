@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, use, useState, useRef, useCallback } from 'react'
+import { useEffect, use, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
@@ -18,24 +18,30 @@ const mauKyNang = {
 
 // ─── FillBlankQuestion Component ─────────────────────────────────────────────
 /**
- * Render một câu fill_blank với drag & drop từ word bank.
+ * Render một câu fill_blank với cơ chế click.
  *
  * Sheet format:
  *   Question   : "Can you do me ___ ? I need someone to ___ at the shop."
  *   Correct_Ans: "a favor|take over"         (thứ tự theo ô trống)
  *   Word_Bank  : "a favor|take over|schedule|customer|update"
  *
+ * Cơ chế:
+ *   - Click từ trong word bank → điền vào ô trống đầu tiên còn thiếu
+ *   - Click từ đã điền trong câu → trả về word bank
+ *
  * answers[globalIndex] = ["a favor", "take over"]   (mảng theo thứ tự blank)
  */
 function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) {
-  // Parse
   const correctParts = (q.Correct_Ans || '').split('|').map(s => s.trim())
   const wordBankRaw  = (q.Word_Bank   || '').split('|').map(s => s.trim()).filter(Boolean)
+  const numBlanks    = correctParts.length
 
-  // userAnswer là mảng slot, mỗi phần tử là từ đã điền hoặc null
-  const slots = userAnswer || correctParts.map(() => null)
+  // slots: mảng độ dài numBlanks, mỗi phần tử là từ đã điền hoặc null
+  const slots = userAnswer
+    ? [...userAnswer, ...Array(numBlanks).fill(null)].slice(0, numBlanks)
+    : Array(numBlanks).fill(null)
 
-  // Tính từ còn trong bank (chưa dùng)
+  // Từ còn trong bank (chưa dùng)
   const usedWords = slots.filter(Boolean)
   const bankWords = wordBankRaw.filter(w => {
     const usedCount  = usedWords.filter(u => u === w).length
@@ -43,121 +49,90 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
     return usedCount < totalCount
   })
 
-  // Drag state
-  const [dragging, setDragging] = useState(null) // { word, from: 'bank'|slotIndex }
-  const [dragOver, setDragOver] = useState(null) // 'bank' | slotIndex
-
-  const handleDragStart = (word, from) => setDragging({ word, from })
-  const handleDragEnd   = () => { setDragging(null); setDragOver(null) }
-
-  const dropToSlot = (slotIdx) => {
-    if (!dragging || isReview) return
+  // Click từ trong word bank → điền vào ô trống đầu tiên
+  const handleClickWord = (word) => {
+    if (isReview) return
+    const firstEmpty = slots.findIndex(s => !s)
+    if (firstEmpty === -1) return // tất cả đã điền rồi
     const newSlots = [...slots]
-
-    // Nếu kéo từ slot khác
-    if (typeof dragging.from === 'number') {
-      // Hoán đổi
-      const displaced = newSlots[slotIdx]
-      newSlots[dragging.from] = displaced   // slot cũ nhận từ bị đẩy ra (có thể null)
-      newSlots[slotIdx]        = dragging.word
-    } else {
-      // Kéo từ bank vào slot
-      // Nếu slot đó đã có từ → trả từ đó về bank tự động (chỉ xóa khỏi slot)
-      newSlots[slotIdx] = dragging.word
-    }
+    newSlots[firstEmpty] = word
     onChange(newSlots)
   }
 
-  const dropToBank = () => {
-    if (!dragging || isReview) return
-    if (typeof dragging.from === 'number') {
-      // Trả từ về bank
-      const newSlots = [...slots]
-      newSlots[dragging.from] = null
-      onChange(newSlots)
-    }
+  // Click ô đã điền → trả về bank
+  const handleClickSlot = (slotIdx) => {
+    if (isReview) return
+    const newSlots = [...slots]
+    newSlots[slotIdx] = null
+    onChange(newSlots)
   }
 
-  // Parse câu hỏi thành segments: [{type:'text',val}] | [{type:'blank',idx}]
+  // Parse câu hỏi thành segments
   const segments = []
   let blankIdx = 0
   const parts = q.Question.split('___')
   parts.forEach((part, i) => {
     if (part) segments.push({ type: 'text', val: part })
-    if (i < parts.length - 1) {
-      segments.push({ type: 'blank', idx: blankIdx++ })
-    }
+    if (i < parts.length - 1) segments.push({ type: 'blank', idx: blankIdx++ })
   })
 
   const getSlotStyle = (slotIdx) => {
-    const filled  = slots[slotIdx]
-    const isDragTarget = dragOver === slotIdx
-
     if (isReview) {
-      const correct = correctParts[slotIdx]
-      const revAns  = (reviewAnswer || [])[slotIdx]
-      if (!revAns)               return { bg: '#FFFBEB', border: '#F0A500', color: '#92400E' }
-      if (revAns === correct)    return { bg: '#E1F5EE', border: '#1D9E75', color: '#085041' }
-      return                            { bg: '#FCEBEB', border: '#E24B4A', color: '#791F1F' }
+      const revAns = (reviewAnswer || [])[slotIdx]
+      if (!revAns)                            return { bg: '#FFFBEB', border: '#F0A500', color: '#92400E' }
+      if (revAns === correctParts[slotIdx])   return { bg: '#E1F5EE', border: '#1D9E75', color: '#085041' }
+      return                                         { bg: '#FCEBEB', border: '#E24B4A', color: '#791F1F' }
     }
-    if (isDragTarget) return { bg: '#EFF6FF', border: '#185FA5', color: '#0C447C' }
-    if (filled)       return { bg: '#E6F1FB', border: '#378ADD', color: '#0C447C' }
-    return                   { bg: 'white',   border: '#B5D4F4', color: '#B5D4F4' }
+    if (slots[slotIdx]) return { bg: '#E6F1FB', border: '#378ADD', color: '#0C447C' }
+    return                     { bg: 'white',   border: '#B5D4F4', color: '#B5D4F4' }
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-      {/* Đoạn văn với các ô trống */}
+      {/* Câu với ô trống */}
       <div style={{
-        fontSize: '14px', lineHeight: '2.2', color: '#1a1a1a',
+        fontSize: '14px', lineHeight: '2.4', color: '#1a1a1a',
         padding: '14px 18px', borderRadius: '10px',
         border: '1px solid #E6F1FB', backgroundColor: '#F8FBFF',
       }}>
         {segments.map((seg, si) => {
-          if (seg.type === 'text') {
-            return <span key={si}>{seg.val}</span>
-          }
-          const idx   = seg.idx
-          const style = getSlotStyle(idx)
-          const filled = isReview
-            ? (reviewAnswer || [])[idx]
-            : slots[idx]
+          if (seg.type === 'text') return <span key={si}>{seg.val}</span>
+
+          const idx    = seg.idx
+          const style  = getSlotStyle(idx)
+          const filled = isReview ? (reviewAnswer || [])[idx] : slots[idx]
 
           return (
             <span
               key={si}
-              draggable={!!filled && !isReview}
-              onDragStart={() => filled && handleDragStart(filled, idx)}
-              onDragEnd={handleDragEnd}
-              onDragOver={e => { e.preventDefault(); !isReview && setDragOver(idx) }}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={e => { e.preventDefault(); dropToSlot(idx) }}
+              onClick={() => filled && handleClickSlot(idx)}
+              title={filled && !isReview ? 'Click để bỏ chọn' : undefined}
               style={{
                 display: 'inline-block',
                 minWidth: '90px',
                 padding: '3px 12px',
-                margin: '0 4px',
+                margin: '0 3px',
                 borderRadius: '6px',
                 border: `1.5px dashed ${style.border}`,
                 backgroundColor: style.bg,
                 color: style.color,
                 fontSize: '13px',
                 fontWeight: filled ? '600' : '400',
-                cursor: filled && !isReview ? 'grab' : 'default',
+                cursor: filled && !isReview ? 'pointer' : 'default',
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 transition: 'all 0.15s',
                 userSelect: 'none',
               }}
+              onMouseEnter={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = '#FCEBEB' }}
+              onMouseLeave={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = style.bg }}
             >
-              {filled || <span style={{ opacity: 0.4, fontStyle: 'italic', fontWeight: 400 }}>kéo vào đây</span>}
-              {/* Review: hiện đáp án đúng nếu sai */}
+              {filled || <span style={{ opacity: 0.35, fontStyle: 'italic', fontWeight: 400, fontSize: '12px' }}>...</span>}
               {isReview && filled && filled !== correctParts[idx] && (
-                <span style={{
-                  marginLeft: '6px', color: '#1D9E75',
-                  fontWeight: '600', fontSize: '12px',
-                }}>→ {correctParts[idx]}</span>
+                <span style={{ marginLeft: '6px', color: '#1D9E75', fontWeight: '600', fontSize: '12px' }}>
+                  → {correctParts[idx]}
+                </span>
               )}
             </span>
           )
@@ -166,42 +141,34 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
 
       {/* Word bank */}
       {!isReview && (
-        <div
-          onDragOver={e => { e.preventDefault(); setDragOver('bank') }}
-          onDragLeave={() => setDragOver(null)}
-          onDrop={e => { e.preventDefault(); dropToBank(); setDragOver(null) }}
-          style={{
-            display: 'flex', flexWrap: 'wrap', gap: '8px',
-            padding: '12px 14px', borderRadius: '10px',
-            border: `1.5px dashed ${dragOver === 'bank' ? '#185FA5' : '#B5D4F4'}`,
-            backgroundColor: dragOver === 'bank' ? '#EFF6FF' : '#F0F7FF',
-            minHeight: '48px',
-            transition: 'all 0.15s',
-          }}
-        >
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: '8px',
+          padding: '12px 14px', borderRadius: '10px',
+          border: '1.5px solid #B5D4F4',
+          backgroundColor: '#F0F7FF',
+          minHeight: '48px',
+        }}>
           {bankWords.length === 0 && (
-            <span style={{ color: '#B5D4F4', fontSize: '13px', fontStyle: 'italic' }}>
-              Kéo từ vào đây để trả về
+            <span style={{ color: '#B5D4F4', fontSize: '13px', fontStyle: 'italic', alignSelf: 'center' }}>
+              Tất cả từ đã được điền
             </span>
           )}
           {bankWords.map((word, wi) => (
             <span
               key={`${word}-${wi}`}
-              draggable
-              onDragStart={() => handleDragStart(word, 'bank')}
-              onDragEnd={handleDragEnd}
+              onClick={() => handleClickWord(word)}
               style={{
                 padding: '6px 14px', borderRadius: '20px',
                 border: '1.5px solid #B5D4F4',
-                backgroundColor: dragging?.word === word && dragging?.from === 'bank'
-                  ? '#E6F1FB' : 'white',
+                backgroundColor: 'white',
                 color: '#185FA5',
                 fontSize: '13px', fontWeight: '500',
-                cursor: 'grab', userSelect: 'none',
+                cursor: 'pointer', userSelect: 'none',
                 transition: 'all 0.15s',
-                opacity: dragging?.word === word && dragging?.from === 'bank' ? 0.5 : 1,
-                boxShadow: '0 1px 3px rgba(24,95,165,0.1)',
+                boxShadow: '0 1px 3px rgba(24,95,165,0.08)',
               }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#E6F1FB'; e.currentTarget.style.borderColor = '#378ADD' }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = '#B5D4F4' }}
             >
               {word}
             </span>
@@ -209,26 +176,21 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
         </div>
       )}
 
-      {/* Review: word bank readonly để xem đáp án */}
+      {/* Review: word bank readonly */}
       {isReview && (
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: '8px',
           padding: '10px 14px', borderRadius: '10px',
           border: '1px solid #E6F1FB', backgroundColor: '#F8FBFF',
         }}>
-          <span style={{ color: '#888', fontSize: '12px', marginRight: '4px', alignSelf: 'center' }}>
-            Word bank:
-          </span>
+          <span style={{ color: '#888', fontSize: '12px', marginRight: '4px', alignSelf: 'center' }}>Word bank:</span>
           {wordBankRaw.map((word, wi) => (
             <span key={wi} style={{
               padding: '4px 12px', borderRadius: '20px',
-              border: '1px solid #B5D4F4',
-              backgroundColor: 'white',
+              border: '1px solid #B5D4F4', backgroundColor: 'white',
               color: correctParts.includes(word) ? '#1D9E75' : '#888',
               fontSize: '12px', fontWeight: correctParts.includes(word) ? '600' : '400',
-            }}>
-              {word}
-            </span>
+            }}>{word}</span>
           ))}
         </div>
       )}
@@ -501,7 +463,6 @@ export default function BaiTap({ params }) {
           100% { opacity: 0; }
         }
         .draft-saved-toast { animation: fadeInOut 2s ease forwards; }
-        [draggable="true"] { -webkit-user-drag: element; }
       `}</style>
 
       {/* Dialog xác nhận nộp bài */}

@@ -59,77 +59,84 @@
   --c-header-btn:     rgba(255,255,255,0.15);
   --c-header-btnhov:  #0C447C;
 
-  /* Sidebar số câu */
+  /* Sidebar */
   --c-sidebar-bg:     #E6F1FB;
 
-  /* Review overlay */
+  /* Misc */
   --c-overlay:        rgba(12,68,124,0.4);
-
-  /* Shadow */
   --shadow-modal:     0 8px 32px rgba(12,68,124,0.2);
 }
 
-/* ─── Dark mode ────────────────────────────────────────────────── */
+/* ─── Dark mode — muted, dễ nhìn ───────────────────────────────── */
 html.dark {
-  --c-primary:        #4A9EE0;
-  --c-primary-dark:   #7DC0F5;
-  --c-primary-mid:    #4A9EE0;
-  --c-primary-light:  #2D6FA3;
-  --c-primary-pale:   #1E3F5C;
-  --c-primary-bg:     #1A2F45;
-  --c-primary-bgsoft: #152535;
-  --c-primary-barest: #111E2B;
+  /* Brand blues — giảm saturation, tăng brightness nhẹ */
+  --c-primary:        #5B9FD4;
+  --c-primary-dark:   #8BBFE8;
+  --c-primary-mid:    #5B9FD4;
+  --c-primary-light:  #3A6B8A;
+  --c-primary-pale:   #243D52;
+  --c-primary-bg:     #1A2C3D;
+  --c-primary-bgsoft: #152330;
+  --c-primary-barest: #111C26;
 
-  --c-success:        #2CC68F;
-  --c-success-bg:     #0D2B22;
-  --c-success-text:   #6EEABF;
-  --c-success-border: #1A5C42;
+  /* Success — xanh lá muted hơn nhiều */
+  --c-success:        #3DA882;
+  --c-success-bg:     #0F2420;
+  --c-success-text:   #72C9A8;
+  --c-success-border: #1E4D3C;
 
-  --c-warn:           #F5B942;
-  --c-warn-bg:        #2B1F08;
-  --c-warn-text:      #F5B942;
-  --c-warn-bgsoft:    #221A07;
-  --c-warn-textsoft:  #D4A032;
-  --c-warn-border:    #7A5010;
+  /* Warning — cam muted */
+  --c-warn:           #C8922A;
+  --c-warn-bg:        #231A08;
+  --c-warn-text:      #D4A55A;
+  --c-warn-bgsoft:    #1C1508;
+  --c-warn-textsoft:  #B8893A;
+  --c-warn-border:    #5C3D10;
 
-  --c-danger:         #F06B6A;
-  --c-danger-bg:      #2B1212;
-  --c-danger-text:    #F9A8A8;
-  --c-danger-border:  #5C2020;
+  /* Danger — đỏ muted */
+  --c-danger:         #C45252;
+  --c-danger-bg:      #221010;
+  --c-danger-text:    #E89090;
+  --c-danger-border:  #4A1E1E;
 
-  --c-reading:        #4A9EE0;
-  --c-listening:      #2CC68F;
-  --c-writing:        #D4943A;
-  --c-speaking:       #D05050;
+  /* Skill colors — desaturated */
+  --c-reading:        #5B9FD4;
+  --c-listening:      #3DA882;
+  --c-writing:        #B07830;
+  --c-speaking:       #A84040;
 
-  --c-surface:        #1C2A38;
-  --c-surface-raise:  #1C2A38;
-  --c-surface-mid:    #152535;
-  --c-border:         #1E3F5C;
-  --c-border-soft:    #1A2F45;
-  --c-text:           #E8F1FA;
-  --c-text-mid:       #7DC0F5;
-  --c-text-soft:      #A0BDD4;
-  --c-text-muted:     #6A8FA8;
-  --c-text-pale:      #1E3F5C;
-  --c-bg:             #0F1C28;
-  --c-bg-page:        #0F1C28;
+  /* Neutrals — nền tối ấm, không lạnh */
+  --c-surface:        #1E2A35;
+  --c-surface-raise:  #1E2A35;
+  --c-surface-mid:    #162030;
+  --c-border:         #243D52;
+  --c-border-soft:    #1A2C3D;
+  --c-text:           #D0DCE8;
+  --c-text-mid:       #8BBFE8;
+  --c-text-soft:      #8A9EAE;
+  --c-text-muted:     #5A7080;
+  --c-text-pale:      #243D52;
+  --c-bg:             #0E1820;
+  --c-bg-page:        #0E1820;
 
-  --c-header-bg:      #0F1C28;
-  --c-header-text:    #E8F1FA;
-  --c-header-sub:     rgba(232,241,250,0.5);
-  --c-header-btn:     rgba(255,255,255,0.08);
-  --c-header-btnhov:  #1A2F45;
+  /* Header — tối nhưng vẫn phân biệt được */
+  --c-header-bg:      #0A1520;
+  --c-header-text:    #D0DCE8;
+  --c-header-sub:     rgba(208,220,232,0.5);
+  --c-header-btn:     rgba(255,255,255,0.07);
+  --c-header-btnhov:  #1A2C3D;
 
-  --c-sidebar-bg:     #152535;
+  /* Sidebar */
+  --c-sidebar-bg:     #122030;
 
-  --c-overlay:        rgba(0,0,0,0.6);
-  --shadow-modal:     0 8px 32px rgba(0,0,0,0.5);
+  /* Misc */
+  --c-overlay:        rgba(0,0,0,0.65);
+  --shadow-modal:     0 8px 32px rgba(0,0,0,0.55);
 }
 
-/* ─── Base reset ───────────────────────────────────────────────── */
+/* ─── Base ──────────────────────────────────────────────────────── */
 body {
   background-color: var(--c-bg-page);
   color: var(--c-text);
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.25s, color 0.25s;
 }

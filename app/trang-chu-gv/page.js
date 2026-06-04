@@ -225,9 +225,8 @@ function TabBaiTap({ userInfo }) {
         </div>
       </div>
 
-      {loading ? (
-        <p style={{ color: 'var(--c-primary)' }}>Đang tải...</p>
-      ) : (
+      {loading ? <SkeletonGVExerciseList />
+       : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
           {filtered.map(ex => (
             <CardBaiTapGV
@@ -626,9 +625,8 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
             })}
           </div>
 
-          {loading ? (
-            <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải lớp...</p>
-          ) : (
+          {loadingClasses ? <SkeletonGVClassButtons />
+           : (
             <>
               {/* Chọn lớp (multi) */}
               <div>
@@ -897,9 +895,7 @@ function TabTienDo({ userInfo }) {
       )}
 
       {/* ── Đang tải bài tập ── */}
-      {loadingLop && (
-        <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải bài tập...</p>
-      )}
+      {loadingLop && <SkeletonGVExerciseDropdown />}
 
       {/* ── Dropdown chọn bài ── */}
       {!loadingLop && selectedLop && exercises.length > 0 && (
@@ -971,9 +967,8 @@ function TabTienDo({ userInfo }) {
       {/* ── Bảng kết quả ── */}
       {selectedEx && (
         <div>
-          {loading ? (
-            <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải kết quả...</p>
-          ) : (
+          {loading ? <SkeletonGVProgressTable />
+           : (
             <>
               {/* Thống kê nhanh */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>

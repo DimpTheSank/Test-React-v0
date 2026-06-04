@@ -5,11 +5,15 @@
  * Dùng CSS variables của app, không cần import thêm gì.
  *
  * Export:
- *  - SkeletonPulse         — block nhấp nháy cơ bản
- *  - SkeletonTrangChu      — trang chủ học viên
- *  - SkeletonTrangChuGV    — trang chủ giáo viên
- *  - SkeletonBaiTap        — trang làm bài (3 vùng)
- *  - SkeletonVocab         — trang vocab
+ *  - SkeletonPulse              — block nhấp nháy cơ bản
+ *  - SkeletonTrangChu           — trang chủ học viên
+ *  - SkeletonTrangChuGV         — trang chủ GV (full page, khi !userInfo)
+ *  - SkeletonGVExerciseList     — danh sách bài tập trong TabBaiTap (khi loading)
+ *  - SkeletonGVClassButtons     — hàng nút chọn lớp trong TabTienDo (khi loadingClasses)
+ *  - SkeletonGVExerciseDropdown — dropdown chọn bài + badge (khi loadingLop)
+ *  - SkeletonGVProgressTable    — bảng tiến độ học viên (khi loading rows)
+ *  - SkeletonBaiTap             — trang làm bài (3 vùng)
+ *  - SkeletonVocab              — trang vocab
  */
 
 /* ─── Animation ─────────────────────────────────────────────────── */
@@ -220,6 +224,148 @@ export function SkeletonTrangChuGV() {
         </div>
       </div>
     </main>
+  )
+}
+
+/* ─── GV: danh sách bài tập (TabBaiTap loading) ─────────────────── */
+export function SkeletonGVExerciseList() {
+  if (typeof window !== 'undefined') injectKeyframes()
+  const cards = Array.from({ length: 6 })
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+      {cards.map((_, i) => (
+        <div
+          key={i}
+          style={{
+            border: '2px solid var(--c-primary-pale)',
+            borderRadius: '16px',
+            width: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'var(--c-surface)',
+            overflow: 'hidden',
+          }}
+        >
+          <SkeletonPulse height="36px" radius="0" />
+          <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <SkeletonPulse height="14px" radius="4px" />
+            <SkeletonPulse width="65%" height="14px" radius="4px" />
+            <SkeletonPulse width="60px" height="20px" radius="20px" />
+            <SkeletonPulse height="32px" radius="8px" style={{ marginTop: '6px' }} />
+            <SkeletonPulse height="32px" radius="8px" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ─── GV: hàng nút chọn lớp (TabTienDo loadingClasses) ──────────── */
+export function SkeletonGVClassButtons() {
+  if (typeof window !== 'undefined') injectKeyframes()
+  return (
+    <div>
+      <SkeletonPulse width="60px" height="14px" radius="4px" style={{ marginBottom: '10px' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {[90, 80, 100, 85].map((w, i) => (
+          <SkeletonPulse key={i} width={`${w}px`} height="36px" radius="20px" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─── GV: dropdown chọn bài + badge (TabTienDo loadingLop) ──────── */
+export function SkeletonGVExerciseDropdown() {
+  if (typeof window !== 'undefined') injectKeyframes()
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+        padding: '14px 18px',
+        borderRadius: '12px',
+        backgroundColor: 'var(--c-surface)',
+        border: '1px solid var(--c-primary-pale)',
+      }}
+    >
+      <SkeletonPulse width="50px" height="16px" radius="4px" />
+      <SkeletonPulse height="38px" radius="8px" style={{ flex: 1, minWidth: '220px' }} />
+      <SkeletonPulse width="110px" height="28px" radius="20px" />
+      <SkeletonPulse width="130px" height="16px" radius="4px" />
+    </div>
+  )
+}
+
+/* ─── GV: bảng tiến độ học viên (TabTienDo loading rows) ────────── */
+export function SkeletonGVProgressTable() {
+  if (typeof window !== 'undefined') injectKeyframes()
+  const rows = Array.from({ length: 6 })
+  return (
+    <div>
+      {/* Stat cards */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {[120, 100, 110, 100].map((w, i) => (
+          <div
+            key={i}
+            style={{
+              padding: '12px 20px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--c-primary-bg)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              width: `${w}px`,
+            }}
+          >
+            <SkeletonPulse width="70%" height="12px" radius="4px" />
+            <SkeletonPulse width="50%" height="24px" radius="4px" />
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
+        {/* Header */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+            backgroundColor: 'var(--c-primary-bg)',
+            padding: '10px 16px',
+            gap: '8px',
+          }}
+        >
+          {[160, 60, 80, 100, 110].map((w, i) => (
+            <SkeletonPulse key={i} width={`${w}px`} height="14px" radius="4px" />
+          ))}
+        </div>
+
+        {/* Rows */}
+        {rows.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+              padding: '12px 16px',
+              gap: '8px',
+              alignItems: 'center',
+              backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+              borderTop: '1px solid var(--c-primary-bg)',
+            }}
+          >
+            <SkeletonPulse height="14px" radius="4px" />
+            <SkeletonPulse width="50px" height="14px" radius="4px" />
+            <SkeletonPulse width="60px" height="22px" radius="20px" />
+            <SkeletonPulse width="80px" height="14px" radius="4px" />
+            <SkeletonPulse width="90px" height="14px" radius="4px" />
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

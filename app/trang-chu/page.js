@@ -5,6 +5,7 @@ import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { getExerciseRoute } from '@/lib/exerciseRoute'
+import { SkeletonTrangChu } from '@/app/components/Skeleton'
 
 const mauTrangThai = {
   'Đã làm':   { bg: 'var(--c-success-bg)', text: 'var(--c-success-text)' },
@@ -78,11 +79,7 @@ export default function TrangChu() {
     return okMucDo && okTrangThai
   })
 
-  if (loading) return (
-    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)', backgroundColor: 'var(--c-bg-page)' }}>
-      <p style={{ color: 'var(--c-primary)' }}>Đang tải...</p>
-    </main>
-  )
+  if (loading) return <SkeletonTrangChu />
 
   return (
     <main style={{ padding: '24px 16px', maxWidth: '960px', margin: '0 auto', backgroundColor: 'var(--c-bg-page)', minHeight: 'calc(100vh - 56px)' }}>

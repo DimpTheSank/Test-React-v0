@@ -8,6 +8,7 @@ import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
 import { useHighlight } from '@/lib/useHighlight'
 import HighlightToolbar from '@/app/components/HighlightToolbar'
+import { SkeletonBaiTap } from '@/app/components/Skeleton'
 
 const mauKyNang = {
   'Reading':   'var(--c-primary-mid)',
@@ -421,11 +422,7 @@ export default function BaiTap({ params }) {
     setAnswers(prev => ({ ...prev, [index]: key }))
   }
 
-  if (!exercise || questions.length === 0) return (
-    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
-      <p style={{ color: 'var(--c-primary)' }}>Đang tải bài tập...</p>
-    </main>
-  )
+  if (!exercise || questions.length === 0) return <SkeletonBaiTap />
 
   return (
     <main style={{ minHeight: 'calc(100vh - 56px)', height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>

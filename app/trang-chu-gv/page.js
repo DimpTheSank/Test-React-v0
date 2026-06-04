@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase'
 import {
   collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc
 } from 'firebase/firestore'
+import { SkeletonTrangChuGV } from '@/app/components/Skeleton'
 
 const mauKyNang = {
   'Reading':   { bg: 'var(--c-primary-mid)', text: 'var(--c-surface)' },
@@ -43,11 +44,7 @@ export default function TrangChuGV() {
     setUserInfo(info)
   }, [])
 
-  if (!userInfo) return (
-    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
-      <p style={{ color: 'var(--c-primary)' }}>Đang tải...</p>
-    </main>
-  )
+  if (!userInfo) return <SkeletonTrangChuGV />
 
   return (
     <main style={{ minHeight: 'calc(100vh - 56px)', backgroundColor: 'var(--c-primary-bgsoft)' }}>

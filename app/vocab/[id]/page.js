@@ -5,6 +5,7 @@ import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, addDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore'
 import Papa from 'papaparse'
+import { SkeletonVocab } from '@/app/components/Skeleton'
 
 const getUserInfo = () => {
   try {
@@ -117,11 +118,8 @@ export default function VocabPage({ params }) {
     }
   }
 
-  if (!exercise || words.length === 0) return (
-    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 56px)' }}>
-      <p style={{ color: 'var(--c-primary)' }}>Đang tải bài tập...</p>
-    </main>
-  )
+  if (!exercise || words.length === 0) return <SkeletonVocab />
+
 
   const isListening = exercise.kyNang === 'Vocab Listening'
   const soCauDaLam = Object.keys(answers).filter(k => answers[k]?.trim()).length

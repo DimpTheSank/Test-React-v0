@@ -6,7 +6,13 @@ import { db } from '@/lib/firebase'
 import {
   collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc
 } from 'firebase/firestore'
-import { SkeletonTrangChuGV } from '@/app/components/Skeleton'
+import {
+  SkeletonTrangChuGV,
+  SkeletonGVExerciseList,
+  SkeletonGVClassButtons,
+  SkeletonGVExerciseDropdown,
+  SkeletonGVProgressTable,
+} from '@/app/components/Skeleton'
 
 const mauKyNang = {
   'Reading':   { bg: 'var(--c-primary-mid)', text: 'var(--c-surface)' },

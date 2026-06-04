@@ -631,8 +631,9 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
             })}
           </div>
 
-          {loadingClasses ? <SkeletonGVClassButtons />
-           : (
+          {loading ? (
+            <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải lớp...</p>
+          ) : (
             <>
               {/* Chọn lớp (multi) */}
               <div>
@@ -873,9 +874,8 @@ function TabTienDo({ userInfo }) {
       <h2 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Tiến độ học viên</h2>
 
       {/* ── Chọn lớp ── */}
-      {loadingClasses ? (
-        <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải lớp...</p>
-      ) : (
+      {loadingClasses ? <SkeletonGVClassButtons />
+       : (
         <div>
           <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }}>
             Chọn lớp

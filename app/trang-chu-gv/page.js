@@ -742,10 +742,12 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
 function TabTienDo({ userInfo }) {
   const [classes, setClasses] = useState([])
   const [selectedLop, setSelectedLop] = useState(null)
+  // exercises: [{ ...exData, thoiGianGiao }] — sort giao gần nhất lên đầu
   const [exercises, setExercises] = useState([])
-  const [selectedEx, setSelectedEx] = useState(null)
+  const [selectedExId, setSelectedExId] = useState('')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadingLop, setLoadingLop] = useState(false)
   const [loadingClasses, setLoadingClasses] = useState(true)
 
   useEffect(() => { loadClasses() }, [])
@@ -761,34 +763,13 @@ function TabTienDo({ userInfo }) {
     finally { setLoadingClasses(false) }
   }
 
-  const handleChonLop = async (cls) => {
-    setSelectedLop(cls)
-    setSelectedEx(null)
-    setRows([])
-    setExercises([])
-    try {
-      const snap = await getDocs(query(
-        collection(db, 'assignments'),
-        where('lopId', '==', cls.lop)
-      ))
-      const exIds = [...new Set(snap.docs.map(d => d.data().exerciseId))]
-      const exData = await Promise.all(
-        exIds.map(async exId => {
-          const s = await getDoc(doc(db, 'exercises', exId))
-          return s.exists() ? { id: exId, ...s.data() } : null
-        })
-      )
-      setExercises(exData.filter(Boolean))
-    } catch (err) { console.error(err) }
-  }
-
-  const handleChonBai = async (ex) => {
-    setSelectedEx(ex)
-    setRows([])
+  // Load danh sách học viên + submission cho 1 bài
+  const loadRows = async (ex, lop) => {
     setLoading(true)
+    setRows([])
     try {
       const hvData = await Promise.all(
-        (selectedLop.hocVienIds || []).map(async uid => {
+        (lop.hocVienIds || []).map(async uid => {
           const s = await getDoc(doc(db, 'users', uid))
           return s.exists() ? { id: uid, ...s.data() } : null
         })
@@ -806,82 +787,204 @@ function TabTienDo({ userInfo }) {
           subMap[data.userId] = data
         }
       })
-
       setRows(hvs.map(hv => ({ ...hv, sub: subMap[hv.id] || null })))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
 
-  const daDam = rows.filter(r => r.sub).length
+  // Chọn lớp → load danh sách bài, tự chọn bài gần nhất
+  const handleChonLop = async (cls) => {
+    if (selectedLop?.id === cls.id) return
+    setSelectedLop(cls)
+    setSelectedExId('')
+    setExercises([])
+    setRows([])
+    setLoadingLop(true)
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'assignments'),
+        where('lopId', '==', cls.lop)
+      ))
+
+      // exerciseId → thoiGianGiao gần nhất
+      const exTimeMap = {}
+      snap.docs.forEach(d => {
+        const { exerciseId, thoiGianGiao } = d.data()
+        if (!exTimeMap[exerciseId] || (thoiGianGiao || '') > exTimeMap[exerciseId]) {
+          exTimeMap[exerciseId] = thoiGianGiao || ''
+        }
+      })
+
+      const exData = await Promise.all(
+        Object.keys(exTimeMap).map(async exId => {
+          const s = await getDoc(doc(db, 'exercises', exId))
+          return s.exists()
+            ? { id: exId, ...s.data(), thoiGianGiao: exTimeMap[exId] }
+            : null
+        })
+      )
+
+      // Sắp xếp: giao gần nhất lên đầu
+      const sorted = exData
+        .filter(Boolean)
+        .sort((a, b) => (b.thoiGianGiao || '').localeCompare(a.thoiGianGiao || ''))
+
+      setExercises(sorted)
+
+      if (sorted.length > 0) {
+        setSelectedExId(sorted[0].id)
+        await loadRows(sorted[0], cls)
+      }
+    } catch (err) { console.error(err) }
+    finally { setLoadingLop(false) }
+  }
+
+  // Thay đổi bài qua dropdown
+  const handleChangeEx = async (exId) => {
+    if (exId === selectedExId) return
+    setSelectedExId(exId)
+    const ex = exercises.find(e => e.id === exId)
+    if (ex && selectedLop) await loadRows(ex, selectedLop)
+  }
+
+  const selectedEx = exercises.find(e => e.id === selectedExId) || null
+
+  const daDam   = rows.filter(r =>  r.sub).length
   const chuaLam = rows.filter(r => !r.sub).length
-  const diemTB = rows.filter(r => r.sub?.diem != null).length > 0
-    ? (rows.filter(r => r.sub?.diem != null)
-        .reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0)
-      / rows.filter(r => r.sub?.diem != null).length).toFixed(0)
+  const diemTB  = (() => {
+    const co = rows.filter(r => r.sub?.diem != null)
+    if (!co.length) return null
+    return (co.reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0) / co.length).toFixed(0)
+  })()
+
+  const formatNgay = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    return `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  const mauEx = selectedEx
+    ? (mauKyNang[selectedEx.kyNang] || { bg: 'var(--c-primary)', text: 'var(--c-surface)' })
     : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <h2 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Tiến độ học viên</h2>
 
+      {/* ── Chọn lớp ── */}
       {loadingClasses ? (
         <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải lớp...</p>
       ) : (
         <div>
-          <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }}>Chọn lớp</p>
+          <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }}>
+            Chọn lớp
+          </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {classes.map(cls => (
-              <button key={cls.id} onClick={() => handleChonLop(cls)} style={{
-                padding: '8px 20px', borderRadius: '20px',
-                border: `1.5px solid ${selectedLop?.id === cls.id ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
-                backgroundColor: selectedLop?.id === cls.id ? 'var(--c-primary)' : 'var(--c-surface)',
-                color: selectedLop?.id === cls.id ? 'var(--c-surface)' : 'var(--c-primary-mid)',
-                fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-              }}>{cls.lop}</button>
+              <button
+                key={cls.id}
+                onClick={() => handleChonLop(cls)}
+                style={{
+                  padding: '8px 20px', borderRadius: '20px', fontSize: '14px',
+                  fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
+                  border: `1.5px solid ${selectedLop?.id === cls.id ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+                  backgroundColor: selectedLop?.id === cls.id ? 'var(--c-primary)' : 'var(--c-surface)',
+                  color: selectedLop?.id === cls.id ? 'var(--c-surface)' : 'var(--c-primary-mid)',
+                }}
+              >
+                {cls.lop}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      {selectedLop && exercises.length > 0 && (
-        <div>
-          <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }}>Chọn bài tập</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {exercises.map(ex => {
-              const mau = mauKyNang[ex.kyNang] || { bg: 'var(--c-primary)', text: 'var(--c-surface)' }
-              const isSelected = selectedEx?.id === ex.id
-              return (
-                <button key={ex.id} onClick={() => handleChonBai(ex)} style={{
-                  padding: '8px 16px', borderRadius: '20px',
-                  border: `1.5px solid ${isSelected ? mau.bg : 'var(--c-primary-pale)'}`,
-                  backgroundColor: isSelected ? mau.bg : 'var(--c-surface)',
-                  color: isSelected ? mau.text : 'var(--c-primary-mid)',
-                  fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-                }}>
-                  {ex.kyNang} · {ex.tenBaiTap}
-                </button>
-              )
-            })}
+      {/* ── Đang tải bài tập ── */}
+      {loadingLop && (
+        <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải bài tập...</p>
+      )}
+
+      {/* ── Dropdown chọn bài ── */}
+      {!loadingLop && selectedLop && exercises.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+          padding: '14px 18px', borderRadius: '12px',
+          backgroundColor: 'var(--c-surface)', border: '1px solid var(--c-primary-pale)',
+        }}>
+          <label style={{
+            fontSize: '13px', color: 'var(--c-primary)',
+            fontWeight: '500', whiteSpace: 'nowrap',
+          }}>
+            Bài tập:
+          </label>
+
+          {/* Select wrapper */}
+          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+            <select
+              value={selectedExId}
+              onChange={e => handleChangeEx(e.target.value)}
+              style={{
+                width: '100%', padding: '9px 36px 9px 14px',
+                borderRadius: '8px', border: '1.5px solid var(--c-primary-pale)',
+                backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-dark)',
+                fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                outline: 'none', appearance: 'none', WebkitAppearance: 'none',
+              }}
+            >
+              {exercises.map((ex, idx) => (
+                <option key={ex.id} value={ex.id}>
+                  {idx === 0 ? '★ ' : ''}{ex.kyNang} · {ex.tenBaiTap}
+                  {ex.thoiGianGiao ? `  —  ${formatNgay(ex.thoiGianGiao)}` : ''}
+                </option>
+              ))}
+            </select>
+            <span style={{
+              position: 'absolute', right: '12px', top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none', color: 'var(--c-primary-mid)', fontSize: '11px',
+            }}>▼</span>
           </div>
+
+          {/* Badge kỹ năng */}
+          {mauEx && (
+            <span style={{
+              padding: '5px 14px', borderRadius: '20px', whiteSpace: 'nowrap',
+              backgroundColor: mauEx.bg, color: mauEx.text,
+              fontSize: '12px', fontWeight: '600',
+            }}>
+              {selectedEx.loaiBai} · {selectedEx.kyNang}
+            </span>
+          )}
+
+          {/* Ngày giao */}
+          {selectedEx?.thoiGianGiao && (
+            <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap' }}>
+              🕐 Giao: {formatNgay(selectedEx.thoiGianGiao)}
+            </span>
+          )}
         </div>
       )}
 
-      {selectedLop && exercises.length === 0 && !loading && (
-        <p style={{ color: 'var(--c-text-muted)', fontSize: '14px' }}>Lớp này chưa được giao bài tập nào.</p>
+      {!loadingLop && selectedLop && exercises.length === 0 && (
+        <p style={{ color: 'var(--c-text-muted)', fontSize: '14px' }}>
+          Lớp này chưa được giao bài tập nào.
+        </p>
       )}
 
+      {/* ── Bảng kết quả ── */}
       {selectedEx && (
         <div>
           {loading ? (
-            <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải...</p>
+            <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải kết quả...</p>
           ) : (
             <>
+              {/* Thống kê nhanh */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 {[
-                  { label: 'Tổng học viên', value: rows.length, bg: 'var(--c-primary-bg)', color: 'var(--c-primary-dark)' },
-                  { label: 'Đã làm', value: daDam, bg: 'var(--c-success-bg)', color: 'var(--c-success-text)' },
-                  { label: 'Chưa làm', value: chuaLam, bg: 'var(--c-danger-bg)', color: 'var(--c-danger-text)' },
-                  { label: 'Điểm TB', value: diemTB ? `${diemTB}%` : '—', bg: 'var(--c-warn-bg)', color: 'var(--c-warn-text)' },
+                  { label: 'Tổng học viên', value: rows.length,                  bg: 'var(--c-primary-bg)',  color: 'var(--c-primary-dark)'  },
+                  { label: 'Đã làm',        value: daDam,                        bg: 'var(--c-success-bg)', color: 'var(--c-success-text)'  },
+                  { label: 'Chưa làm',      value: chuaLam,                      bg: 'var(--c-danger-bg)',  color: 'var(--c-danger-text)'   },
+                  { label: 'Điểm TB',       value: diemTB ? `${diemTB}%` : '—', bg: 'var(--c-warn-bg)',    color: 'var(--c-warn-text)'     },
                 ].map(s => (
                   <div key={s.label} style={{
                     padding: '12px 20px', borderRadius: '12px',
@@ -893,6 +996,7 @@ function TabTienDo({ userInfo }) {
                 ))}
               </div>
 
+              {/* Bảng học viên */}
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
                 <div style={{
                   display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
@@ -907,17 +1011,12 @@ function TabTienDo({ userInfo }) {
                   const daDamRow = !!r.sub
                   const phanTram = r.sub?.diem != null
                     ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
-                  const formatNgay = (iso) => {
-                    if (!iso) return '—'
-                    const d = new Date(iso)
-                    return `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
-                  }
                   return (
                     <div key={r.id} style={{
                       display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                      padding: '10px 16px', gap: '8px',
+                      padding: '10px 16px', gap: '8px', alignItems: 'center',
                       backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
-                      borderTop: '1px solid var(--c-primary-bg)', alignItems: 'center',
+                      borderTop: '1px solid var(--c-primary-bg)',
                     }}>
                       <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--c-primary-dark)' }}>
                         {r.ho} {r.ten}
@@ -933,9 +1032,13 @@ function TabTienDo({ userInfo }) {
                       </span>
                       <span style={{
                         fontSize: '14px', fontWeight: '600',
-                        color: phanTram >= 50 ? 'var(--c-success)' : phanTram != null ? 'var(--c-danger)' : 'var(--c-primary-pale)',
+                        color: phanTram >= 50
+                          ? 'var(--c-success)'
+                          : phanTram != null ? 'var(--c-danger)' : 'var(--c-primary-pale)',
                       }}>
-                        {r.sub?.diem != null ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)` : '—'}
+                        {r.sub?.diem != null
+                          ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)`
+                          : '—'}
                       </span>
                       <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>
                         {formatNgay(r.sub?.thoiGianNop)}

@@ -73,11 +73,12 @@ export default function TrangChu() {
         const assign = assignDoc.data()
         const exSnap = await getDoc(doc(db, 'exercises', assign.exerciseId))
         if (!exSnap.exists()) return null
+        const trangThaiText = bestSub ? 'Đã làm' : (assign.trangThai || 'Chưa làm')
         const bestSub = subMap[assign.exerciseId]
         return {
           id: assignDoc.id, exerciseId: assign.exerciseId, thoiGianGiao: assign.thoiGianGiao,
           ...exSnap.data(),
-          trangThai:   bestSub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
+          trangThai:   tranThaiTest,
           nhacNho:     trangThaiText === 'Chưa làm' ? 'Bạn chưa làm bài tập này. Thử sức ngay nhé! 🔥' : null,
           diem:        bestSub?.diem ?? null,
           tongCau:     bestSub?.tongCau ?? null,

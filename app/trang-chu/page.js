@@ -345,20 +345,7 @@ function CardBaiTap({ bai }) {
 
         {/* CTA buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: 'auto', paddingTop: '4px' }}>
-          <button
-            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId))}
-            style={{
-              padding: '9px 0', borderRadius: '9px', border: 'none',
-              backgroundColor: hovered ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)',
-              color: '#fff', fontSize: '13px', fontWeight: '600',
-              cursor: 'pointer', transition: 'background-color 0.15s',
-              width: '100%', letterSpacing: '0.01em',
-            }}
-          >
-            {daDam ? 'Làm lại' : 'Làm bài'}
-          </button>
-
-          {bai.duocXemLai && (
+                    {bai.duocXemLai && (
             <button
               onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, '?review=true'))}
               style={{
@@ -373,6 +360,21 @@ function CardBaiTap({ bai }) {
               Xem lại ✓
             </button>
           )}
+          
+          <button
+            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId))}
+            style={{
+              padding: '9px 0', borderRadius: '9px', border: 'none',
+              backgroundColor: hovered ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)',
+              color: '#fff', fontSize: '13px', fontWeight: '600',
+              cursor: 'pointer', transition: 'background-color 0.15s',
+              width: '100%', letterSpacing: '0.01em',
+            }}
+          >
+            {daDam ? 'Làm lại' : 'Làm bài'}
+          </button>
+
+
         </div>
       </div>
     </div>

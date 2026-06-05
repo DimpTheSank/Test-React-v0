@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Google Fonts ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
 /* ─── Light mode (default) ─────────────────────────────────────── */
 :root {
   /* Brand blues */
@@ -15,10 +18,10 @@
   --c-primary-barest: #F8FBFF;
 
   /* Semantic */
-  --c-success:        #1D9E75;
-  --c-success-bg:     #E1F5EE;
+  --c-success:        #0F9E7B;
+  --c-success-bg:     #E4F5F0;
   --c-success-text:   #085041;
-  --c-success-border: #9FE1CB;
+  --c-success-border: #7FD4BC;
 
   --c-warn:           #F0A500;
   --c-warn-bg:        #FAEEDA;
@@ -34,7 +37,7 @@
 
   /* Skill colors */
   --c-reading:        #378ADD;
-  --c-listening:      #1D9E75;
+  --c-listening:      #0F9E7B;
   --c-writing:        #BA7517;
   --c-speaking:       #A32D2D;
 
@@ -63,13 +66,47 @@
   --c-sidebar-bg:     #E6F1FB;
 
   /* Misc */
-  --c-overlay:        rgba(12,68,124,0.4);
+  --c-overlay:        rgba(12,68,124,0.45);
   --shadow-modal:     0 8px 32px rgba(12,68,124,0.2);
+
+  /* ── NEW: Shadow system ────────────────────────────── */
+  --shadow-card:      0 1px 3px rgba(24,95,165,0.06), 0 4px 16px rgba(24,95,165,0.07);
+  --shadow-card-hover:0 4px 12px rgba(24,95,165,0.10), 0 12px 32px rgba(24,95,165,0.11);
+  --shadow-card-done: 0 1px 3px rgba(15,158,123,0.07), 0 4px 16px rgba(15,158,123,0.09);
+
+  /* ── NEW: Typography scale ─────────────────────────── */
+  --fs-xs:    11px;
+  --fs-sm:    12px;
+  --fs-base:  14px;
+  --fs-md:    15px;
+  --fs-lg:    17px;
+  --fs-xl:    20px;
+  --fs-2xl:   24px;
+  --fs-3xl:   30px;
+
+  --lh-tight:  1.3;
+  --lh-snug:   1.45;
+  --lh-base:   1.6;
+  --lh-relaxed:1.75;
+
+  /* ── NEW: Spacing scale ────────────────────────────── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+
+  /* ── NEW: Border radius ────────────────────────────── */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+  --r-pill:9999px;
 }
 
-/* ─── Dark mode — muted, dễ nhìn ───────────────────────────────── */
+/* ─── Dark mode ─────────────────────────────────────────────────── */
 html.dark {
-  /* Brand blues — giảm saturation, tăng brightness nhẹ */
   --c-primary:        #5B9FD4;
   --c-primary-dark:   #8BBFE8;
   --c-primary-mid:    #5B9FD4;
@@ -79,13 +116,11 @@ html.dark {
   --c-primary-bgsoft: #152330;
   --c-primary-barest: #111C26;
 
-  /* Success — xanh lá muted hơn nhiều */
-  --c-success:        #3DA882;
+  --c-success:        #2FB08A;
   --c-success-bg:     #0F2420;
   --c-success-text:   #72C9A8;
   --c-success-border: #1E4D3C;
 
-  /* Warning — cam muted */
   --c-warn:           #C8922A;
   --c-warn-bg:        #231A08;
   --c-warn-text:      #D4A55A;
@@ -93,19 +128,16 @@ html.dark {
   --c-warn-textsoft:  #B8893A;
   --c-warn-border:    #5C3D10;
 
-  /* Danger — đỏ muted */
   --c-danger:         #C45252;
   --c-danger-bg:      #221010;
   --c-danger-text:    #E89090;
   --c-danger-border:  #4A1E1E;
 
-  /* Skill colors — desaturated */
   --c-reading:        #5B9FD4;
-  --c-listening:      #3DA882;
+  --c-listening:      #2FB08A;
   --c-writing:        #B07830;
   --c-speaking:       #A84040;
 
-  /* Neutrals — nền tối ấm, không lạnh */
   --c-surface:        #1E2A35;
   --c-surface-raise:  #1E2A35;
   --c-surface-mid:    #162030;
@@ -119,24 +151,85 @@ html.dark {
   --c-bg:             #0E1820;
   --c-bg-page:        #0E1820;
 
-  /* Header — tối nhưng vẫn phân biệt được */
   --c-header-bg:      #0A1520;
   --c-header-text:    #D0DCE8;
   --c-header-sub:     rgba(208,220,232,0.5);
   --c-header-btn:     rgba(255,255,255,0.07);
   --c-header-btnhov:  #1A2C3D;
 
-  /* Sidebar */
   --c-sidebar-bg:     #122030;
 
-  /* Misc */
   --c-overlay:        rgba(0,0,0,0.65);
   --shadow-modal:     0 8px 32px rgba(0,0,0,0.55);
+
+  --shadow-card:      0 1px 3px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.22);
+  --shadow-card-hover:0 4px 12px rgba(0,0,0,0.28), 0 12px 32px rgba(0,0,0,0.32);
+  --shadow-card-done: 0 1px 3px rgba(15,158,123,0.10), 0 4px 16px rgba(0,0,0,0.22);
 }
 
 /* ─── Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
   background-color: var(--c-bg-page);
   color: var(--c-text);
+  font-family: 'Be Vietnam Pro', 'DM Sans', sans-serif;
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.25s, color 0.25s;
+}
+
+/* ─── Typography helpers ────────────────────────────────────────── */
+h1, h2, h3, h4 {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+  color: var(--c-primary-dark);
+}
+
+h1 { font-size: var(--fs-3xl); font-weight: 700; }
+h2 { font-size: var(--fs-xl);  font-weight: 700; }
+h3 { font-size: var(--fs-lg);  font-weight: 600; }
+
+p {
+  line-height: var(--lh-relaxed);
+  color: var(--c-text-soft);
+}
+
+/* ─── Utility: pill badge ───────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+/* ─── Scrollbar (subtle) ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--c-primary-pale);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--c-primary-light); }
+
+/* ─── Focus ring ────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2.5px solid var(--c-primary-mid);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ─── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: var(--c-primary-bg);
+  color: var(--c-primary-dark);
 }

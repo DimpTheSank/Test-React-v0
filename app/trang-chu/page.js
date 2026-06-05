@@ -78,7 +78,7 @@ export default function TrangChu() {
         return {
           id: assignDoc.id, exerciseId: assign.exerciseId, thoiGianGiao: assign.thoiGianGiao,
           ...exSnap.data(),
-          trangThai:   tranThaiTest,
+          trangThai:   trangThaiTest,
           nhacNho:     trangThaiText === 'Chưa làm' ? 'Bạn chưa làm bài tập này. Thử sức ngay nhé! 🔥' : null,
           diem:        bestSub?.diem ?? null,
           tongCau:     bestSub?.tongCau ?? null,

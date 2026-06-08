@@ -949,6 +949,7 @@ function TabTienDo({ userInfo }) {
         <ModalThongKe
           exercise={selectedEx}
           submissions={rows.filter(r => r.sub).map(r => r.sub)}
+          allRows={rows}
           onClose={() => setShowThongKe(false)}
         />
       )}
@@ -957,9 +958,47 @@ function TabTienDo({ userInfo }) {
 }
 
 // ─── MODAL THỐNG KÊ ĐỀ BÀI ───────────────────────────────────────────────────
-function ModalThongKe({ exercise, submissions, onClose }) {
+function ModalThongKe({ exercise, submissions, allRows, onClose }) {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading]     = useState(true)
+  const [tooltip, setTooltip]     = useState(null) // { x, y, names[], label }
+
+  // Map userId → tên đầy đủ
+  const nameMap = {}
+  allRows.forEach(r => { nameMap[r.id] = `${r.ho} ${r.ten}`.trim() })
+
+  // Map userId → submission (để tra cứu đáp án theo người)
+  const subByUser = {}
+  allRows.forEach(r => { if (r.sub) subByUser[r.id] = r.sub })
+  
+  // Trả về danh sách tên học viên đã chọn đáp án `optKey` ở câu `qIdx`
+  const getWhoChose = (qIdx, optKey) =>
+    allRows
+      .filter(r => r.sub && r.sub.answers?.[qIdx] === optKey)
+      .map(r => nameMap[r.id] || r.id)
+
+  // Học viên chưa trả lời câu này (không có trong submissions)
+  const getWhoUnanswered = (qIdx) =>
+    allRows
+      .filter(r => !r.sub || !r.sub.answers?.[qIdx])
+      .map(r => nameMap[r.id] || r.id)
+
+  // Học viên điền fill_blank/fill_short slot cụ thể
+  const getWhoChoseSlot = (qIdx, slotIdx, answer) =>
+    allRows
+      .filter(r => {
+        const ans = r.sub?.answers?.[qIdx]
+        return Array.isArray(ans) && (ans[slotIdx] || '').trim() === answer
+      })
+      .map(r => nameMap[r.id] || r.id)
+
+  const getWhoUnansweredSlot = (qIdx, slotIdx) =>
+    allRows
+      .filter(r => {
+        const ans = r.sub?.answers?.[qIdx]
+        return !r.sub || !Array.isArray(ans) || !(ans[slotIdx] || '').trim()
+      })
+      .map(r => nameMap[r.id] || r.id)
 
   useEffect(() => {
     loadQuestions()
@@ -1152,7 +1191,16 @@ function ModalThongKe({ exercise, submissions, onClose }) {
                                 {q.Question_Type === 'mcq' && (
                                   <span style={{ fontSize: '13px', color: 'var(--c-text-soft)', flex: 1 }}>{opt.value}</span>
                                 )}
-                                <span style={{ fontSize: '12px', fontWeight: '600', color: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                                <span
+                                  onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoChose(q.globalIndex, opt.key), label: `Chọn ${opt.key}` })}
+                                  onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
+                                  onMouseLeave={() => setTooltip(null)}
+                                  style={{ fontSize: '12px', fontWeight: '600', cursor: 'default',
+                                    color: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-text-muted)',
+                                    marginLeft: 'auto', whiteSpace: 'nowrap',
+                                    borderBottom: '1px dashed currentColor',
+                                  }}
+                                >
                                   {count} người ({pct}%)
                                 </span>
                               </div>
@@ -1176,7 +1224,12 @@ function ModalThongKe({ exercise, submissions, onClose }) {
                           if (chuaLam <= 0) return null
                           const pct = Math.round(chuaLam / dist.total * 100)
                           return (
-                            <div style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px' }}>
+                            <div
+                              onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoUnanswered(q.globalIndex), label: 'Chưa trả lời' })}
+                              onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
+                              onMouseLeave={() => setTooltip(null)}
+                              style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px', cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
                               ⚠️ {chuaLam} học viên chưa trả lời ({pct}%)
                             </div>
                           )
@@ -1228,12 +1281,26 @@ function ModalThongKe({ exercise, submissions, onClose }) {
                                       <div style={{ flex: 1, height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
                                         <div style={{ height: '100%', width: `${pct}%`, borderRadius: '99px', backgroundColor: isCorrect ? 'var(--c-success)' : 'var(--c-danger)', transition: 'width 0.4s ease' }} />
                                       </div>
-                                      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap' }}>{cnt} ({pct}%)</span>
+                                      <span
+                                        onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoChoseSlot(q.globalIndex, slot, ans), label: `Điền "${ans}"` })}
+                                        onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
+                                        onMouseLeave={() => setTooltip(null)}
+                                        style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap', cursor: 'default', borderBottom: '1px dashed var(--c-text-muted)' }}
+                                      >
+                                        {cnt} ({pct}%)
+                                      </span>
                                     </div>
                                   )
                                 })}
                                 {answered < total && (
-                                  <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>⚠️ {total - answered} chưa trả lời</span>
+                                  <span
+                                    onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoUnansweredSlot(q.globalIndex, slot), label: 'Chưa trả lời' })}
+                                    onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
+                                    onMouseLeave={() => setTooltip(null)}
+                                    style={{ fontSize: '12px', color: 'var(--c-text-muted)', cursor: 'default', borderBottom: '1px dashed var(--c-text-muted)' }}
+                                  >
+                                    ⚠️ {total - answered} chưa trả lời
+                                  </span>
                                 )}
                               </div>
                             )}
@@ -1274,10 +1341,43 @@ function ModalThongKe({ exercise, submissions, onClose }) {
           )}
         </div>
       </div>
+      <NameTooltip tooltip={tooltip} />
     </div>
   )
 }
 
+function NameTooltip({ tooltip }) {
+  if (!tooltip) return null
+  return (
+    <div style={{
+      position: 'fixed',
+      left: tooltip.x + 12,
+      top: tooltip.y - 8,
+      zIndex: 9999,
+      backgroundColor: '#1E293B',
+      borderRadius: '10px',
+      padding: '10px 14px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      maxWidth: '220px',
+      pointerEvents: 'none',
+    }}>
+      <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {tooltip.label}
+      </p>
+      {tooltip.names.length === 0 ? (
+        <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>Không có ai</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          {tooltip.names.map((n, i) => (
+            <span key={i} style={{ fontSize: '13px', color: '#fff', fontWeight: '500' }}>
+              · {n}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 // ─── Shared ───────────────────────────────────────────────────────────────────
 function Overlay({ onClose, children, width = '420px' }) {
   return (

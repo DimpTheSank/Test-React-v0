@@ -81,7 +81,7 @@ export default function TrangChu() {
           diem:        bestSub?.diem ?? null,
           tongCau:     bestSub?.tongCau ?? null,
           thoiGianNop: bestSub?.thoiGianNop ?? null,
-          duocXemLai:  bestSub ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.5 : false,
+          duocXemLai:  bestSub ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.3 : false,
         }
       }))
 

@@ -13,6 +13,8 @@ import {
   SkeletonGVExerciseDropdown,
   SkeletonGVProgressTable,
 } from '@/app/components/Skeleton'
+import Papa from 'papaparse'
+import { convertDriveLink } from '@/lib/driveUtils'
 
 const accentKyNang = {
   'Reading':          'var(--c-primary-mid)',
@@ -717,6 +719,7 @@ function TabTienDo({ userInfo }) {
   const [loading, setLoading]           = useState(false)
   const [loadingLop, setLoadingLop]     = useState(false)
   const [loadingClasses, setLoadingClasses] = useState(true)
+  const [showThongKe, setShowThongKe] = useState(false)
 
   useEffect(() => { loadClasses() }, [])
 
@@ -887,6 +890,20 @@ function TabTienDo({ userInfo }) {
                 ))}
               </div>
 
+              <div style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>
+                <button
+                  onClick={() => setShowThongKe(true)}
+                  style={{
+                    padding: '10px 20px', borderRadius: '9px', border: 'none',
+                    backgroundColor: 'var(--c-primary)', color: '#fff',
+                    fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                  }}
+                >
+                  📊 Xem đề & thống kê
+                </button>
+              </div>
+
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px' }}>
                   {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
@@ -928,6 +945,335 @@ function TabTienDo({ userInfo }) {
           )}
         </div>
       )}
+      {showThongKe && selectedEx && (
+        <ModalThongKe
+          exercise={selectedEx}
+          submissions={rows.filter(r => r.sub).map(r => r.sub)}
+          onClose={() => setShowThongKe(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── MODAL THỐNG KÊ ĐỀ BÀI ───────────────────────────────────────────────────
+function ModalThongKe({ exercise, submissions, onClose }) {
+  const [questions, setQuestions] = useState([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    loadQuestions()
+  }, [])
+
+  const loadQuestions = async () => {
+    try {
+      const fileId = exercise.linkDrive.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1]
+      if (!fileId) return
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`
+      const res  = await fetch(csvUrl)
+      const text = await res.text()
+      const { data } = Papa.parse(text, { header: true, skipEmptyLines: true })
+      setQuestions(data.map((row, i) => ({ ...row, globalIndex: i })))
+    } catch (err) {
+      console.error('Lỗi khi tải đề:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Tính phân phối đáp án cho 1 câu
+  const getDistribution = (q) => {
+    const idx = q.globalIndex
+    const type = q.Question_Type
+
+    if (type === 'mcq' || type === 'mcq_blank') {
+      const counts = {}
+      submissions.forEach(sub => {
+        const ans = sub.answers?.[idx]
+        if (ans) counts[ans] = (counts[ans] || 0) + 1
+      })
+      const total = submissions.length || 1
+      const correct = q.Correct_Ans?.trim()
+      return { type: 'choice', counts, total, correct }
+    }
+
+    if (type === 'fill_blank') {
+      const correct = (q.Correct_Ans || '').split('|').map(s => s.trim())
+      const slotCounts = correct.map((c, si) => {
+        const counts = {}
+        submissions.forEach(sub => {
+          const ans = (sub.answers?.[idx] || [])[si]
+          if (ans) counts[ans.trim()] = (counts[ans.trim()] || 0) + 1
+        })
+        return { slot: si, correct: c, counts, total: submissions.length || 1 }
+      })
+      return { type: 'fill_blank', slotCounts }
+    }
+
+    if (type === 'fill_short') {
+      const correct = (q.Correct_Ans || '').split('|').map(s => s.trim())
+      const slotCounts = correct.map((c, si) => {
+        const counts = {}
+        submissions.forEach(sub => {
+          const ans = (sub.answers?.[idx] || [])[si]
+          if (ans) counts[ans.trim()] = (counts[ans.trim()] || 0) + 1
+        })
+        return { slot: si, correct: c, counts, total: submissions.length || 1 }
+      })
+      return { type: 'fill_short', slotCounts }
+    }
+
+    // fill_long: hiển thị tất cả bài làm
+    const allAnswers = submissions
+      .map(sub => sub.answers?.[idx])
+      .filter(Boolean)
+    return { type: 'fill_long', allAnswers }
+  }
+
+  const getOptions = (q) =>
+    ['A', 'B', 'C', 'D', 'E']
+      .map(k => ({ key: k, value: q[`Opt_${k}`] }))
+      .filter(o => o.value?.trim())
+
+  const totalSubs = submissions.length
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 3000,
+      backgroundColor: 'var(--c-overlay)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px',
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        backgroundColor: 'var(--c-surface)',
+        borderRadius: '16px',
+        width: '100%', maxWidth: '720px',
+        maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: 'var(--shadow-modal)',
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid var(--c-primary-pale)',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          flexShrink: 0,
+        }}>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--c-primary-dark)' }}>
+              📊 Thống kê đáp án
+            </h3>
+            <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--c-text-muted)' }}>
+              {exercise.tenBaiTap} · {totalSubs} học viên đã nộp
+            </p>
+          </div>
+          <button onClick={onClose} style={{
+            width: '32px', height: '32px', borderRadius: '8px',
+            border: '1px solid var(--c-primary-pale)',
+            backgroundColor: 'var(--c-surface)',
+            color: 'var(--c-text-muted)', fontSize: '16px',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{
+                  padding: '16px', borderRadius: '12px',
+                  border: '1px solid var(--c-primary-pale)',
+                  display: 'flex', flexDirection: 'column', gap: '10px',
+                }}>
+                  <div style={{ height: '14px', width: '70%', borderRadius: '4px', backgroundColor: 'var(--c-primary-pale)', animation: 'sk-pulse 1.6s ease-in-out infinite' }} />
+                  {[100, 80, 90, 85].map((w, j) => (
+                    <div key={j} style={{ height: '32px', width: `${w}%`, borderRadius: '6px', backgroundColor: 'var(--c-primary-bg)', animation: 'sk-pulse 1.6s ease-in-out infinite' }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : questions.length === 0 ? (
+            <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', textAlign: 'center', padding: '40px 0' }}>
+              Không thể tải đề bài.
+            </p>
+          ) : (
+            questions.map((q) => {
+              const dist = getDistribution(q)
+              return (
+                <div key={q.globalIndex} style={{
+                  padding: '16px 18px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--c-primary-pale)',
+                  backgroundColor: 'var(--c-surface)',
+                  display: 'flex', flexDirection: 'column', gap: '12px',
+                }}>
+                  {/* Câu hỏi */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <span style={{
+                      minWidth: '26px', height: '26px', borderRadius: '6px',
+                      backgroundColor: 'var(--c-primary-bg)',
+                      color: 'var(--c-primary)', fontSize: '12px', fontWeight: '700',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0, marginTop: '1px',
+                    }}>
+                      {q.globalIndex + 1}
+                    </span>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>
+                      {q.Question}
+                    </p>
+                  </div>
+
+                  {/* MCQ */}
+                  {(dist.type === 'choice') && (() => {
+                    const opts = (q.Question_Type === 'mcq') ? getOptions(q) : ['A','B','C','D'].slice(0, parseInt(q.Num_Answers)||4).map(k=>({key:k,value:k}))
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {opts.map(opt => {
+                          const count = dist.counts[opt.key] || 0
+                          const pct   = Math.round(count / dist.total * 100)
+                          const isCorrect = opt.key === dist.correct
+                          const hasVotes  = count > 0
+                          return (
+                            <div key={opt.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                  minWidth: '24px', height: '24px', borderRadius: '5px',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: '11px', fontWeight: '700',
+                                  backgroundColor: isCorrect ? 'var(--c-success-bg)' : 'var(--c-primary-bg)',
+                                  color: isCorrect ? 'var(--c-success-text)' : 'var(--c-primary-mid)',
+                                  border: isCorrect ? '1.5px solid var(--c-success-border)' : 'none',
+                                  flexShrink: 0,
+                                }}>{opt.key}</span>
+                                {q.Question_Type === 'mcq' && (
+                                  <span style={{ fontSize: '13px', color: 'var(--c-text-soft)', flex: 1 }}>{opt.value}</span>
+                                )}
+                                <span style={{ fontSize: '12px', fontWeight: '600', color: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                                  {count} người ({pct}%)
+                                </span>
+                              </div>
+                              {/* Progress bar */}
+                              <div style={{ height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
+                                <div style={{
+                                  height: '100%',
+                                  width: `${pct}%`,
+                                  borderRadius: '99px',
+                                  backgroundColor: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-primary-pale)',
+                                  transition: 'width 0.4s ease',
+                                }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {/* Chưa làm */}
+                        {(() => {
+                          const answered = Object.values(dist.counts).reduce((a,b)=>a+b,0)
+                          const chuaLam  = dist.total - answered
+                          if (chuaLam <= 0) return null
+                          const pct = Math.round(chuaLam / dist.total * 100)
+                          return (
+                            <div style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px' }}>
+                              ⚠️ {chuaLam} học viên chưa trả lời ({pct}%)
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )
+                  })()}
+
+                  {/* Fill blank / fill short */}
+                  {(dist.type === 'fill_blank' || dist.type === 'fill_short') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {dist.slotCounts.map(({ slot, correct, counts, total }) => {
+                        const allAnswers = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+                        const answered   = Object.values(counts).reduce((a,b)=>a+b,0)
+                        return (
+                          <div key={slot} style={{
+                            padding: '10px 14px', borderRadius: '10px',
+                            backgroundColor: 'var(--c-primary-barest)',
+                            border: '1px solid var(--c-primary-bg)',
+                          }}>
+                            {dist.slotCounts.length > 1 && (
+                              <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600' }}>
+                                Ô trống {slot + 1} — Đáp án: <span style={{ color: 'var(--c-success)' }}>{correct}</span>
+                              </p>
+                            )}
+                            {dist.slotCounts.length === 1 && (
+                              <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600' }}>
+                                Đáp án đúng: <span style={{ color: 'var(--c-success)' }}>{correct}</span>
+                              </p>
+                            )}
+                            {allAnswers.length === 0 ? (
+                              <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>Chưa có ai trả lời</span>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                {allAnswers.map(([ans, cnt]) => {
+                                  const isCorrect = ans.toLowerCase() === correct.toLowerCase()
+                                  const pct       = Math.round(cnt / total * 100)
+                                  return (
+                                    <div key={ans} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{
+                                        fontSize: '13px', fontWeight: isCorrect ? '600' : '400',
+                                        color: isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+                                        backgroundColor: isCorrect ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
+                                        padding: '2px 10px', borderRadius: '6px',
+                                        minWidth: '80px',
+                                      }}>
+                                        {isCorrect ? '✓ ' : '✗ '}{ans}
+                                      </span>
+                                      <div style={{ flex: 1, height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', width: `${pct}%`, borderRadius: '99px', backgroundColor: isCorrect ? 'var(--c-success)' : 'var(--c-danger)', transition: 'width 0.4s ease' }} />
+                                      </div>
+                                      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap' }}>{cnt} ({pct}%)</span>
+                                    </div>
+                                  )
+                                })}
+                                {answered < total && (
+                                  <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>⚠️ {total - answered} chưa trả lời</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* Fill long */}
+                  {dist.type === 'fill_long' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--c-text-muted)', fontWeight: '500' }}>
+                        {dist.allAnswers.length} bài làm đã nộp
+                      </p>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {dist.allAnswers.map((ans, i) => (
+                          <div key={i} style={{
+                            padding: '10px 14px', borderRadius: '8px',
+                            backgroundColor: 'var(--c-primary-barest)',
+                            border: '1px solid var(--c-primary-bg)',
+                            fontSize: '13px', color: 'var(--c-text-soft)', lineHeight: 1.6,
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--c-primary-pale)', marginRight: '6px' }}>#{i+1}</span>
+                            {ans}
+                          </div>
+                        ))}
+                        {dist.allAnswers.length === 0 && (
+                          <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>Chưa có bài nộp</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
     </div>
   )
 }

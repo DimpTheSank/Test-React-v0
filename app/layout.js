@@ -5,11 +5,6 @@ import Cookies from 'js-cookie'
 import { Be_Vietnam_Pro } from 'next/font/google'
 import './globals.css'
 
-export const metadata = {
-  title: "TOEIC Mr. Dank", 
-  description: "Cùng đạt 600+ TOEIC nào!",
-};
-
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
   weight: ['400', '500', '600', '700'],
@@ -52,6 +47,20 @@ export default function RootLayout({ children }) {
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  useEffect(() => {
+    const titles = {
+      '/':              'Đăng nhập',
+      '/trang-chu':     'Bài tập của tôi',
+      '/trang-chu-gv':  'Quản lý lớp',
+    }
+    const title =
+      titles[pathname] ??
+      (pathname.startsWith('/bai-tap/') ? 'Làm bài' :
+      pathname.startsWith('/vocab/')   ? 'Từ vựng' :
+      'EnglishApp')
+    document.title = title
+  }, [pathname])
 
   const applyTheme = (theme, save = true) => {
     if (theme === 'dark') {

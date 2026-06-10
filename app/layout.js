@@ -5,6 +5,11 @@ import Cookies from 'js-cookie'
 import { Be_Vietnam_Pro } from 'next/font/google'
 import './globals.css'
 
+export const metadata = {
+  title: "TOEIC Mr. Dank", 
+  description: "Cùng đạt 600+ TOEIC nào!",
+};
+
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
   weight: ['400', '500', '600', '700'],
@@ -22,10 +27,7 @@ const themeScript = `
   } catch(e) {}
 })();
 `
-export const metadata = {
-  title: "TOEIC Mr. Dank", 
-  description: "Cùng đạt 600+ TOEIC nào!",
-};
+
 export default function RootLayout({ children }) {
   const [userInfo,    setUserInfo]    = useState(null)
   const [hoverHome,   setHoverHome]   = useState(false)

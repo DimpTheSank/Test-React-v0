@@ -22,7 +22,10 @@ const themeScript = `
   } catch(e) {}
 })();
 `
-
+export const metadata = {
+  title: "TOEIC Mr. Dank", 
+  description: "Cùng đạt 600+ TOEIC nào!",
+};
 export default function RootLayout({ children }) {
   const [userInfo,    setUserInfo]    = useState(null)
   const [hoverHome,   setHoverHome]   = useState(false)

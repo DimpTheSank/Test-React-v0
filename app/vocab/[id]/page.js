@@ -298,13 +298,18 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
   const isCorrect = userAnswer?.trim().toLowerCase() === correct.toLowerCase()
   const isWrong = isReview && userAnswer?.trim() && !isCorrect
   const isEmpty = isReview && !userAnswer?.trim()
+  const [checked, setChecked] = useState(false)
 
+  // Border/bg logic
   let borderColor = 'var(--c-primary-pale)'
   let bgColor = 'var(--c-surface)'
   if (isReview) {
-    if (isCorrect) { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
-    else if (isWrong) { borderColor = 'var(--c-danger)'; bgColor = 'var(--c-danger-bg)' }
-    else { borderColor = 'var(--c-warn)'; bgColor = 'var(--c-warn-bgsoft)' }
+    if (isCorrect)  { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+    else if (isWrong){ borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'  }
+    else             { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)' }
+  } else if (checked && userAnswer?.trim()) {
+    if (isCorrect)  { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+    else            { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'  }
   } else if (userAnswer?.trim()) {
     borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bgsoft)'
   }
@@ -317,22 +322,20 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
       backgroundColor: bgColor,
       transition: 'all 0.2s',
     }}>
-      {/* Index */}
       <span style={{ color: 'var(--c-primary-pale)', fontSize: '13px', fontWeight: '600', minWidth: '24px' }}>
         {index + 1}
       </span>
 
-      {/* Vietnamese meaning */}
       <span style={{ flex: 1, fontSize: '15px', color: 'var(--c-primary-dark)', fontWeight: '500' }}>
         {word.Vietnamese}
       </span>
 
-      {/* Input */}
       <input
         type="text"
         readOnly={isReview}
         value={userAnswer || ''}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => { setChecked(false); onChange(e.target.value) }}
+        onBlur={() => { if (userAnswer?.trim()) setChecked(true) }}
         placeholder="Nhập từ tiếng Anh..."
         style={{
           width: '220px', padding: '8px 12px',
@@ -345,26 +348,22 @@ function ReadingRow({ word, index, isReview, userAnswer, onChange }) {
         }}
       />
 
-      {/* Review status */}
+      {/* Review mode */}
       {isReview && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '140px' }}>
           {isCorrect && <span style={{ fontSize: '18px' }}>✅</span>}
-          {isWrong && (
-            <>
-              <span style={{ fontSize: '18px' }}>❌</span>
-              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
-                → {correct}
-              </span>
-            </>
-          )}
-          {isEmpty && (
-            <>
-              <span style={{ fontSize: '18px' }}>⚠️</span>
-              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
-                → {correct}
-              </span>
-            </>
-          )}
+          {isWrong && (<><span style={{ fontSize: '18px' }}>❌</span><span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>→ {correct}</span></>)}
+          {isEmpty && (<><span style={{ fontSize: '18px' }}>⚠️</span><span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>→ {correct}</span></>)}
+        </div>
+      )}
+
+      {/* Real-time check (khi đang làm bài) */}
+      {!isReview && checked && userAnswer?.trim() && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '140px' }}>
+          {isCorrect
+            ? <span style={{ fontSize: '18px' }}>✅</span>
+            : <><span style={{ fontSize: '18px' }}>❌</span><span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>→ {correct}</span></>
+          }
         </div>
       )}
     </div>
@@ -378,13 +377,17 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
   const isWrong = isReview && userAnswer?.trim() && !isCorrect
   const isEmpty = isReview && !userAnswer?.trim()
   const [speaking, setSpeaking] = useState(false)
+  const [checked, setChecked] = useState(false)
 
   let borderColor = 'var(--c-primary-pale)'
   let bgColor = 'var(--c-surface)'
   if (isReview) {
-    if (isCorrect) { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
-    else if (isWrong) { borderColor = 'var(--c-danger)'; bgColor = 'var(--c-danger-bg)' }
-    else { borderColor = 'var(--c-warn)'; bgColor = 'var(--c-warn-bgsoft)' }
+    if (isCorrect)  { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+    else if (isWrong){ borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'  }
+    else             { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)' }
+  } else if (checked && userAnswer?.trim()) {
+    if (isCorrect)  { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+    else            { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'  }
   } else if (userAnswer?.trim()) {
     borderColor = 'var(--c-success)'; bgColor = '#F0FBF7'
   }
@@ -393,8 +396,7 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
     const utter = new SpeechSynthesisUtterance(correct)
-    utter.lang = 'en-GB'
-    utter.rate = 0.75
+    utter.lang = 'en-GB'; utter.rate = 0.75
     utter.onstart = () => setSpeaking(true)
     utter.onend = () => setSpeaking(false)
     utter.onerror = () => setSpeaking(false)
@@ -409,35 +411,27 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
       backgroundColor: bgColor,
       transition: 'all 0.2s',
     }}>
-      {/* Index */}
       <span style={{ color: 'var(--c-primary-pale)', fontSize: '13px', fontWeight: '600', minWidth: '24px' }}>
         {index + 1}
       </span>
 
-      {/* Speaker button */}
-      <button
-        onClick={speak}
-        title="Phát âm"
-        style={{
-          width: '44px', height: '44px', borderRadius: '50%',
-          border: 'none', cursor: 'pointer',
-          backgroundColor: speaking ? 'var(--c-success)' : 'var(--c-primary-bg)',
-          color: speaking ? 'var(--c-surface)' : 'var(--c-primary)',
-          fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.2s',
-          flexShrink: 0,
-          boxShadow: speaking ? '0 0 0 4px rgba(29,158,117,0.2)' : 'none',
-        }}
-      >
+      <button onClick={speak} title="Phát âm" style={{
+        width: '44px', height: '44px', borderRadius: '50%', border: 'none', cursor: 'pointer',
+        backgroundColor: speaking ? 'var(--c-success)' : 'var(--c-primary-bg)',
+        color: speaking ? 'var(--c-surface)' : 'var(--c-primary)',
+        fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.2s', flexShrink: 0,
+        boxShadow: speaking ? '0 0 0 4px rgba(29,158,117,0.2)' : 'none',
+      }}>
         {speaking ? '🔊' : '🔈'}
       </button>
 
-      {/* Input */}
       <input
         type="text"
         readOnly={isReview}
         value={userAnswer || ''}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => { setChecked(false); onChange(e.target.value) }}
+        onBlur={() => { if (userAnswer?.trim()) setChecked(true) }}
         placeholder="Nghe và điền từ tiếng Anh..."
         style={{
           flex: 1, padding: '8px 12px',
@@ -450,32 +444,27 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
         }}
       />
 
-      {/* Review status */}
+      {/* Review mode */}
       {isReview && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '140px' }}>
           {isCorrect && <span style={{ fontSize: '18px' }}>✅</span>}
-          {isWrong && (
-            <>
-              <span style={{ fontSize: '18px' }}>❌</span>
-              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
-                → {correct}
-              </span>
-            </>
-          )}
-          {isEmpty && (
-            <>
-              <span style={{ fontSize: '18px' }}>⚠️</span>
-              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>
-                → {correct}
-              </span>
-            </>
-          )}
+          {isWrong && (<><span style={{ fontSize: '18px' }}>❌</span><span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>→ {correct}</span></>)}
+          {isEmpty && (<><span style={{ fontSize: '18px' }}>⚠️</span><span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>→ {correct}</span></>)}
+        </div>
+      )}
+
+      {/* Real-time check */}
+      {!isReview && checked && userAnswer?.trim() && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '140px' }}>
+          {isCorrect
+            ? <span style={{ fontSize: '18px' }}>✅</span>
+            : <><span style={{ fontSize: '18px' }}>❌</span><span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '600' }}>→ {correct}</span></>
+          }
         </div>
       )}
     </div>
   )
 }
-
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const btnPrimary = {
   flex: 1, padding: '12px', borderRadius: '8px', border: 'none',

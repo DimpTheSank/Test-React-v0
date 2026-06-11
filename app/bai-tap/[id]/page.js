@@ -448,10 +448,11 @@ export default function BaiTap({ params }) {
         @media (max-width: 768px) {
           .bt-vung1 { width: 48px !important; min-width: 48px !important; border-right: 1px solid var(--c-primary-pale); }
           .bt-vung1 .so-cau { width: 28px !important; height: 28px !important; font-size: 11px !important; }
-          .bt-body { overflow-y: auto; align-items: flex-start; }
-          .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; }
-          .bt-vung2 { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); padding: 12px; }
-          .bt-vung3 { flex: none; overflow: visible; padding: 12px; gap: 16px; }
+          .bt-body { overflow-y: auto; overflow-x: hidden; align-items: flex-start; }
+          .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; min-width: 0; max-width: 100%; }
+          .bt-vung2 { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); padding: 12px; min-width: 0; }
+          .bt-vung3 { flex: none; overflow: visible; padding: 12px; gap: 16px; min-width: 0; }
+          .bt-vung3 p, .bt-vung3 div, .bt-vung3 span { word-break: break-word; overflow-wrap: anywhere; }
           .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
         }
         @keyframes fadeInOut {

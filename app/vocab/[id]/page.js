@@ -395,12 +395,39 @@ function ListeningRow({ word, index, isReview, userAnswer, onChange }) {
   const speak = () => {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
+
     const utter = new SpeechSynthesisUtterance(correct)
-    utter.lang = 'en-GB'; utter.rate = 0.65
-    utter.onstart = () => setSpeaking(true)
-    utter.onend = () => setSpeaking(false)
-    utter.onerror = () => setSpeaking(false)
-    window.speechSynthesis.speak(utter)
+    utter.rate = 0.75
+
+    const setVoiceAndSpeak = () => {
+      const voices = window.speechSynthesis.getVoices()
+
+      // Ưu tiên: en-GB → en-US → bất kỳ giọng en nào
+      const preferred = [
+        voices.find(v => v.lang === 'en-GB'),
+        voices.find(v => v.lang === 'en-US'),
+        voices.find(v => v.lang.startsWith('en')),
+      ].find(Boolean)
+
+      if (preferred) utter.voice = preferred
+      utter.lang = preferred?.lang || 'en-GB'
+
+      utter.onstart = () => setSpeaking(true)
+      utter.onend   = () => setSpeaking(false)
+      utter.onerror = () => setSpeaking(false)
+      window.speechSynthesis.speak(utter)
+    }
+
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      setVoiceAndSpeak()
+    } else {
+      // iOS load voices bất đồng bộ
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null
+        setVoiceAndSpeak()
+      }
+    }
   }
 
   return (

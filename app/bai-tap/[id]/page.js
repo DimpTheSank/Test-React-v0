@@ -17,32 +17,63 @@ const mauKyNang = {
   'Speaking':  'var(--c-speaking)',
 }
 
+// ─── FontSizeControl ──────────────────────────────────────────────────────────
+function FontSizeControl({ label, value, onChange, min = 11, max = 22 }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '4px',
+      padding: '3px 6px', borderRadius: '8px',
+      backgroundColor: 'var(--c-primary-bg)',
+      border: '1px solid var(--c-primary-pale)',
+      userSelect: 'none', flexShrink: 0,
+    }}>
+      <span style={{ fontSize: '10px', color: 'var(--c-text-muted)', fontWeight: '600', marginRight: '2px' }}>
+        {label}
+      </span>
+      <button
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
+        style={{
+          width: '20px', height: '20px', borderRadius: '5px', border: 'none',
+          backgroundColor: value <= min ? 'transparent' : 'var(--c-surface)',
+          color: value <= min ? 'var(--c-primary-pale)' : 'var(--c-primary)',
+          fontSize: '14px', fontWeight: '700', cursor: value <= min ? 'default' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          lineHeight: 1, padding: 0,
+          transition: 'background-color 0.15s',
+        }}
+      >−</button>
+      <span style={{
+        fontSize: '11px', fontWeight: '600', color: 'var(--c-primary)',
+        minWidth: '24px', textAlign: 'center',
+      }}>{value}</span>
+      <button
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
+        style={{
+          width: '20px', height: '20px', borderRadius: '5px', border: 'none',
+          backgroundColor: value >= max ? 'transparent' : 'var(--c-surface)',
+          color: value >= max ? 'var(--c-primary-pale)' : 'var(--c-primary)',
+          fontSize: '14px', fontWeight: '700', cursor: value >= max ? 'default' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          lineHeight: 1, padding: 0,
+          transition: 'background-color 0.15s',
+        }}
+      >+</button>
+    </div>
+  )
+}
+
 // ─── FillBlankQuestion Component ─────────────────────────────────────────────
-/**
- * Render một câu fill_blank với cơ chế click.
- *
- * Sheet format:
- *   Question   : "Can you do me ___ ? I need someone to ___ at the shop."
- *   Correct_Ans: "a favor|take over"         (thứ tự theo ô trống)
- *   Word_Bank  : "a favor|take over|schedule|customer|update"
- *
- * Cơ chế:
- *   - Click từ trong word bank → điền vào ô trống đầu tiên còn thiếu
- *   - Click từ đã điền trong câu → trả về word bank
- *
- * answers[globalIndex] = ["a favor", "take over"]   (mảng theo thứ tự blank)
- */
-function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) {
+function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fontSize }) {
   const correctParts = (q.Correct_Ans || '').split('|').map(s => s.trim())
   const wordBankRaw  = (q.Word_Bank   || '').split('|').map(s => s.trim()).filter(Boolean)
   const numBlanks    = correctParts.length
 
-  // slots: mảng độ dài numBlanks, mỗi phần tử là từ đã điền hoặc null
   const slots = userAnswer
     ? [...userAnswer, ...Array(numBlanks).fill(null)].slice(0, numBlanks)
     : Array(numBlanks).fill(null)
 
-  // Từ còn trong bank (chưa dùng)
   const usedWords = slots.filter(Boolean)
   const bankWords = wordBankRaw.filter(w => {
     const usedCount  = usedWords.filter(u => u === w).length
@@ -50,17 +81,15 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
     return usedCount < totalCount
   })
 
-  // Click từ trong word bank → điền vào ô trống đầu tiên
   const handleClickWord = (word) => {
     if (isReview) return
     const firstEmpty = slots.findIndex(s => !s)
-    if (firstEmpty === -1) return // tất cả đã điền rồi
+    if (firstEmpty === -1) return
     const newSlots = [...slots]
     newSlots[firstEmpty] = word
     onChange(newSlots)
   }
 
-  // Click ô đã điền → trả về bank
   const handleClickSlot = (slotIdx) => {
     if (isReview) return
     const newSlots = [...slots]
@@ -68,7 +97,6 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
     onChange(newSlots)
   }
 
-  // Parse câu hỏi thành segments
   const segments = []
   let blankIdx = 0
   const parts = q.Question.split('___')
@@ -88,12 +116,12 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
     return                     { bg: 'var(--c-surface)',   border: 'var(--c-primary-pale)', color: 'var(--c-primary-pale)' }
   }
 
+  const fs = fontSize || 14
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-      {/* Câu với ô trống */}
       <div style={{
-        fontSize: '14px', lineHeight: '2.4', color: 'var(--c-text)',
+        fontSize: `${fs}px`, lineHeight: '2.4', color: 'var(--c-text)',
         padding: '14px 18px', borderRadius: '10px',
         border: '1px solid var(--c-primary-bg)', backgroundColor: 'var(--c-primary-barest)',
       }}>
@@ -118,7 +146,7 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
                 border: `1.5px dashed ${style.border}`,
                 backgroundColor: style.bg,
                 color: style.color,
-                fontSize: '13px',
+                fontSize: `${Math.max(11, fs - 1)}px`,
                 fontWeight: filled ? '600' : '400',
                 cursor: filled && !isReview ? 'pointer' : 'default',
                 textAlign: 'center',
@@ -129,9 +157,9 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
               onMouseEnter={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = 'var(--c-danger-bg)' }}
               onMouseLeave={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = style.bg }}
             >
-              {filled || <span style={{ opacity: 0.35, fontStyle: 'italic', fontWeight: 400, fontSize: '12px' }}>...</span>}
+              {filled || <span style={{ opacity: 0.35, fontStyle: 'italic', fontWeight: 400, fontSize: `${Math.max(11, fs - 2)}px` }}>...</span>}
               {isReview && filled && filled !== correctParts[idx] && (
-                <span style={{ marginLeft: '6px', color: 'var(--c-success)', fontWeight: '600', fontSize: '12px' }}>
+                <span style={{ marginLeft: '6px', color: 'var(--c-success)', fontWeight: '600', fontSize: `${Math.max(11, fs - 2)}px` }}>
                   → {correctParts[idx]}
                 </span>
               )}
@@ -140,7 +168,6 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
         })}
       </div>
 
-      {/* Word bank */}
       {!isReview && (
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: '8px',
@@ -150,7 +177,7 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
           minHeight: '48px',
         }}>
           {bankWords.length === 0 && (
-            <span style={{ color: 'var(--c-primary-pale)', fontSize: '13px', fontStyle: 'italic', alignSelf: 'center' }}>
+            <span style={{ color: 'var(--c-primary-pale)', fontSize: `${Math.max(11, fs - 1)}px`, fontStyle: 'italic', alignSelf: 'center' }}>
               Tất cả từ đã được điền
             </span>
           )}
@@ -163,7 +190,7 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
                 border: '1.5px solid var(--c-primary-pale)',
                 backgroundColor: 'var(--c-surface)',
                 color: 'var(--c-primary)',
-                fontSize: '13px', fontWeight: '500',
+                fontSize: `${Math.max(11, fs - 1)}px`, fontWeight: '500',
                 cursor: 'pointer', userSelect: 'none',
                 transition: 'all 0.15s',
                 boxShadow: '0 1px 3px rgba(24,95,165,0.08)',
@@ -177,20 +204,19 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange }) 
         </div>
       )}
 
-      {/* Review: word bank readonly */}
       {isReview && (
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: '8px',
           padding: '10px 14px', borderRadius: '10px',
           border: '1px solid var(--c-primary-bg)', backgroundColor: 'var(--c-primary-barest)',
         }}>
-          <span style={{ color: 'var(--c-text-muted)', fontSize: '12px', marginRight: '4px', alignSelf: 'center' }}>Word bank:</span>
+          <span style={{ color: 'var(--c-text-muted)', fontSize: `${Math.max(11, fs - 2)}px`, marginRight: '4px', alignSelf: 'center' }}>Word bank:</span>
           {wordBankRaw.map((word, wi) => (
             <span key={wi} style={{
               padding: '4px 12px', borderRadius: '20px',
               border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
               color: correctParts.includes(word) ? 'var(--c-success)' : 'var(--c-text-muted)',
-              fontSize: '12px', fontWeight: correctParts.includes(word) ? '600' : '400',
+              fontSize: `${Math.max(11, fs - 2)}px`, fontWeight: correctParts.includes(word) ? '600' : '400',
             }}>{word}</span>
           ))}
         </div>
@@ -219,6 +245,10 @@ export default function BaiTap({ params }) {
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
   const [reviewAnswers, setReviewAnswers] = useState({})
 
+  // ── Font size state cho vùng 2 và 3 ──────────────────────────────
+  const [fontSizeV2, setFontSizeV2] = useState(14)
+  const [fontSizeV3, setFontSizeV3] = useState(14)
+
   const saveDraftTimeout = useRef(null)
   const assignmentIdRef  = useRef(null)
   const isFirstLoad      = useRef(true)
@@ -228,7 +258,6 @@ export default function BaiTap({ params }) {
     loadInfo()
   }, [])
 
-  // Auto-save draft
   useEffect(() => {
     if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
@@ -333,7 +362,6 @@ export default function BaiTap({ params }) {
     }
   }
 
-  // ── Tính số câu chưa làm (hỗ trợ fill_blank) ──────────────────────────────
   const soCauChuaLam = questions.filter(q => {
     const ans = answers[q.globalIndex]
     if (q.Question_Type === 'fill_blank') {
@@ -343,7 +371,6 @@ export default function BaiTap({ params }) {
     return !ans
   }).length
 
-  // ── Chấm điểm ─────────────────────────────────────────────────────────────
   const handleNopBai = async () => {
     setIsSubmitting(true)
     try {
@@ -363,7 +390,6 @@ export default function BaiTap({ params }) {
           const userParts    = (userAns || []).map(s => s.trim().toLowerCase())
           if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
         } else if (q.Question_Type === 'fill_blank') {
-          // Mỗi blank đúng tính 1 điểm con; cả câu đúng hết mới tính 1 điểm câu
           const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
           const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
           if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
@@ -430,28 +456,49 @@ export default function BaiTap({ params }) {
       <style>{`
         .bt-body { display: flex; flex: 1; overflow: hidden; }
         .bt-vung2-3 { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        .bt-vung2-header {
+          display: flex; align-items: center; justify-content: flex-end;
+          padding: 6px 12px 0;
+          flex-shrink: 0;
+        }
+        .bt-vung3-header {
+          display: flex; align-items: center; justify-content: flex-end;
+          padding: 6px 12px 0;
+          flex-shrink: 0;
+        }
         .bt-vung2 {
           flex: 1.2; border-bottom: 1px solid var(--c-primary-pale);
-          padding: 20px; overflow-y: auto;
+          padding: 12px 20px 20px; overflow-y: auto;
           display: flex; flex-direction: column; gap: 16px;
         }
         .bt-vung3 {
-          flex: 1; padding: 20px; overflow-y: auto;
+          flex: 1; padding: 12px 20px 20px; overflow-y: auto;
           display: flex; flex-direction: column; gap: 35px;
+        }
+        .bt-vung2-wrap {
+          display: flex; flex-direction: column;
+          flex: 1.2; border-bottom: 1px solid var(--c-primary-pale);
+          overflow: hidden;
+        }
+        .bt-vung3-wrap {
+          display: flex; flex-direction: column;
+          flex: 1; overflow: hidden;
         }
         @media (min-width: 769px) {
           .bt-vung1 { border-right: 1px solid var(--c-primary-pale); }
-          .bt-vung2 { border-right: 1px solid var(--c-primary-pale); border-bottom: none; flex: 1.2; }
+          .bt-vung2-wrap { border-right: 1px solid var(--c-primary-pale); border-bottom: none; }
+          .bt-vung2 { border-bottom: none; }
           .bt-vung2-3 { flex-direction: row; }
-          .bt-vung3 { flex: 1; }
         }
         @media (max-width: 768px) {
           .bt-vung1 { width: 48px !important; min-width: 48px !important; border-right: 1px solid var(--c-primary-pale); }
           .bt-vung1 .so-cau { width: 28px !important; height: 28px !important; font-size: 11px !important; }
           .bt-body { overflow-y: auto; overflow-x: hidden; align-items: flex-start; }
           .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; min-width: 0; max-width: 100%; }
-          .bt-vung2 { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); padding: 12px; min-width: 0; }
-          .bt-vung3 { flex: none; overflow: visible; padding: 12px; gap: 16px; min-width: 0; }
+          .bt-vung2-wrap { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); min-width: 0; }
+          .bt-vung3-wrap { flex: none; overflow: visible; min-width: 0; }
+          .bt-vung2 { flex: none; overflow: visible; padding: 8px 12px 12px; min-width: 0; }
+          .bt-vung3 { flex: none; overflow: visible; padding: 8px 12px 12px; gap: 16px; min-width: 0; }
           .bt-vung3 p, .bt-vung3 div, .bt-vung3 span { word-break: break-word; overflow-wrap: anywhere; }
           .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
         }
@@ -576,123 +623,147 @@ export default function BaiTap({ params }) {
         {/* Vùng 2 + 3 */}
         <div className="bt-vung2-3">
 
-          {/* Vùng 2: Nội dung */}
-          <div className="bt-vung2" id="content-panel">
-            {firstInGroup?.Audios?.map((src, i) => (
-              <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
-            ))}
-            {firstInGroup?.Contexts?.map((ctx, i) => (
-              <div key={i} style={{ fontSize: '14px', lineHeight: '1.8', color: 'var(--c-primary-dark)', whiteSpace: 'pre-wrap' }}>
-                {ctx.startsWith('http') ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} /> : ctx}
-              </div>
-            ))}
-            {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
-              <p style={{ color: 'var(--c-primary-pale)', fontSize: '14px' }}>Không có nội dung chung cho nhóm này</p>
-            )}
+          {/* ── Vùng 2 wrap (header + content) ── */}
+          <div className="bt-vung2-wrap">
+            {/* Font size control vùng 2 */}
+            <div className="bt-vung2-header">
+              <FontSizeControl
+                label="V2"
+                value={fontSizeV2}
+                onChange={setFontSizeV2}
+              />
+            </div>
+
+            {/* Nội dung vùng 2 */}
+            <div className="bt-vung2" id="content-panel" style={{ fontSize: `${fontSizeV2}px` }}>
+              {firstInGroup?.Audios?.map((src, i) => (
+                <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
+              ))}
+              {firstInGroup?.Contexts?.map((ctx, i) => (
+                <div key={i} style={{ lineHeight: '1.8', color: 'var(--c-primary-dark)', whiteSpace: 'pre-wrap' }}>
+                  {ctx.startsWith('http') ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} /> : ctx}
+                </div>
+              ))}
+              {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
+                <p style={{ color: 'var(--c-primary-pale)' }}>Không có nội dung chung cho nhóm này</p>
+              )}
+            </div>
           </div>
 
-          {/* Vùng 3: Câu hỏi & Đáp án */}
-          <div className="bt-vung3" id="question-panel">
-            {questionsInGroup.map((q) => (
-              <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? 'var(--c-primary-barest)' : 'transparent', padding: '10px', borderRadius: '8px' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--c-primary)' }}>
-                  Câu {q.globalIndex + 1}:{' '}
-                  {/* Với fill_blank, tiêu đề không lặp lại toàn bộ câu (câu được render trong component) */}
-                  {q.Question_Type !== 'fill_blank' ? q.Question : ''}
-                </p>
+          {/* ── Vùng 3 wrap (header + content) ── */}
+          <div className="bt-vung3-wrap">
+            {/* Font size control vùng 3 */}
+            <div className="bt-vung3-header">
+              <FontSizeControl
+                label="V3"
+                value={fontSizeV3}
+                onChange={setFontSizeV3}
+              />
+            </div>
 
-                {/* MCQ */}
-                {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {q.Question_Type === 'mcq'
-                      ? getOptions(q).map(opt => {
-                          const border = isReview ? getReviewBorderColor(q, opt.key) : (answers[q.globalIndex] === opt.key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
-                          const bg     = isReview ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)') : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
-                          const color  = isReview ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-primary-mid)') : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)')
-                          return (
-                            <div key={opt.key} onClick={() => chonDapAn(q.globalIndex, opt.key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: '14px', cursor: isReview ? 'default' : 'pointer', transition: 'all 0.15s' }}>
-                              {opt.key}. {opt.value}
-                            </div>
-                          )
-                        })
-                      : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
-                          const border = isReview ? getReviewBorderColor(q, key) : (answers[q.globalIndex] === key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
-                          const bg     = isReview ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)') : (answers[q.globalIndex] === key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
-                          const color  = isReview ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-text-muted)') : (answers[q.globalIndex] === key ? 'var(--c-primary-dark)' : 'var(--c-text-muted)')
-                          return (
-                            <div key={key} onClick={() => chonDapAn(q.globalIndex, key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: '14px', cursor: isReview ? 'default' : 'pointer', fontWeight: '600', textAlign: 'center' }}>
-                              {key}
-                            </div>
-                          )
-                        })
-                    }
-                  </div>
-                )}
+            {/* Câu hỏi & Đáp án */}
+            <div className="bt-vung3" id="question-panel">
+              {questionsInGroup.map((q) => (
+                <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? 'var(--c-primary-barest)' : 'transparent', padding: '10px', borderRadius: '8px' }}>
+                  <p style={{ margin: 0, fontSize: `${fontSizeV3}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
+                    Câu {q.globalIndex + 1}:{' '}
+                    {q.Question_Type !== 'fill_blank' ? q.Question : ''}
+                  </p>
 
-                {/* Fill short */}
-                {q.Question_Type === 'fill_short' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
-                      <input key={i} type="text"
-                        placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
-                        value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
-                        readOnly={isReview}
-                        onChange={(e) => {
-                          if (isReview) return
-                          const prev = answers[q.globalIndex] || []
-                          const newArr = [...prev]; newArr[i] = e.target.value
-                          setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
-                        }}
-                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)' }}
-                      />
-                    ))}
-                  </div>
-                )}
+                  {/* MCQ */}
+                  {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {q.Question_Type === 'mcq'
+                        ? getOptions(q).map(opt => {
+                            const border = isReview ? getReviewBorderColor(q, opt.key) : (answers[q.globalIndex] === opt.key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
+                            const bg     = isReview ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)') : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
+                            const color  = isReview ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-primary-mid)') : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)')
+                            return (
+                              <div key={opt.key} onClick={() => chonDapAn(q.globalIndex, opt.key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: `${fontSizeV3}px`, cursor: isReview ? 'default' : 'pointer', transition: 'all 0.15s' }}>
+                                {opt.key}. {opt.value}
+                              </div>
+                            )
+                          })
+                        : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
+                            const border = isReview ? getReviewBorderColor(q, key) : (answers[q.globalIndex] === key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
+                            const bg     = isReview ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)') : (answers[q.globalIndex] === key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
+                            const color  = isReview ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-text-muted)') : (answers[q.globalIndex] === key ? 'var(--c-primary-dark)' : 'var(--c-text-muted)')
+                            return (
+                              <div key={key} onClick={() => chonDapAn(q.globalIndex, key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: `${fontSizeV3}px`, cursor: isReview ? 'default' : 'pointer', fontWeight: '600', textAlign: 'center' }}>
+                                {key}
+                              </div>
+                            )
+                          })
+                      }
+                    </div>
+                  )}
 
-                {/* Fill long */}
-                {q.Question_Type === 'fill_long' && (
-                  <textarea
-                    placeholder="Nhập bài làm của bạn..."
-                    value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
-                    readOnly={isReview}
-                    onChange={(e) => { if (isReview) return; setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value })) }}
-                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', minHeight: '120px', resize: 'vertical', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)' }}
-                  />
-                )}
+                  {/* Fill short */}
+                  {q.Question_Type === 'fill_short' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
+                        <input key={i} type="text"
+                          placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
+                          value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
+                          readOnly={isReview}
+                          onChange={(e) => {
+                            if (isReview) return
+                            const prev = answers[q.globalIndex] || []
+                            const newArr = [...prev]; newArr[i] = e.target.value
+                            setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
+                          }}
+                          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)', fontSize: `${fontSizeV3}px` }}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                {/* ── Fill blank (kéo thả) ── */}
-                {q.Question_Type === 'fill_blank' && (
-                  <FillBlankQuestion
-                    q={q}
-                    isReview={isReview}
-                    userAnswer={isReview ? null : answers[q.globalIndex]}
-                    reviewAnswer={isReview ? reviewAnswers[q.globalIndex] : null}
-                    onChange={(newSlots) => setAnswers(a => ({ ...a, [q.globalIndex]: newSlots }))}
-                  />
+                  {/* Fill long */}
+                  {q.Question_Type === 'fill_long' && (
+                    <textarea
+                      placeholder="Nhập bài làm của bạn..."
+                      value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
+                      readOnly={isReview}
+                      onChange={(e) => { if (isReview) return; setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value })) }}
+                      style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', minHeight: '120px', resize: 'vertical', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)', fontSize: `${fontSizeV3}px` }}
+                    />
+                  )}
+
+                  {/* Fill blank */}
+                  {q.Question_Type === 'fill_blank' && (
+                    <FillBlankQuestion
+                      q={q}
+                      isReview={isReview}
+                      userAnswer={isReview ? null : answers[q.globalIndex]}
+                      reviewAnswer={isReview ? reviewAnswers[q.globalIndex] : null}
+                      onChange={(newSlots) => setAnswers(a => ({ ...a, [q.globalIndex]: newSlots }))}
+                      fontSize={fontSizeV3}
+                    />
+                  )}
+                </div>
+              ))}
+
+              {/* Nút điều hướng */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
+                <button className="bt-nav-btn"
+                  onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
+                  disabled={cauHienTai === 0}
+                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)', cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer', opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500' }}
+                >← Trước</button>
+
+                {!isReview && cauHienTai === questions.length - 1 ? (
+                  <button className="bt-nav-btn"
+                    onClick={() => setShowConfirm(true)}
+                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-success)', color: 'var(--c-surface)', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+                  >Nộp bài ✓</button>
+                ) : (
+                  <button className="bt-nav-btn"
+                    onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
+                    disabled={cauHienTai === questions.length - 1}
+                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-primary-mid)', color: 'var(--c-surface)', cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer', opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500' }}
+                  >Tiếp →</button>
                 )}
               </div>
-            ))}
-
-            {/* Nút điều hướng */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
-              <button className="bt-nav-btn"
-                onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
-                disabled={cauHienTai === 0}
-                style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)', cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer', opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500' }}
-              >← Trước</button>
-
-              {!isReview && cauHienTai === questions.length - 1 ? (
-                <button className="bt-nav-btn"
-                  onClick={() => setShowConfirm(true)}
-                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-success)', color: 'var(--c-surface)', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
-                >Nộp bài ✓</button>
-              ) : (
-                <button className="bt-nav-btn"
-                  onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
-                  disabled={cauHienTai === questions.length - 1}
-                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-primary-mid)', color: 'var(--c-surface)', cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer', opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500' }}
-                >Tiếp →</button>
-              )}
             </div>
           </div>
 

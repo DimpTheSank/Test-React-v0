@@ -628,7 +628,7 @@ export default function BaiTap({ params }) {
             {/* Font size control vùng 2 */}
             <div className="bt-vung2-header">
               <FontSizeControl
-                label="V2"
+                label="Cỡ chữ"
                 value={fontSizeV2}
                 onChange={setFontSizeV2}
               />
@@ -655,7 +655,7 @@ export default function BaiTap({ params }) {
             {/* Font size control vùng 3 */}
             <div className="bt-vung3-header">
               <FontSizeControl
-                label="V3"
+                label="Cỡ chữ"
                 value={fontSizeV3}
                 onChange={setFontSizeV3}
               />

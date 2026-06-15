@@ -121,16 +121,12 @@ function TabBaiTap({ userInfo }) {
     try {
       const snap = await getDocs(collection(db, 'exercises'))
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      const kyNangOrder = { 'Listening': 0, 'Reading': 1, 'Speaking': 2, 'Writing': 3 }
       list.sort((a, b) => {
-        const loaiA = a.loaiBai === 'TOEIC' ? '' : a.loaiBai
-        const loaiB = b.loaiBai === 'TOEIC' ? '' : b.loaiBai
-        if (loaiA !== loaiB) return loaiA.localeCompare(loaiB)
-        const kyA = kyNangOrder[a.kyNang] ?? 99
-        const kyB = kyNangOrder[b.kyNang] ?? 99
-        if (kyA !== kyB) return kyA - kyB
-        return a.tenBaiTap.localeCompare(b.tenBaiTap, 'vi')
+        const tA = a.thoiGianTao || ''
+        const tB = b.thoiGianTao || ''
+        return tB.localeCompare(tA) // mới nhất lên đầu
       })
+      
       setExercises(list)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }

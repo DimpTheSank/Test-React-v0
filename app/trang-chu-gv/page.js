@@ -115,22 +115,14 @@ function TabBaiTap({ userInfo }) {
   const [showDelete, setShowDelete]   = useState(false)
   const [deletingEx, setDeletingEx]   = useState(null)
   const [isDeleting, setIsDeleting]   = useState(false)
+  const [filterKeyword, setFilterKeyword] = useState('')
 
   const loadExercises = async () => {
     setLoading(true)
     try {
       const snap = await getDocs(collection(db, 'exercises'))
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      const kyNangOrder = { 'Listening': 0, 'Reading': 1, 'Speaking': 2, 'Writing': 3 }
-      list.sort((a, b) => {
-        const loaiA = a.loaiBai === 'TOEIC' ? '' : a.loaiBai
-        const loaiB = b.loaiBai === 'TOEIC' ? '' : b.loaiBai
-        if (loaiA !== loaiB) return loaiA.localeCompare(loaiB)
-        const kyA = kyNangOrder[a.kyNang] ?? 99
-        const kyB = kyNangOrder[b.kyNang] ?? 99
-        if (kyA !== kyB) return kyA - kyB
-        return a.tenBaiTap.localeCompare(b.tenBaiTap, 'vi')
-      })
+      list.sort((a, b) => (b.thoiGianTao || '').localeCompare(a.thoiGianTao || ''))
       
       setExercises(list)
     } catch (err) { console.error(err) }
@@ -165,9 +157,14 @@ function TabBaiTap({ userInfo }) {
   }
 
   const filtered = exercises.filter(ex => {
-    const okMucDo  = filterMucDo  === 'Tất cả' || ex.mucDo  === filterMucDo
-    const okKyNang = filterKyNang === 'Tất cả' || ex.kyNang === filterKyNang
-    return okMucDo && okKyNang
+    const okMucDo   = filterMucDo   === 'Tất cả' || ex.mucDo  === filterMucDo
+    const okKyNang  = filterKyNang  === 'Tất cả' || ex.kyNang === filterKyNang
+    const kw        = filterKeyword.trim().toLowerCase()
+    const okKeyword = !kw
+      || ex.tenBaiTap?.toLowerCase().includes(kw)
+      || ex.kyNang?.toLowerCase().includes(kw)
+      || ex.loaiBai?.toLowerCase().includes(kw)
+    return okMucDo && okKyNang && okKeyword
   })
 
   const selectedExercises = exercises.filter(ex => selected.has(ex.id))
@@ -220,7 +217,42 @@ function TabBaiTap({ userInfo }) {
         <FilterGroup label="Mức độ"  options={cacMucDo}  value={filterMucDo}  onChange={setFilterMucDo} />
         <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
         <FilterGroup label="Kỹ năng" options={cacKyNang} value={filterKyNang} onChange={setFilterKyNang} />
+        <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600',
+            whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em',
+          }}>Tìm kiếm</span>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              placeholder="Tên bài, kỹ năng..."
+              value={filterKeyword}
+              onChange={e => setFilterKeyword(e.target.value)}
+              style={{
+                padding: '5px 28px 5px 12px',
+                borderRadius: '9999px', fontSize: '13px',
+                border: `1.5px solid ${filterKeyword ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+                backgroundColor: 'var(--c-surface)',
+                color: 'var(--c-primary-dark)',
+                outline: 'none', width: '180px',
+                transition: 'border-color 0.15s',
+              }}
+            />
+            {filterKeyword && (
+              <button
+                onClick={() => setFilterKeyword('')}
+                style={{
+                  position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--c-text-muted)', fontSize: '14px', padding: 0, lineHeight: 1,
+                }}
+              >×</button>
+            )}
+          </div>
+        </div>
       </div>
+
 
       {loading ? <SkeletonGVExerciseList /> : (
         <div style={{

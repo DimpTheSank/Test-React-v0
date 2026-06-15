@@ -14,15 +14,16 @@ import {
   SkeletonGVProgressTable,
 } from '@/app/components/Skeleton'
 import Papa from 'papaparse'
-import { convertDriveLink } from '@/lib/driveUtils'
+
 
 const accentKyNang = {
   'Reading':          'var(--c-primary-mid)',
   'Listening':        'var(--c-success)',
   'Writing':          'var(--c-writing)',
   'Speaking':         'var(--c-speaking)',
-  'Vocab Reading':    'var(--c-primary-mid)',
-  'Vocab Listening':  'var(--c-success)',
+  'Vocab Reading':    'var(--c-vocab-reading)',
+  'Vocab Listening':  'var(--c-vocab-listening)',
+  'Tổng hợp':         'var(--c-tonghop)',
 }
 
 const iconKyNang = {
@@ -32,13 +33,16 @@ const iconKyNang = {
   'Speaking':        '🗣️',
   'Vocab Reading':   '🔤',
   'Vocab Listening': '🔊',
+  'Tổng hợp':        '🧩',
 }
+
 
 const mauKyNang = {
   'Reading':   { bg: 'var(--c-primary-mid)', text: 'var(--c-surface)' },
   'Listening': { bg: 'var(--c-success)',     text: 'var(--c-surface)' },
   'Writing':   { bg: 'var(--c-writing)',     text: 'var(--c-surface)' },
   'Speaking':  { bg: 'var(--c-speaking)',    text: 'var(--c-surface)' },
+  'Tổng hợp':  { bg: 'var(--c-tonghop)',     text: 'var(--c-surface)' },
 }
 
 const mauMucDo = {
@@ -48,7 +52,7 @@ const mauMucDo = {
 }
 
 const cacMucDo  = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
-const cacKyNang = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking']
+const cacKyNang = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp']
 
 const getUserInfo = () => {
   try {
@@ -475,7 +479,7 @@ function ModalTaoBai({ onClose, onCreated }) {
           <label style={labelStyle}>Kỹ năng</label>
           <select style={inputStyle} value={form.kyNang}
             onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
-            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening'].map(v => <option key={v}>{v}</option>)}
+            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp'].map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
       </div>

@@ -19,8 +19,9 @@ const accentKyNang = {
   'Listening':        'var(--c-success)',
   'Writing':          'var(--c-writing)',
   'Speaking':         'var(--c-speaking)',
-  'Vocab Reading':    'var(--c-primary-mid)',
-  'Vocab Listening':  'var(--c-success)',
+  'Vocab Reading':    'var(--c-vocab-reading)',
+  'Vocab Listening':  'var(--c-vocab-listening)',
+  'Tổng hợp':         'var(--c-tonghop)',
 }
 
 const iconKyNang = {
@@ -30,6 +31,7 @@ const iconKyNang = {
   'Speaking':        '🗣️',
   'Vocab Reading':   '🔤',
   'Vocab Listening': '🔊',
+  'Tổng hợp':        '🧩',
 }
 
 const mauMucDo = {

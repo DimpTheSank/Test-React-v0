@@ -15,6 +15,7 @@ const mauKyNang = {
   'Listening': 'var(--c-success)',
   'Writing':   'var(--c-writing)',
   'Speaking':  'var(--c-speaking)',
+  'Tổng hợp':  'var(--c-tonghop)',
 }
 
 // ─── FontSizeControl ──────────────────────────────────────────────────────────

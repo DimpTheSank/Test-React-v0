@@ -40,6 +40,9 @@
   --c-listening:      #0F9E7B;
   --c-writing:        #BA7517;
   --c-speaking:       #A32D2D;
+  --c-vocab-reading:   #7C5CBF;
+  --c-vocab-listening: #1B9C9C;
+  --c-tonghop:         #D6692E;
 
   /* Neutrals */
   --c-surface:        #ffffff;
@@ -137,6 +140,9 @@ html.dark {
   --c-listening:      #2FB08A;
   --c-writing:        #B07830;
   --c-speaking:       #A84040;
+  --c-vocab-reading:   #9B7FD4;
+  --c-vocab-listening: #4FC4C4;
+  --c-tonghop:         #E08A52;
 
   --c-surface:        #1E2A35;
   --c-surface-raise:  #1E2A35;

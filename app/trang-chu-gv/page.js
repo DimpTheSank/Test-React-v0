@@ -122,7 +122,11 @@ function TabBaiTap({ userInfo }) {
     try {
       const snap = await getDocs(collection(db, 'exercises'))
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      list.sort((a, b) => (b.thoiGianTao || '').localeCompare(a.thoiGianTao || ''))
+      list.sort((a, b) => {
+        const tA = a.thoiGianTao?.toDate?.() ?? new Date(a.thoiGianTao || 0)
+        const tB = b.thoiGianTao?.toDate?.() ?? new Date(b.thoiGianTao || 0)
+        return tB - tA
+      })
       
       setExercises(list)
     } catch (err) { console.error(err) }

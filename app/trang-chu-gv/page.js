@@ -116,6 +116,7 @@ function TabBaiTap({ userInfo }) {
   const [deletingEx, setDeletingEx]   = useState(null)
   const [isDeleting, setIsDeleting]   = useState(false)
   const [filterKeyword, setFilterKeyword] = useState('')
+  const [filterLoaiBai, setFilterLoaiBai] = useState('Tất cả')
 
   const loadExercises = async () => {
     setLoading(true)
@@ -125,7 +126,8 @@ function TabBaiTap({ userInfo }) {
       list.sort((a, b) => {
         const tA = a.thoiGianTao?.toDate?.() ?? new Date(a.thoiGianTao || 0)
         const tB = b.thoiGianTao?.toDate?.() ?? new Date(b.thoiGianTao || 0)
-        return tB - tA
+        if (tB - tA !== 0) return tB - tA
+        return (a.tenBaiTap || '').localeCompare(b.tenBaiTap || '', 'vi')
       })
       
       setExercises(list)
@@ -161,14 +163,15 @@ function TabBaiTap({ userInfo }) {
   }
 
   const filtered = exercises.filter(ex => {
-    const okMucDo   = filterMucDo   === 'Tất cả' || ex.mucDo  === filterMucDo
-    const okKyNang  = filterKyNang  === 'Tất cả' || ex.kyNang === filterKyNang
+    const okMucDo   = filterMucDo   === 'Tất cả' || ex.mucDo   === filterMucDo
+    const okKyNang  = filterKyNang  === 'Tất cả' || ex.kyNang  === filterKyNang
+    const okLoaiBai = filterLoaiBai === 'Tất cả' || ex.loaiBai === filterLoaiBai
     const kw        = filterKeyword.trim().toLowerCase()
     const okKeyword = !kw
       || ex.tenBaiTap?.toLowerCase().includes(kw)
       || ex.kyNang?.toLowerCase().includes(kw)
       || ex.loaiBai?.toLowerCase().includes(kw)
-    return okMucDo && okKyNang && okKeyword
+    return okMucDo && okKyNang && okLoaiBai && okKeyword
   })
 
   const selectedExercises = exercises.filter(ex => selected.has(ex.id))
@@ -221,6 +224,8 @@ function TabBaiTap({ userInfo }) {
         <FilterGroup label="Mức độ"  options={cacMucDo}  value={filterMucDo}  onChange={setFilterMucDo} />
         <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
         <FilterGroup label="Kỹ năng" options={cacKyNang} value={filterKyNang} onChange={setFilterKyNang} />
+        <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
+        <FilterGroup label="Loại bài" options={cacLoaiBai} value={filterLoaiBai} onChange={setFilterLoaiBai} />
         <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{
@@ -768,6 +773,8 @@ function TabTienDo({ userInfo }) {
   const loadClasses = async () => {
     try {
       const snap = await getDocs(query(collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan)))
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      list.sort((a, b) => (a.lop || '').localeCompare(b.lop || '', 'vi'))      
       setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch (err) { console.error(err) }
     finally { setLoadingClasses(false) }

@@ -423,7 +423,7 @@ function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
 // ─── MODAL TẠO BÀI ───────────────────────────────────────────────────────────
 function ModalTaoBai({ onClose, onCreated }) {
   const [form, setForm] = useState({
-    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'IELTS',
+    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'TOEIC',
     mucDo: 'Cơ bản', linkDrive: ''
   })
   const [saving, setSaving] = useState(false)

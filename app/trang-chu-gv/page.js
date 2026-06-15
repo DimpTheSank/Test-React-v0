@@ -441,6 +441,7 @@ function ModalTaoBai({ onClose, onCreated }) {
         loaiBai:   form.loaiBai,
         mucDo:     form.mucDo,
         linkDrive: form.linkDrive.trim(),
+        thoiGianTao: new Date().toISOString(),
       })
       onCreated()
     } catch (err) {

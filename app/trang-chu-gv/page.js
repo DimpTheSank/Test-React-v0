@@ -217,21 +217,21 @@ function TabBaiTap({ userInfo }) {
 
       {/* Filter bar */}
       <div style={{
-        display: 'flex', gap: '20px', marginBottom: '20px',
+        display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px',
         padding: '14px 18px', backgroundColor: 'var(--c-surface)',
         borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
-        flexWrap: 'wrap', alignItems: 'center',
       }}>
-        <FilterGroup label="Mức độ"  options={cacMucDo}  value={filterMucDo}  onChange={setFilterMucDo} />
-        <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
-        <FilterGroup label="Kỹ năng" options={cacKyNang} value={filterKyNang} onChange={setFilterKyNang} />
-        <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
+        <FilterGroup label="Mức độ"   options={cacMucDo}   value={filterMucDo}   onChange={setFilterMucDo} />
+        <div style={{ height: '1px', backgroundColor: 'var(--c-primary-pale)' }} />
+        <FilterGroup label="Kỹ năng"  options={cacKyNang}  value={filterKyNang}  onChange={setFilterKyNang} />
+        <div style={{ height: '1px', backgroundColor: 'var(--c-primary-pale)' }} />
         <FilterGroup label="Loại bài" options={cacLoaiBai} value={filterLoaiBai} onChange={setFilterLoaiBai} />
-        <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
+        <div style={{ height: '1px', backgroundColor: 'var(--c-primary-pale)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{
             fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600',
             whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em',
+            minWidth: '72px',
           }}>Tìm kiếm</span>
           <div style={{ position: 'relative' }}>
             <input
@@ -245,7 +245,7 @@ function TabBaiTap({ userInfo }) {
                 border: `1.5px solid ${filterKeyword ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
                 backgroundColor: 'var(--c-surface)',
                 color: 'var(--c-primary-dark)',
-                outline: 'none', width: '180px',
+                outline: 'none', width: '220px',
                 transition: 'border-color 0.15s',
               }}
             />
@@ -327,6 +327,7 @@ function FilterGroup({ label, options, value, onChange }) {
       <span style={{
         fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600',
         whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em',
+        minWidth: '72px', // ← thêm dòng này để các label thẳng cột
       }}>
         {label}
       </span>

@@ -89,7 +89,11 @@ export default function TrangChu() {
 
       const sorted = baiTapData
         .filter(Boolean)
-        .sort((a, b) => new Date(b.thoiGianGiao) - new Date(a.thoiGianGiao))
+        .sort((a, b) => {
+          const timeDiff = new Date(b.thoiGianGiao) - new Date(a.thoiGianGiao)
+          if (timeDiff !== 0) return timeDiff
+          return (a.tenBaiTap ?? '').localeCompare(b.tenBaiTap ?? '', 'vi')
+        })
       setBaiTapList(sorted)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }

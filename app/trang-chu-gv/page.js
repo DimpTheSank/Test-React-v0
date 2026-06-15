@@ -51,6 +51,7 @@ const mauMucDo = {
   'Nâng cao':  { bg: 'var(--c-danger-bg)',  text: 'var(--c-danger-text)'  },
 }
 
+const cacLoaiBai = ['Tất cả', 'TOEIC', 'IELTS', 'Khác']
 const cacMucDo  = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
 const cacKyNang = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp']
 

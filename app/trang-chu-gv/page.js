@@ -774,8 +774,8 @@ function TabTienDo({ userInfo }) {
     try {
       const snap = await getDocs(query(collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan)))
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      list.sort((a, b) => (a.lop || '').localeCompare(b.lop || '', 'vi'))      
-      setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      list.sort((a, b) => (a.lop || '').localeCompare(b.lop || '', 'vi'))
+      setClasses(list)  // ← dùng list đã sort, không dùng snap.docs lại
     } catch (err) { console.error(err) }
     finally { setLoadingClasses(false) }
   }

@@ -283,6 +283,7 @@ export default function BaiTap({ params }) {
           await updateDoc(doc(db, 'assignments', assignId), {
             trangThai: 'Đang làm',
             answers,
+            tongCauDraft: questions.length,
             thoiGianLuuNhap: new Date().toISOString(),
           })
           setDraftSaved(true)

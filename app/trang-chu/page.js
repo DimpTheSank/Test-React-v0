@@ -13,7 +13,6 @@ const mauTrangThai = {
   'Chưa làm': { bg: 'var(--c-danger-bg)',   text: 'var(--c-danger-text)'  },
 }
 
-// Màu theo kỹ năng — dùng cho accent line trên card
 const accentKyNang = {
   'Reading':          'var(--c-primary-mid)',
   'Listening':        'var(--c-success)',
@@ -40,14 +39,14 @@ const mauMucDo = {
   'Nâng cao':  { bg: 'var(--c-danger-bg)',  text: 'var(--c-danger-text)'  },
 }
 
-const cacMucDo    = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
-const cacTrangThai = ['Tất cả', 'Chưa làm', 'Đã làm']
+const cacMucDo     = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
+const cacTrangThai = ['Tất cả', 'Chưa làm', 'Đang làm', 'Đã làm']
 
 export default function TrangChu() {
   const router = useRouter()
-  const [baiTapList, setBaiTapList]     = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [filterMucDo, setFilterMucDo]   = useState('Tất cả')
+  const [baiTapList, setBaiTapList]           = useState([])
+  const [loading, setLoading]                 = useState(true)
+  const [filterMucDo, setFilterMucDo]         = useState('Tất cả')
   const [filterTrangThai, setFilterTrangThai] = useState('Tất cả')
 
   useEffect(() => {
@@ -76,14 +75,25 @@ export default function TrangChu() {
         const exSnap = await getDoc(doc(db, 'exercises', assign.exerciseId))
         if (!exSnap.exists()) return null
         const bestSub = subMap[assign.exerciseId]
+
+        // Đếm số câu đã làm trong nháp (bỏ qua nếu đã nộp)
+        const draftAnswerCount = !bestSub && assign.answers
+          ? Object.keys(assign.answers).filter(k => {
+              const v = assign.answers[k]
+              return Array.isArray(v) ? v.some(Boolean) : !!v
+            }).length
+          : 0
+
         return {
           id: assignDoc.id, exerciseId: assign.exerciseId, thoiGianGiao: assign.thoiGianGiao,
           ...exSnap.data(),
-          trangThai:   bestSub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
-          diem:        bestSub?.diem ?? null,
-          tongCau:     bestSub?.tongCau ?? null,
-          thoiGianNop: bestSub?.thoiGianNop ?? null,
-          duocXemLai:  bestSub ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.3 : false,
+          trangThai:        bestSub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
+          diem:             bestSub?.diem ?? null,
+          tongCau:          bestSub?.tongCau ?? null,
+          thoiGianNop:      bestSub?.thoiGianNop ?? null,
+          duocXemLai:       bestSub ? (bestSub.diem ?? 0) >= (bestSub.tongCau ?? 1) * 0.3 : false,
+          draftAnswerCount,
+          draftTongCau:     assign.tongCauDraft ?? null,
         }
       }))
 
@@ -100,10 +110,11 @@ export default function TrangChu() {
   }
 
   const daDam   = baiTapList.filter(b => b.trangThai === 'Đã làm').length
+  const dangLam = baiTapList.filter(b => b.trangThai === 'Đang làm').length
   const chuaLam = baiTapList.filter(b => b.trangThai === 'Chưa làm').length
 
   const filtered = baiTapList.filter(b => {
-    const okMucDo    = filterMucDo    === 'Tất cả' || b.mucDo    === filterMucDo
+    const okMucDo     = filterMucDo     === 'Tất cả' || b.mucDo     === filterMucDo
     const okTrangThai = filterTrangThai === 'Tất cả' || b.trangThai === filterTrangThai
     return okMucDo && okTrangThai
   })
@@ -141,6 +152,17 @@ export default function TrangChu() {
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--c-success)', display: 'inline-block' }} />
             Đã làm: {daDam}
           </span>
+          {dangLam > 0 && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 14px', borderRadius: '9999px',
+              backgroundColor: 'var(--c-warn-bg)', color: 'var(--c-warn-text)',
+              fontSize: '13px', fontWeight: '600',
+            }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--c-warn)', display: 'inline-block' }} />
+              Đang làm: {dangLam}
+            </span>
+          )}
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             padding: '6px 14px', borderRadius: '9999px',
@@ -229,16 +251,20 @@ function FilterGroup({ label, options, value, onChange }) {
 /* ── CardBaiTap ──────────────────────────────────────────────────── */
 function CardBaiTap({ bai }) {
   const [hovered, setHovered] = useState(false)
-  const router   = useRouter()
+  const router = useRouter()
 
-  const daDam    = bai.trangThai === 'Đã làm'
-  const mau      = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
-  const mauDo    = mauMucDo[bai.mucDo] || null
-  const accent   = accentKyNang[bai.kyNang] || 'var(--c-primary-mid)'
-  const icon     = iconKyNang[bai.kyNang]   || '📝'
+  const daDam  = bai.trangThai === 'Đã làm'
+  const mau    = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
+  const mauDo  = mauMucDo[bai.mucDo] || null
+  const accent = accentKyNang[bai.kyNang] || 'var(--c-primary-mid)'
+  const icon   = iconKyNang[bai.kyNang]   || '📝'
 
-  const pctStr   = bai.diem !== null && bai.tongCau
+  const pctStr = bai.diem !== null && bai.tongCau
     ? `${Math.round(bai.diem / bai.tongCau * 100)}%`
+    : null
+
+  const draftPct = bai.draftTongCau
+    ? Math.round(bai.draftAnswerCount / bai.draftTongCau * 100)
     : null
 
   const formatNgay = (iso) => {
@@ -292,7 +318,6 @@ function CardBaiTap({ bai }) {
           fontWeight: '600',
           color: 'var(--c-primary-dark)',
           lineHeight: 1.4,
-          /* clamp to 3 lines */
           display: '-webkit-box',
           WebkitLineClamp: 3,
           WebkitBoxOrient: 'vertical',
@@ -321,7 +346,33 @@ function CardBaiTap({ bai }) {
           </span>
         </div>
 
-        {/* Score + date */}
+        {/* Draft progress bar — chỉ hiện khi chưa/đang làm và có dữ liệu nháp */}
+        {!daDam && bai.draftAnswerCount > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', color: 'var(--c-warn-text)', fontWeight: '600' }}>
+                ✏️ Đang làm
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--c-warn-text)', fontWeight: '700' }}>
+                {bai.draftAnswerCount}{bai.draftTongCau ? `/${bai.draftTongCau}` : ''} câu
+                {draftPct !== null ? ` · ${draftPct}%` : ''}
+              </span>
+            </div>
+            {draftPct !== null && (
+              <div style={{ height: '5px', borderRadius: '99px', backgroundColor: 'var(--c-warn-bg)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${draftPct}%`,
+                  borderRadius: '99px',
+                  backgroundColor: 'var(--c-warn)',
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Score + date — chỉ hiện khi đã làm */}
         {daDam && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -351,7 +402,7 @@ function CardBaiTap({ bai }) {
 
         {/* CTA buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: 'auto', paddingTop: '4px' }}>
-                    {bai.duocXemLai && (
+          {bai.duocXemLai && (
             <button
               onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, '?review=true'))}
               style={{
@@ -366,7 +417,7 @@ function CardBaiTap({ bai }) {
               Xem lại ✓
             </button>
           )}
-          
+
           <button
             onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId))}
             style={{
@@ -377,10 +428,8 @@ function CardBaiTap({ bai }) {
               width: '100%', letterSpacing: '0.01em',
             }}
           >
-            {daDam ? 'Làm lại' : 'Làm bài'}
+            {daDam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
           </button>
-
-
         </div>
       </div>
     </div>

@@ -36,7 +36,6 @@ const iconKyNang = {
   'Tổng hợp':        '🧩',
 }
 
-
 const mauKyNang = {
   'Reading':          { bg: 'var(--c-primary-mid)',      text: 'var(--c-surface)' },
   'Listening':        { bg: 'var(--c-success)',          text: 'var(--c-surface)' },
@@ -54,8 +53,8 @@ const mauMucDo = {
 }
 
 const cacLoaiBai = ['Tất cả', 'TOEIC', 'IELTS', 'Khác']
-const cacMucDo  = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
-const cacKyNang = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp']
+const cacMucDo   = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
+const cacKyNang  = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp']
 
 const getUserInfo = () => {
   try {
@@ -67,7 +66,7 @@ const getUserInfo = () => {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function TrangChuGV() {
   const router = useRouter()
-  const [tab, setTab]         = useState('baiTap')
+  const [tab, setTab]           = useState('baiTap')
   const [userInfo, setUserInfo] = useState(null)
 
   useEffect(() => {
@@ -108,16 +107,16 @@ export default function TrangChuGV() {
 
 // ─── TAB BÀI TẬP ─────────────────────────────────────────────────────────────
 function TabBaiTap({ userInfo }) {
-  const [exercises, setExercises]   = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [showAssign, setShowAssign] = useState(false)
-  const [selected, setSelected]     = useState(new Set())
-  const [filterMucDo, setFilterMucDo]   = useState('Tất cả')
-  const [filterKyNang, setFilterKyNang] = useState('Tất cả')
-  const [showDelete, setShowDelete]   = useState(false)
-  const [deletingEx, setDeletingEx]   = useState(null)
-  const [isDeleting, setIsDeleting]   = useState(false)
+  const [exercises, setExercises]         = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [showCreate, setShowCreate]       = useState(false)
+  const [showAssign, setShowAssign]       = useState(false)
+  const [selected, setSelected]           = useState(new Set())
+  const [filterMucDo, setFilterMucDo]     = useState('Tất cả')
+  const [filterKyNang, setFilterKyNang]   = useState('Tất cả')
+  const [showDelete, setShowDelete]       = useState(false)
+  const [deletingEx, setDeletingEx]       = useState(null)
+  const [isDeleting, setIsDeleting]       = useState(false)
   const [filterKeyword, setFilterKeyword] = useState('')
   const [filterLoaiBai, setFilterLoaiBai] = useState('Tất cả')
 
@@ -132,7 +131,6 @@ function TabBaiTap({ userInfo }) {
         if (tB - tA !== 0) return tB - tA
         return (a.tenBaiTap || '').localeCompare(b.tenBaiTap || '', 'vi')
       })
-      
       setExercises(list)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
@@ -193,25 +191,19 @@ function TabBaiTap({ userInfo }) {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
           {selected.size > 0 && (
-            <button
-              onClick={() => setShowAssign(true)}
-              style={{
-                padding: '10px 20px', borderRadius: '9px', border: 'none',
-                backgroundColor: 'var(--c-success)', color: '#fff',
-                fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-              }}
-            >
+            <button onClick={() => setShowAssign(true)} style={{
+              padding: '10px 20px', borderRadius: '9px', border: 'none',
+              backgroundColor: 'var(--c-success)', color: '#fff',
+              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+            }}>
               Giao {selected.size} bài đã chọn
             </button>
           )}
-          <button
-            onClick={() => setShowCreate(true)}
-            style={{
-              padding: '10px 20px', borderRadius: '9px', border: 'none',
-              backgroundColor: 'var(--c-primary)', color: '#fff',
-              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-            }}
-          >
+          <button onClick={() => setShowCreate(true)} style={{
+            padding: '10px 20px', borderRadius: '9px', border: 'none',
+            backgroundColor: 'var(--c-primary)', color: '#fff',
+            fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+          }}>
             + Tạo bài mới
           </button>
         </div>
@@ -237,45 +229,31 @@ function TabBaiTap({ userInfo }) {
           }}>Tìm kiếm</span>
           <div style={{ position: 'relative' }}>
             <input
-              type="text"
-              placeholder="Tên bài, kỹ năng..."
-              value={filterKeyword}
-              onChange={e => setFilterKeyword(e.target.value)}
+              type="text" placeholder="Tên bài, kỹ năng..."
+              value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)}
               style={{
-                padding: '5px 28px 5px 12px',
-                borderRadius: '9999px', fontSize: '13px',
+                padding: '5px 28px 5px 12px', borderRadius: '9999px', fontSize: '13px',
                 border: `1.5px solid ${filterKeyword ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
-                backgroundColor: 'var(--c-surface)',
-                color: 'var(--c-primary-dark)',
-                outline: 'none', width: '220px',
-                transition: 'border-color 0.15s',
+                backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-dark)',
+                outline: 'none', width: '220px', transition: 'border-color 0.15s',
               }}
             />
             {filterKeyword && (
-              <button
-                onClick={() => setFilterKeyword('')}
-                style={{
-                  position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--c-text-muted)', fontSize: '14px', padding: 0, lineHeight: 1,
-                }}
-              >×</button>
+              <button onClick={() => setFilterKeyword('')} style={{
+                position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--c-text-muted)', fontSize: '14px', padding: 0, lineHeight: 1,
+              }}>×</button>
             )}
           </div>
         </div>
       </div>
 
-
       {loading ? <SkeletonGVExerciseList /> : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(186px, 1fr))',
-          gap: '16px',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(186px, 1fr))', gap: '16px' }}>
           {filtered.map(ex => (
             <CardBaiTapGV
-              key={ex.id}
-              ex={ex}
+              key={ex.id} ex={ex}
               isSelected={selected.has(ex.id)}
               onToggle={() => toggleSelect(ex.id)}
               onGiaoNhanh={() => { setSelected(new Set([ex.id])); setShowAssign(true) }}
@@ -286,10 +264,7 @@ function TabBaiTap({ userInfo }) {
       )}
 
       {showCreate && (
-        <ModalTaoBai
-          onClose={() => setShowCreate(false)}
-          onCreated={() => { setShowCreate(false); loadExercises() }}
-        />
+        <ModalTaoBai onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); loadExercises() }} />
       )}
 
       {showDelete && deletingEx && (
@@ -312,11 +287,8 @@ function TabBaiTap({ userInfo }) {
       )}
 
       {showAssign && (
-        <ModalGiaoBai
-          exercises={selectedExercises}
-          userInfo={userInfo}
-          onClose={() => { setShowAssign(false); setSelected(new Set()) }}
-        />
+        <ModalGiaoBai exercises={selectedExercises} userInfo={userInfo}
+          onClose={() => { setShowAssign(false); setSelected(new Set()) }} />
       )}
     </div>
   )
@@ -329,10 +301,8 @@ function FilterGroup({ label, options, value, onChange }) {
       <span style={{
         fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600',
         whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em',
-        minWidth: '72px', // ← thêm dòng này để các label thẳng cột
-      }}>
-        {label}
-      </span>
+        minWidth: '72px',
+      }}>{label}</span>
       {options.map(opt => (
         <button key={opt} onClick={() => onChange(opt)} style={{
           padding: '5px 13px', borderRadius: '9999px', fontSize: '13px',
@@ -349,117 +319,75 @@ function FilterGroup({ label, options, value, onChange }) {
 
 /* ── CardBaiTapGV ─────────────────────────────────────────────────── */
 function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
-  const [hovered,    setHovered]    = useState(false)
-  const [hoverGiao,  setHoverGiao]  = useState(false)
-  const [hoverXoa,   setHoverXoa]   = useState(false)
+  const [hovered,   setHovered]   = useState(false)
+  const [hoverGiao, setHoverGiao] = useState(false)
+  const [hoverXoa,  setHoverXoa]  = useState(false)
 
   const accent = accentKyNang[ex.kyNang] || 'var(--c-primary-mid)'
   const icon   = iconKyNang[ex.kyNang]   || '📝'
   const mauDo  = mauMucDo[ex.mucDo]     || null
 
   return (
-    <div
-      onClick={onToggle}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div onClick={onToggle} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex', flexDirection: 'column',
         backgroundColor: isSelected ? 'var(--c-primary-bgsoft)' : 'var(--c-surface)',
         borderRadius: '14px', overflow: 'hidden', cursor: 'pointer',
         boxShadow: hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
-        border: isSelected
-          ? '2px solid var(--c-primary)'
-          : '1px solid var(--c-border-soft)',
+        border: isSelected ? '2px solid var(--c-primary)' : '1px solid var(--c-border-soft)',
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.15s, background-color 0.15s',
       }}
     >
-      {/* Accent bar + selected checkmark */}
       <div style={{ position: 'relative' }}>
         <div style={{ height: '4px', backgroundColor: accent }} />
-        {/* Checkbox */}
         <div style={{
           position: 'absolute', top: '-28px', right: '10px',
           width: '18px', height: '18px', borderRadius: '5px',
           border: `2px solid ${isSelected ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
           backgroundColor: isSelected ? 'var(--c-primary)' : 'var(--c-surface)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.15s',
-          /* float it above the accent bar */
-          marginTop: '28px',
-          zIndex: 1,
+          transition: 'all 0.15s', marginTop: '28px', zIndex: 1,
         }}>
           {isSelected && <span style={{ color: '#fff', fontSize: '11px', fontWeight: '700', lineHeight: 1 }}>✓</span>}
         </div>
       </div>
 
-      {/* Body */}
       <div style={{ padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-
-        {/* Icon + skill label */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
           <span style={{ fontSize: '17px', lineHeight: 1 }}>{icon}</span>
-          <span style={{
-            fontSize: '10.5px', fontWeight: '700', letterSpacing: '0.04em',
-            color: 'var(--c-text-muted)', textTransform: 'uppercase',
-          }}>
+          <span style={{ fontSize: '10.5px', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--c-text-muted)', textTransform: 'uppercase' }}>
             {ex.loaiBai} · {ex.kyNang}
           </span>
         </div>
-
-        {/* Title */}
         <p style={{
-          margin: 0, fontSize: '13.5px', fontWeight: '600',
-          color: 'var(--c-primary-dark)', lineHeight: 1.4,
-          display: '-webkit-box', WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>
-          {ex.tenBaiTap}
-        </p>
-
-        {/* Difficulty badge */}
+          margin: 0, fontSize: '13.5px', fontWeight: '600', color: 'var(--c-primary-dark)', lineHeight: 1.4,
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{ex.tenBaiTap}</p>
         {mauDo && (
           <span style={{
             padding: '2px 9px', borderRadius: '9999px', alignSelf: 'flex-start',
-            fontSize: '11px', fontWeight: '600',
-            backgroundColor: mauDo.bg, color: mauDo.text,
-          }}>
-            {ex.mucDo}
-          </span>
+            fontSize: '11px', fontWeight: '600', backgroundColor: mauDo.bg, color: mauDo.text,
+          }}>{ex.mucDo}</span>
         )}
-
-        {/* Action buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: 'auto', paddingTop: '4px' }}>
-          <button
-            onClick={e => { e.stopPropagation(); onGiaoNhanh() }}
-            onMouseEnter={() => setHoverGiao(true)}
-            onMouseLeave={() => setHoverGiao(false)}
+          <button onClick={e => { e.stopPropagation(); onGiaoNhanh() }}
+            onMouseEnter={() => setHoverGiao(true)} onMouseLeave={() => setHoverGiao(false)}
             style={{
               padding: '9px 0', borderRadius: '9px', border: 'none',
               backgroundColor: hoverGiao ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)',
               color: '#fff', fontSize: '13px', fontWeight: '600',
-              cursor: 'pointer', transition: 'background-color 0.15s',
-              width: '100%', letterSpacing: '0.01em',
-            }}
-          >
-            Giao bài
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); onXoa() }}
-            onMouseEnter={() => setHoverXoa(true)}
-            onMouseLeave={() => setHoverXoa(false)}
+              cursor: 'pointer', transition: 'background-color 0.15s', width: '100%',
+            }}>Giao bài</button>
+          <button onClick={e => { e.stopPropagation(); onXoa() }}
+            onMouseEnter={() => setHoverXoa(true)} onMouseLeave={() => setHoverXoa(false)}
             style={{
               padding: '8px 0', borderRadius: '9px',
               border: `1.5px solid ${hoverXoa ? 'var(--c-danger)' : 'var(--c-danger-border)'}`,
               backgroundColor: hoverXoa ? 'var(--c-danger-bg)' : 'transparent',
               color: hoverXoa ? 'var(--c-danger-text)' : 'var(--c-text-muted)',
-              fontSize: '13px', fontWeight: '500',
-              cursor: 'pointer', transition: 'all 0.15s',
-              width: '100%', letterSpacing: '0.01em',
-            }}
-          >
-            Xoá bài
-          </button>
+              fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.15s', width: '100%',
+            }}>Xoá bài</button>
         </div>
       </div>
     </div>
@@ -468,102 +396,77 @@ function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
 
 // ─── MODAL TẠO BÀI ───────────────────────────────────────────────────────────
 function ModalTaoBai({ onClose, onCreated }) {
-  const [form, setForm] = useState({
-    tenBaiTap: '', kyNang: 'Reading', loaiBai: 'TOEIC',
-    mucDo: 'Cơ bản', linkDrive: ''
-  })
+  const [form, setForm] = useState({ tenBaiTap: '', kyNang: 'Reading', loaiBai: 'TOEIC', mucDo: 'Cơ bản', linkDrive: '' })
   const [saving, setSaving] = useState(false)
   const [loi, setLoi]       = useState('')
 
   const handleSave = async () => {
-    if (!form.tenBaiTap.trim() || !form.linkDrive.trim()) {
-      setLoi('Vui lòng điền đầy đủ thông tin'); return
-    }
+    if (!form.tenBaiTap.trim() || !form.linkDrive.trim()) { setLoi('Vui lòng điền đầy đủ thông tin'); return }
     setSaving(true)
     try {
       await addDoc(collection(db, 'exercises'), {
-        tenBaiTap: form.tenBaiTap.trim(),
-        kyNang:    form.kyNang,
-        loaiBai:   form.loaiBai,
-        mucDo:     form.mucDo,
-        linkDrive: form.linkDrive.trim(),
-        thoiGianTao: new Date().toISOString(),
+        tenBaiTap: form.tenBaiTap.trim(), kyNang: form.kyNang, loaiBai: form.loaiBai,
+        mucDo: form.mucDo, linkDrive: form.linkDrive.trim(), thoiGianTao: new Date().toISOString(),
       })
       onCreated()
-    } catch (err) {
-      setLoi('Lỗi khi tạo bài, thử lại sau')
-      console.error(err)
-    } finally { setSaving(false) }
+    } catch (err) { setLoi('Lỗi khi tạo bài, thử lại sau'); console.error(err) }
+    finally { setSaving(false) }
   }
 
   const inputStyle = {
-    padding: '10px 12px', borderRadius: '8px',
-    border: '1px solid var(--c-primary-pale)', fontSize: '14px',
-    backgroundColor: 'var(--c-surface)', outline: 'none',
-    width: '100%', boxSizing: 'border-box',
+    padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)',
+    fontSize: '14px', backgroundColor: 'var(--c-surface)', outline: 'none', width: '100%', boxSizing: 'border-box',
   }
   const labelStyle = { color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }
 
   return (
     <Overlay onClose={onClose}>
       <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Tạo bài tập mới</h3>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <label style={labelStyle}>Tên bài tập</label>
         <input style={inputStyle} placeholder="Nhập tên bài tập"
           value={form.tenBaiTap} onChange={e => setForm(f => ({ ...f, tenBaiTap: e.target.value }))} />
       </div>
-
       <div style={{ display: 'flex', gap: '12px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           <label style={labelStyle}>Loại bài</label>
-          <select style={inputStyle} value={form.loaiBai}
-            onChange={e => setForm(f => ({ ...f, loaiBai: e.target.value }))}>
+          <select style={inputStyle} value={form.loaiBai} onChange={e => setForm(f => ({ ...f, loaiBai: e.target.value }))}>
             {['TOEIC', 'IELTS', 'Khác'].map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           <label style={labelStyle}>Kỹ năng</label>
-          <select style={inputStyle} value={form.kyNang}
-            onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
+          <select style={inputStyle} value={form.kyNang} onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
             {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp'].map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <label style={labelStyle}>Mức độ</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {['Cơ bản', 'Trung bình', 'Nâng cao'].map(m => {
-            const mau = mauMucDo[m]
-            const isSelected = form.mucDo === m
+            const mau = mauMucDo[m]; const isSelected = form.mucDo === m
             return (
               <button key={m} onClick={() => setForm(f => ({ ...f, mucDo: m }))} style={{
                 flex: 1, padding: '8px', borderRadius: '8px',
                 border: `1.5px solid ${isSelected ? mau.text : 'var(--c-primary-pale)'}`,
                 backgroundColor: isSelected ? mau.bg : 'var(--c-surface)',
                 color: isSelected ? mau.text : 'var(--c-text-muted)',
-                fontSize: '13px', fontWeight: isSelected ? '600' : '400',
-                cursor: 'pointer', transition: 'all 0.15s',
+                fontSize: '13px', fontWeight: isSelected ? '600' : '400', cursor: 'pointer', transition: 'all 0.15s',
               }}>{m}</button>
             )
           })}
         </div>
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <label style={labelStyle}>Link Google Drive (Excel)</label>
         <input style={inputStyle} placeholder="https://docs.google.com/spreadsheets/..."
           value={form.linkDrive} onChange={e => setForm(f => ({ ...f, linkDrive: e.target.value }))} />
       </div>
-
       {loi && <p style={{ margin: 0, color: 'var(--c-danger)', fontSize: '13px' }}>{loi}</p>}
-
       <div style={{ display: 'flex', gap: '10px' }}>
         <button onClick={onClose} style={btnSecondary}>Huỷ</button>
-        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
-          {saving ? 'Đang lưu...' : 'Tạo bài'}
-        </button>
+        <button onClick={handleSave} disabled={saving} style={btnPrimary}>{saving ? 'Đang lưu...' : 'Tạo bài'}</button>
       </div>
     </Overlay>
   )
@@ -583,9 +486,7 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
 
   const loadClasses = async () => {
     try {
-      const snap = await getDocs(query(
-        collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan)
-      ))
+      const snap = await getDocs(query(collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan)))
       setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
@@ -601,12 +502,10 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
     } else {
       next.add(lopName)
       if (!hocViensByLop[lopName] && cls.hocVienIds?.length) {
-        const hvData = await Promise.all(
-          cls.hocVienIds.map(async uid => {
-            const snap = await getDoc(doc(db, 'users', uid))
-            return snap.exists() ? { id: uid, ...snap.data() } : null
-          })
-        )
+        const hvData = await Promise.all(cls.hocVienIds.map(async uid => {
+          const snap = await getDoc(doc(db, 'users', uid))
+          return snap.exists() ? { id: uid, ...snap.data() } : null
+        }))
         const hvs = hvData.filter(Boolean)
         setHocViensByLop(prev => ({ ...prev, [lopName]: hvs }))
         setSelectedHVs(prev => { const s = new Set(prev); hvs.forEach(h => s.add(h.id)); return s })
@@ -629,19 +528,12 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
     setSaving(true)
     try {
       const thoiGianGiao = new Date().toISOString()
-      await Promise.all(
-        exercises.flatMap(ex =>
-          [...selectedHVs].map(uid => {
-            const lopName = [...selectedLops].find(lopName =>
-              (hocViensByLop[lopName] || []).some(h => h.id === uid)
-            ) || ''
-            return addDoc(collection(db, 'assignments'), {
-              userId: uid, exerciseId: ex.id, lopId: lopName,
-              thoiGianGiao, trangThai: 'Chưa làm',
-            })
-          })
-        )
-      )
+      await Promise.all(exercises.flatMap(ex =>
+        [...selectedHVs].map(uid => {
+          const lopName = [...selectedLops].find(l => (hocViensByLop[l] || []).some(h => h.id === uid)) || ''
+          return addDoc(collection(db, 'assignments'), { userId: uid, exerciseId: ex.id, lopId: lopName, thoiGianGiao, trangThai: 'Chưa làm' })
+        })
+      ))
       setDone(true)
     } catch (err) { console.error(err) }
     finally { setSaving(false) }
@@ -660,26 +552,18 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
         </div>
       ) : (
         <>
-          <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>
-            Giao bài ({exercises.length} bài đã chọn)
-          </h3>
-
+          <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Giao bài ({exercises.length} bài đã chọn)</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {exercises.map(ex => {
               const mau = mauKyNang[ex.kyNang] || { bg: 'var(--c-primary)', text: '#fff' }
               return (
-                <span key={ex.id} style={{
-                  padding: '4px 10px', borderRadius: '9999px',
-                  backgroundColor: mau.bg, color: mau.text,
-                  fontSize: '12px', fontWeight: '500',
-                }}>{ex.tenBaiTap}</span>
+                <span key={ex.id} style={{ padding: '4px 10px', borderRadius: '9999px', backgroundColor: mau.bg, color: mau.text, fontSize: '12px', fontWeight: '500' }}>
+                  {ex.tenBaiTap}
+                </span>
               )
             })}
           </div>
-
-          {loading ? (
-            <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải lớp...</p>
-          ) : (
+          {loading ? <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải lớp...</p> : (
             <>
               <div>
                 <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }}>Chọn lớp</p>
@@ -695,33 +579,21 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
                   ))}
                 </div>
               </div>
-
               {uniqueHVs.length > 0 && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                     <p style={{ margin: 0, color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }}>
                       Học viên ({selectedHVs.size}/{uniqueHVs.length})
                     </p>
-                    <button
-                      onClick={() => {
-                        if (selectedHVs.size === uniqueHVs.length) setSelectedHVs(new Set())
-                        else setSelectedHVs(new Set(uniqueHVs.map(h => h.id)))
-                      }}
-                      style={{
-                        marginLeft: 'auto', padding: '4px 12px', borderRadius: '6px',
-                        border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
-                        color: 'var(--c-primary-mid)', fontSize: '12px', cursor: 'pointer',
-                      }}
-                    >
+                    <button onClick={() => { if (selectedHVs.size === uniqueHVs.length) setSelectedHVs(new Set()); else setSelectedHVs(new Set(uniqueHVs.map(h => h.id))) }}
+                      style={{ marginLeft: 'auto', padding: '4px 12px', borderRadius: '6px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)', fontSize: '12px', cursor: 'pointer' }}>
                       {selectedHVs.size === uniqueHVs.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                     </button>
                   </div>
-
                   <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--c-primary-pale)', borderRadius: '10px' }}>
                     {uniqueHVs.map((hv, i) => (
                       <div key={hv.id} onClick={() => toggleHV(hv.id)} style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '10px 14px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', cursor: 'pointer',
                         borderBottom: i < uniqueHVs.length - 1 ? '1px solid var(--c-primary-bg)' : 'none',
                         backgroundColor: selectedHVs.has(hv.id) ? 'var(--c-primary-bgsoft)' : 'var(--c-surface)',
                         transition: 'background-color 0.15s',
@@ -730,8 +602,7 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
                           width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0,
                           border: `2px solid ${selectedHVs.has(hv.id) ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
                           backgroundColor: selectedHVs.has(hv.id) ? 'var(--c-primary)' : 'var(--c-surface)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
                         }}>
                           {selectedHVs.has(hv.id) && <span style={{ color: '#fff', fontSize: '11px', fontWeight: '700' }}>✓</span>}
                         </div>
@@ -744,7 +615,6 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
                   </div>
                 </div>
               )}
-
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={onClose} style={btnSecondary}>Huỷ</button>
                 <button onClick={handleGiao} disabled={saving || !selectedHVs.size || !selectedLops.size}
@@ -762,15 +632,16 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
 
 // ─── TAB TIẾN ĐỘ ─────────────────────────────────────────────────────────────
 function TabTienDo({ userInfo }) {
-  const [classes, setClasses]           = useState([])
-  const [selectedLop, setSelectedLop]   = useState(null)
-  const [exercises, setExercises]       = useState([])
-  const [selectedExId, setSelectedExId] = useState('')
-  const [rows, setRows]                 = useState([])
-  const [loading, setLoading]           = useState(false)
-  const [loadingLop, setLoadingLop]     = useState(false)
+  const [classes, setClasses]               = useState([])
+  const [selectedLop, setSelectedLop]       = useState(null)
+  const [exercises, setExercises]           = useState([])
+  const [selectedExId, setSelectedExId]     = useState('')
+  const [rows, setRows]                     = useState([])
+  const [loading, setLoading]               = useState(false)
+  const [loadingLop, setLoadingLop]         = useState(false)
   const [loadingClasses, setLoadingClasses] = useState(true)
-  const [showThongKe, setShowThongKe] = useState(false)
+  const [showThongKe, setShowThongKe]       = useState(false)
+  const [selectedHV, setSelectedHV]         = useState(null) // { row, exercise, questions }
 
   useEffect(() => { loadClasses() }, [])
 
@@ -779,7 +650,7 @@ function TabTienDo({ userInfo }) {
       const snap = await getDocs(query(collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan)))
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       list.sort((a, b) => (a.lop || '').localeCompare(b.lop || '', 'vi'))
-      setClasses(list)  // ← dùng list đã sort, không dùng snap.docs lại
+      setClasses(list)
     } catch (err) { console.error(err) }
     finally { setLoadingClasses(false) }
   }
@@ -816,12 +687,10 @@ function TabTienDo({ userInfo }) {
         const { exerciseId, thoiGianGiao } = d.data()
         if (!exTimeMap[exerciseId] || (thoiGianGiao || '') > exTimeMap[exerciseId]) exTimeMap[exerciseId] = thoiGianGiao || ''
       })
-      const exData = await Promise.all(
-        Object.keys(exTimeMap).map(async exId => {
-          const s = await getDoc(doc(db, 'exercises', exId))
-          return s.exists() ? { id: exId, ...s.data(), thoiGianGiao: exTimeMap[exId] } : null
-        })
-      )
+      const exData = await Promise.all(Object.keys(exTimeMap).map(async exId => {
+        const s = await getDoc(doc(db, 'exercises', exId))
+        return s.exists() ? { id: exId, ...s.data(), thoiGianGiao: exTimeMap[exId] } : null
+      }))
       const sorted = exData.filter(Boolean).sort((a, b) => (b.thoiGianGiao || '').localeCompare(a.thoiGianGiao || ''))
       setExercises(sorted)
       if (sorted.length > 0) { setSelectedExId(sorted[0].id); await loadRows(sorted[0], cls) }
@@ -836,10 +705,27 @@ function TabTienDo({ userInfo }) {
     if (ex && selectedLop) await loadRows(ex, selectedLop)
   }
 
-  const selectedEx  = exercises.find(e => e.id === selectedExId) || null
-  const daDam       = rows.filter(r =>  r.sub).length
-  const chuaLam     = rows.filter(r => !r.sub).length
-  const diemTB      = (() => {
+  // Khi click tên học viên — tải đề bài rồi mở modal
+  const handleClickHV = async (row) => {
+    if (!row.sub) return // chưa làm thì không có gì để xem
+    const ex = exercises.find(e => e.id === selectedExId)
+    if (!ex) return
+    try {
+      const fileId = ex.linkDrive.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1]
+      if (!fileId) return
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`
+      const res  = await fetch(csvUrl)
+      const text = await res.text()
+      const { data } = Papa.parse(text, { header: true, skipEmptyLines: true })
+      const questions = data.map((q, i) => ({ ...q, globalIndex: i }))
+      setSelectedHV({ row, exercise: ex, questions })
+    } catch (err) { console.error('Lỗi tải đề:', err) }
+  }
+
+  const selectedEx = exercises.find(e => e.id === selectedExId) || null
+  const daDam      = rows.filter(r =>  r.sub).length
+  const chuaLam    = rows.filter(r => !r.sub).length
+  const diemTB     = (() => {
     const co = rows.filter(r => r.sub?.diem != null)
     if (!co.length) return null
     return (co.reduce((s, r) => s + r.sub.diem / r.sub.tongCau * 100, 0) / co.length).toFixed(0)
@@ -855,17 +741,13 @@ function TabTienDo({ userInfo }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--c-primary-dark)', lineHeight: 1.2 }}>
-          Tiến độ học viên
-        </h2>
-      </div>
+      <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--c-primary-dark)', lineHeight: 1.2 }}>
+        Tiến độ học viên
+      </h2>
 
       {loadingClasses ? <SkeletonGVClassButtons /> : (
         <div>
-          <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Chọn lớp
-          </p>
+          <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chọn lớp</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {classes.map(cls => (
               <button key={cls.id} onClick={() => handleChonLop(cls)} style={{
@@ -888,15 +770,12 @@ function TabTienDo({ userInfo }) {
           padding: '14px 18px', borderRadius: '12px',
           backgroundColor: 'var(--c-surface)', border: '1px solid var(--c-primary-pale)',
         }}>
-          <label style={{ fontSize: '13px', color: 'var(--c-primary)', fontWeight: '500', whiteSpace: 'nowrap' }}>
-            Bài tập:
-          </label>
+          <label style={{ fontSize: '13px', color: 'var(--c-primary)', fontWeight: '500', whiteSpace: 'nowrap' }}>Bài tập:</label>
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <select value={selectedExId} onChange={e => handleChangeEx(e.target.value)} style={{
-              width: '100%', padding: '9px 36px 9px 14px',
-              borderRadius: '8px', border: '1.5px solid var(--c-primary-pale)',
-              backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-dark)',
-              fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+              width: '100%', padding: '9px 36px 9px 14px', borderRadius: '8px',
+              border: '1.5px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
+              color: 'var(--c-primary-dark)', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
               outline: 'none', appearance: 'none', WebkitAppearance: 'none',
             }}>
               {exercises.map((ex, idx) => (
@@ -929,6 +808,7 @@ function TabTienDo({ userInfo }) {
         <div>
           {loading ? <SkeletonGVProgressTable /> : (
             <>
+              {/* Stats */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 {[
                   { label: 'Tổng học viên', value: rows.length,                  bg: 'var(--c-primary-bg)',  color: 'var(--c-primary-dark)'  },
@@ -943,20 +823,16 @@ function TabTienDo({ userInfo }) {
                 ))}
               </div>
 
-              <div style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>
-                <button
-                  onClick={() => setShowThongKe(true)}
-                  style={{
-                    padding: '10px 20px', borderRadius: '9px', border: 'none',
-                    backgroundColor: 'var(--c-primary)', color: '#fff',
-                    fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                  }}
-                >
-                  📊 Xem đề & thống kê
-                </button>
+              <div style={{ marginBottom: '16px' }}>
+                <button onClick={() => setShowThongKe(true)} style={{
+                  padding: '10px 20px', borderRadius: '9px', border: 'none',
+                  backgroundColor: 'var(--c-primary)', color: '#fff',
+                  fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}>📊 Xem đề & thống kê</button>
               </div>
 
+              {/* Bảng học viên */}
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px' }}>
                   {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
@@ -964,8 +840,8 @@ function TabTienDo({ userInfo }) {
                   ))}
                 </div>
                 {rows.map((r, i) => {
-                  const daDamRow  = !!r.sub
-                  const phanTram  = r.sub?.diem != null ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
+                  const daDamRow = !!r.sub
+                  const phanTram = r.sub?.diem != null ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
                   return (
                     <div key={r.id} style={{
                       display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
@@ -973,7 +849,21 @@ function TabTienDo({ userInfo }) {
                       backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
                       borderTop: '1px solid var(--c-primary-bg)',
                     }}>
-                      <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--c-primary-dark)' }}>{r.ho} {r.ten}</span>
+                      {/* Tên học viên — clickable nếu đã làm */}
+                      <span
+                        onClick={() => daDamRow && handleClickHV(r)}
+                        style={{
+                          fontSize: '14px', fontWeight: '500',
+                          color: daDamRow ? 'var(--c-primary)' : 'var(--c-primary-dark)',
+                          cursor: daDamRow ? 'pointer' : 'default',
+                          textDecoration: daDamRow ? 'underline' : 'none',
+                          textDecorationStyle: 'dotted',
+                          textUnderlineOffset: '3px',
+                        }}
+                        title={daDamRow ? 'Xem chi tiết bài làm' : undefined}
+                      >
+                        {r.ho} {r.ten}
+                      </span>
                       <span style={{ fontSize: '13px', color: 'var(--c-text-soft)' }}>{r.lop}</span>
                       <span style={{
                         fontSize: '12px', fontWeight: '500', padding: '3px 10px', borderRadius: '9999px',
@@ -998,6 +888,7 @@ function TabTienDo({ userInfo }) {
           )}
         </div>
       )}
+
       {showThongKe && selectedEx && (
         <ModalThongKe
           exercise={selectedEx}
@@ -1006,6 +897,244 @@ function TabTienDo({ userInfo }) {
           onClose={() => setShowThongKe(false)}
         />
       )}
+
+      {selectedHV && (
+        <ModalChiTietHV
+          row={selectedHV.row}
+          exercise={selectedHV.exercise}
+          questions={selectedHV.questions}
+          onClose={() => setSelectedHV(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── MODAL CHI TIẾT HỌC VIÊN ─────────────────────────────────────────────────
+function ModalChiTietHV({ row, exercise, questions, onClose }) {
+  const sub      = row.sub
+  const answers  = sub?.answers || {}
+  const phanTram = sub?.diem != null ? Math.round(sub.diem / sub.tongCau * 100) : null
+  const mauEx    = mauKyNang[exercise.kyNang] || { bg: 'var(--c-primary)', text: '#fff' }
+
+  const getOptions = (q) =>
+    ['A', 'B', 'C', 'D', 'E'].map(k => ({ key: k, value: q[`Opt_${k}`] })).filter(o => o.value?.trim())
+
+  // Kiểm tra đúng/sai cho từng câu
+  const getCauResult = (q) => {
+    const idx     = q.globalIndex
+    const correct = q.Correct_Ans?.trim()
+    const userAns = answers[idx]
+    const type    = q.Question_Type
+
+    if (type === 'fill_long') return { type: 'long', userAns }
+
+    if (type === 'mcq' || type === 'mcq_blank') {
+      if (!userAns) return { type: 'choice', isCorrect: false, isEmpty: true, userAns: null, correct }
+      return { type: 'choice', isCorrect: userAns === correct, isEmpty: false, userAns, correct }
+    }
+
+    if (type === 'fill_short' || type === 'fill_blank') {
+      const correctParts = (correct || '').split('|').map(s => s.trim())
+      const userParts    = (userAns || []).map(s => (s || '').trim())
+      const slotResults  = correctParts.map((c, i) => ({
+        correct: c,
+        user: userParts[i] || '',
+        isCorrect: (userParts[i] || '').toLowerCase() === c.toLowerCase(),
+      }))
+      const allCorrect = slotResults.every(s => s.isCorrect)
+      return { type: 'slots', slotResults, allCorrect }
+    }
+
+    return { type: 'unknown' }
+  }
+
+  const formatNgay = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 4000, backgroundColor: 'var(--c-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        backgroundColor: 'var(--c-surface)', borderRadius: '16px',
+        width: '100%', maxWidth: '640px', maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: 'var(--shadow-modal)', overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--c-primary-pale)',
+          display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
+          backgroundColor: 'var(--c-primary-barest)',
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '16px' }}>👤</span>
+              <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--c-primary-dark)' }}>
+                {row.ho} {row.ten}
+              </h3>
+              <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>· {row.lop}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <span style={{ padding: '2px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: '600', backgroundColor: mauEx.bg, color: mauEx.text }}>
+                {exercise.loaiBai} · {exercise.kyNang}
+              </span>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: phanTram >= 50 ? 'var(--c-success)' : 'var(--c-danger)' }}>
+                {sub.diem}/{sub.tongCau} ({phanTram}%)
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>
+                🕐 {formatNgay(sub.thoiGianNop)}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: '32px', height: '32px', borderRadius: '8px',
+            border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
+            color: 'var(--c-text-muted)', fontSize: '16px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>×</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {questions.map((q) => {
+            const result = getCauResult(q)
+
+            // Border màu theo đúng/sai
+            let borderColor = 'var(--c-primary-pale)'
+            let bgColor     = 'var(--c-surface)'
+            if (result.type === 'choice') {
+              if (result.isEmpty)      { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)' }
+              else if (result.isCorrect){ borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'  }
+              else                      { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'   }
+            } else if (result.type === 'slots') {
+              if (result.allCorrect) { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)' }
+              else                   { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'  }
+            }
+
+            return (
+              <div key={q.globalIndex} style={{
+                borderRadius: '12px', border: `1.5px solid ${borderColor}`,
+                backgroundColor: bgColor, padding: '14px 16px',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+              }}>
+                {/* Số câu + câu hỏi */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <span style={{
+                    minWidth: '24px', height: '24px', borderRadius: '6px', flexShrink: 0,
+                    backgroundColor: 'var(--c-primary-bg)', color: 'var(--c-primary)',
+                    fontSize: '11px', fontWeight: '700',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{q.globalIndex + 1}</span>
+                  <p style={{ margin: 0, fontSize: '13.5px', fontWeight: '600', color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>
+                    {q.Question_Type !== 'fill_blank' ? q.Question : q.Question}
+                  </p>
+                  {/* Icon kết quả */}
+                  <span style={{ marginLeft: 'auto', fontSize: '16px', flexShrink: 0 }}>
+                    {result.type === 'choice' && (result.isEmpty ? '⚠️' : result.isCorrect ? '✅' : '❌')}
+                    {result.type === 'slots'  && (result.allCorrect ? '✅' : '❌')}
+                    {result.type === 'long'   && '📝'}
+                  </span>
+                </div>
+
+                {/* MCQ */}
+                {result.type === 'choice' && q.Question_Type === 'mcq' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {getOptions(q).map(opt => {
+                      const isUserAns  = opt.key === result.userAns
+                      const isCorrect  = opt.key === result.correct
+                      let bg = 'transparent', border = 'var(--c-primary-pale)', color = 'var(--c-text-soft)'
+                      if (isCorrect)                    { bg = 'var(--c-success-bg)'; border = 'var(--c-success)'; color = 'var(--c-success-text)' }
+                      else if (isUserAns && !isCorrect) { bg = 'var(--c-danger-bg)';  border = 'var(--c-danger)';  color = 'var(--c-danger-text)'  }
+                      return (
+                        <div key={opt.key} style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '7px 12px', borderRadius: '8px',
+                          border: `1.5px solid ${border}`, backgroundColor: bg,
+                        }}>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color, minWidth: '18px' }}>{opt.key}.</span>
+                          <span style={{ fontSize: '13px', color, flex: 1 }}>{opt.value}</span>
+                          {isCorrect  && <span style={{ fontSize: '13px' }}>✅</span>}
+                          {isUserAns && !isCorrect && <span style={{ fontSize: '13px' }}>❌</span>}
+                        </div>
+                      )
+                    })}
+                    {result.isEmpty && (
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--c-warn-text)', fontStyle: 'italic' }}>⚠️ Học viên chưa trả lời</p>
+                    )}
+                  </div>
+                )}
+
+                {/* MCQ Blank */}
+                {result.type === 'choice' && q.Question_Type === 'mcq_blank' && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {['A','B','C','D'].slice(0, parseInt(q.Num_Answers)||4).map(key => {
+                      const isUserAns = key === result.userAns
+                      const isCorrect = key === result.correct
+                      let bg = 'var(--c-surface)', border = 'var(--c-primary-pale)', color = 'var(--c-text-muted)'
+                      if (isCorrect)                    { bg = 'var(--c-success-bg)'; border = 'var(--c-success)'; color = 'var(--c-success-text)' }
+                      else if (isUserAns && !isCorrect) { bg = 'var(--c-danger-bg)';  border = 'var(--c-danger)';  color = 'var(--c-danger-text)'  }
+                      return (
+                        <div key={key} style={{
+                          padding: '6px 16px', borderRadius: '8px', border: `1.5px solid ${border}`,
+                          backgroundColor: bg, color, fontSize: '13px', fontWeight: '600',
+                          display: 'flex', alignItems: 'center', gap: '5px',
+                        }}>
+                          {key}
+                          {isCorrect   && <span>✅</span>}
+                          {isUserAns && !isCorrect && <span>❌</span>}
+                        </div>
+                      )
+                    })}
+                    {result.isEmpty && <p style={{ margin: 0, fontSize: '12px', color: 'var(--c-warn-text)', fontStyle: 'italic' }}>⚠️ Chưa trả lời</p>}
+                  </div>
+                )}
+
+                {/* Fill short / Fill blank */}
+                {result.type === 'slots' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {result.slotResults.map((slot, si) => (
+                      <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {result.slotResults.length > 1 && (
+                          <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', minWidth: '52px' }}>Ô {si + 1}:</span>
+                        )}
+                        <span style={{
+                          padding: '4px 12px', borderRadius: '7px', fontSize: '13px', fontWeight: '600',
+                          backgroundColor: slot.isCorrect ? 'var(--c-success-bg)' : slot.user ? 'var(--c-danger-bg)' : 'var(--c-warn-bgsoft)',
+                          color: slot.isCorrect ? 'var(--c-success-text)' : slot.user ? 'var(--c-danger-text)' : 'var(--c-warn-text)',
+                          border: `1px solid ${slot.isCorrect ? 'var(--c-success-border)' : slot.user ? 'var(--c-danger-border)' : 'var(--c-warn-border)'}`,
+                        }}>
+                          {slot.user || '(trống)'}
+                        </span>
+                        {!slot.isCorrect && (
+                          <span style={{ fontSize: '12px', color: 'var(--c-success)', fontWeight: '600' }}>→ {slot.correct}</span>
+                        )}
+                        <span style={{ fontSize: '14px', marginLeft: 'auto' }}>{slot.isCorrect ? '✅' : slot.user ? '❌' : '⚠️'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Fill long */}
+                {result.type === 'long' && (
+                  <div style={{
+                    padding: '10px 14px', borderRadius: '8px',
+                    backgroundColor: 'var(--c-primary-barest)', border: '1px solid var(--c-primary-bg)',
+                    fontSize: '13px', color: 'var(--c-text-soft)', lineHeight: 1.7, whiteSpace: 'pre-wrap',
+                  }}>
+                    {result.userAns || <span style={{ fontStyle: 'italic', color: 'var(--c-text-muted)' }}>Chưa trả lời</span>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1014,48 +1143,30 @@ function TabTienDo({ userInfo }) {
 function ModalThongKe({ exercise, submissions, allRows, onClose }) {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading]     = useState(true)
-  const [tooltip, setTooltip]     = useState(null) // { x, y, names[], label }
+  const [tooltip, setTooltip]     = useState(null)
 
-  // Map userId → tên đầy đủ
   const nameMap = {}
   allRows.forEach(r => { nameMap[r.id] = `${r.ho} ${r.ten}`.trim() })
 
-  // Map userId → submission (để tra cứu đáp án theo người)
-  const subByUser = {}
-  allRows.forEach(r => { if (r.sub) subByUser[r.id] = r.sub })
-  
-  // Trả về danh sách tên học viên đã chọn đáp án `optKey` ở câu `qIdx`
   const getWhoChose = (qIdx, optKey) =>
-    allRows
-      .filter(r => r.sub && r.sub.answers?.[qIdx] === optKey)
-      .map(r => nameMap[r.id] || r.id)
+    allRows.filter(r => r.sub && r.sub.answers?.[qIdx] === optKey).map(r => nameMap[r.id] || r.id)
 
-  // Học viên chưa trả lời câu này (không có trong submissions)
   const getWhoUnanswered = (qIdx) =>
-    allRows
-      .filter(r => !r.sub || !r.sub.answers?.[qIdx])
-      .map(r => nameMap[r.id] || r.id)
+    allRows.filter(r => !r.sub || !r.sub.answers?.[qIdx]).map(r => nameMap[r.id] || r.id)
 
-  // Học viên điền fill_blank/fill_short slot cụ thể
   const getWhoChoseSlot = (qIdx, slotIdx, answer) =>
-    allRows
-      .filter(r => {
-        const ans = r.sub?.answers?.[qIdx]
-        return Array.isArray(ans) && (ans[slotIdx] || '').trim() === answer
-      })
-      .map(r => nameMap[r.id] || r.id)
+    allRows.filter(r => {
+      const ans = r.sub?.answers?.[qIdx]
+      return Array.isArray(ans) && (ans[slotIdx] || '').trim() === answer
+    }).map(r => nameMap[r.id] || r.id)
 
   const getWhoUnansweredSlot = (qIdx, slotIdx) =>
-    allRows
-      .filter(r => {
-        const ans = r.sub?.answers?.[qIdx]
-        return !r.sub || !Array.isArray(ans) || !(ans[slotIdx] || '').trim()
-      })
-      .map(r => nameMap[r.id] || r.id)
+    allRows.filter(r => {
+      const ans = r.sub?.answers?.[qIdx]
+      return !r.sub || !Array.isArray(ans) || !(ans[slotIdx] || '').trim()
+    }).map(r => nameMap[r.id] || r.id)
 
-  useEffect(() => {
-    loadQuestions()
-  }, [])
+  useEffect(() => { loadQuestions() }, [])
 
   const loadQuestions = async () => {
     try {
@@ -1066,121 +1177,50 @@ function ModalThongKe({ exercise, submissions, allRows, onClose }) {
       const text = await res.text()
       const { data } = Papa.parse(text, { header: true, skipEmptyLines: true })
       setQuestions(data.map((row, i) => ({ ...row, globalIndex: i })))
-    } catch (err) {
-      console.error('Lỗi khi tải đề:', err)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { console.error('Lỗi khi tải đề:', err) }
+    finally { setLoading(false) }
   }
 
-  // Tính phân phối đáp án cho 1 câu
   const getDistribution = (q) => {
-    const idx = q.globalIndex
+    const idx  = q.globalIndex
     const type = q.Question_Type
 
     if (type === 'mcq' || type === 'mcq_blank') {
       const counts = {}
-      submissions.forEach(sub => {
-        const ans = sub.answers?.[idx]
-        if (ans) counts[ans] = (counts[ans] || 0) + 1
-      })
-      const total = submissions.length || 1
-      const correct = q.Correct_Ans?.trim()
-      return { type: 'choice', counts, total, correct }
+      submissions.forEach(sub => { const ans = sub.answers?.[idx]; if (ans) counts[ans] = (counts[ans] || 0) + 1 })
+      return { type: 'choice', counts, total: submissions.length || 1, correct: q.Correct_Ans?.trim() }
     }
-
-    if (type === 'fill_blank') {
+    if (type === 'fill_blank' || type === 'fill_short') {
       const correct = (q.Correct_Ans || '').split('|').map(s => s.trim())
       const slotCounts = correct.map((c, si) => {
         const counts = {}
-        submissions.forEach(sub => {
-          const ans = (sub.answers?.[idx] || [])[si]
-          if (ans) counts[ans.trim()] = (counts[ans.trim()] || 0) + 1
-        })
+        submissions.forEach(sub => { const ans = (sub.answers?.[idx] || [])[si]; if (ans) counts[ans.trim()] = (counts[ans.trim()] || 0) + 1 })
         return { slot: si, correct: c, counts, total: submissions.length || 1 }
       })
-      return { type: 'fill_blank', slotCounts }
+      return { type, slotCounts }
     }
-
-    if (type === 'fill_short') {
-      const correct = (q.Correct_Ans || '').split('|').map(s => s.trim())
-      const slotCounts = correct.map((c, si) => {
-        const counts = {}
-        submissions.forEach(sub => {
-          const ans = (sub.answers?.[idx] || [])[si]
-          if (ans) counts[ans.trim()] = (counts[ans.trim()] || 0) + 1
-        })
-        return { slot: si, correct: c, counts, total: submissions.length || 1 }
-      })
-      return { type: 'fill_short', slotCounts }
-    }
-
-    // fill_long: hiển thị tất cả bài làm
-    const allAnswers = submissions
-      .map(sub => sub.answers?.[idx])
-      .filter(Boolean)
-    return { type: 'fill_long', allAnswers }
+    return { type: 'fill_long', allAnswers: submissions.map(sub => sub.answers?.[idx]).filter(Boolean) }
   }
 
-  const getOptions = (q) =>
-    ['A', 'B', 'C', 'D', 'E']
-      .map(k => ({ key: k, value: q[`Opt_${k}`] }))
-      .filter(o => o.value?.trim())
-
-  const totalSubs = submissions.length
+  const getOptions = (q) => ['A','B','C','D','E'].map(k => ({ key: k, value: q[`Opt_${k}`] })).filter(o => o.value?.trim())
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 3000,
-      backgroundColor: 'var(--c-overlay)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '16px',
-    }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div style={{
-        backgroundColor: 'var(--c-surface)',
-        borderRadius: '16px',
-        width: '100%', maxWidth: '720px',
-        maxHeight: '90vh',
-        display: 'flex', flexDirection: 'column',
-        boxShadow: 'var(--shadow-modal)',
-        overflow: 'hidden',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: '1px solid var(--c-primary-pale)',
-          display: 'flex', alignItems: 'center', gap: '12px',
-          flexShrink: 0,
-        }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, backgroundColor: 'var(--c-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ backgroundColor: 'var(--c-surface)', borderRadius: '16px', width: '100%', maxWidth: '720px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-modal)', overflow: 'hidden' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--c-primary-pale)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--c-primary-dark)' }}>
-              📊 Thống kê đáp án
-            </h3>
-            <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--c-text-muted)' }}>
-              {exercise.tenBaiTap} · {totalSubs} học viên đã nộp
-            </p>
+            <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--c-primary-dark)' }}>📊 Thống kê đáp án</h3>
+            <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--c-text-muted)' }}>{exercise.tenBaiTap} · {submissions.length} học viên đã nộp</p>
           </div>
-          <button onClick={onClose} style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            border: '1px solid var(--c-primary-pale)',
-            backgroundColor: 'var(--c-surface)',
-            color: 'var(--c-text-muted)', fontSize: '16px',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
+          <button onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', color: 'var(--c-text-muted)', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
 
-        {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} style={{
-                  padding: '16px', borderRadius: '12px',
-                  border: '1px solid var(--c-primary-pale)',
-                  display: 'flex', flexDirection: 'column', gap: '10px',
-                }}>
+                <div key={i} style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--c-primary-pale)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ height: '14px', width: '70%', borderRadius: '4px', backgroundColor: 'var(--c-primary-pale)', animation: 'sk-pulse 1.6s ease-in-out infinite' }} />
                   {[100, 80, 90, 85].map((w, j) => (
                     <div key={j} style={{ height: '32px', width: `${w}%`, borderRadius: '6px', backgroundColor: 'var(--c-primary-bg)', animation: 'sk-pulse 1.6s ease-in-out infinite' }} />
@@ -1189,209 +1229,116 @@ function ModalThongKe({ exercise, submissions, allRows, onClose }) {
               ))}
             </div>
           ) : questions.length === 0 ? (
-            <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', textAlign: 'center', padding: '40px 0' }}>
-              Không thể tải đề bài.
-            </p>
-          ) : (
-            questions.map((q) => {
-              const dist = getDistribution(q)
-              return (
-                <div key={q.globalIndex} style={{
-                  padding: '16px 18px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--c-primary-pale)',
-                  backgroundColor: 'var(--c-surface)',
-                  display: 'flex', flexDirection: 'column', gap: '12px',
-                }}>
-                  {/* Câu hỏi */}
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                    <span style={{
-                      minWidth: '26px', height: '26px', borderRadius: '6px',
-                      backgroundColor: 'var(--c-primary-bg)',
-                      color: 'var(--c-primary)', fontSize: '12px', fontWeight: '700',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, marginTop: '1px',
-                    }}>
-                      {q.globalIndex + 1}
-                    </span>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>
-                      {q.Question}
-                    </p>
-                  </div>
+            <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', textAlign: 'center', padding: '40px 0' }}>Không thể tải đề bài.</p>
+          ) : questions.map((q) => {
+            const dist = getDistribution(q)
+            return (
+              <div key={q.globalIndex} style={{ padding: '16px 18px', borderRadius: '12px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <span style={{ minWidth: '26px', height: '26px', borderRadius: '6px', backgroundColor: 'var(--c-primary-bg)', color: 'var(--c-primary)', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>{q.globalIndex + 1}</span>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>{q.Question}</p>
+                </div>
 
-                  {/* MCQ */}
-                  {(dist.type === 'choice') && (() => {
-                    const opts = (q.Question_Type === 'mcq') ? getOptions(q) : ['A','B','C','D'].slice(0, parseInt(q.Num_Answers)||4).map(k=>({key:k,value:k}))
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {opts.map(opt => {
-                          const count = dist.counts[opt.key] || 0
-                          const pct   = Math.round(count / dist.total * 100)
-                          const isCorrect = opt.key === dist.correct
-                          const hasVotes  = count > 0
-                          return (
-                            <div key={opt.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{
-                                  minWidth: '24px', height: '24px', borderRadius: '5px',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontSize: '11px', fontWeight: '700',
-                                  backgroundColor: isCorrect ? 'var(--c-success-bg)' : 'var(--c-primary-bg)',
-                                  color: isCorrect ? 'var(--c-success-text)' : 'var(--c-primary-mid)',
-                                  border: isCorrect ? '1.5px solid var(--c-success-border)' : 'none',
-                                  flexShrink: 0,
-                                }}>{opt.key}</span>
-                                {q.Question_Type === 'mcq' && (
-                                  <span style={{ fontSize: '13px', color: 'var(--c-text-soft)', flex: 1 }}>{opt.value}</span>
-                                )}
-                                <span
-                                  onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoChose(q.globalIndex, opt.key), label: `Chọn ${opt.key}` })}
-                                  onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
-                                  onMouseLeave={() => setTooltip(null)}
-                                  style={{ fontSize: '12px', fontWeight: '600', cursor: 'default',
-                                    color: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-text-muted)',
-                                    marginLeft: 'auto', whiteSpace: 'nowrap',
-                                    borderBottom: '1px dashed currentColor',
-                                  }}
-                                >
-                                  {count} người ({pct}%)
-                                </span>
-                              </div>
-                              {/* Progress bar */}
-                              <div style={{ height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
-                                <div style={{
-                                  height: '100%',
-                                  width: `${pct}%`,
-                                  borderRadius: '99px',
-                                  backgroundColor: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-primary-pale)',
-                                  transition: 'width 0.4s ease',
-                                }} />
-                              </div>
-                            </div>
-                          )
-                        })}
-                        {/* Chưa làm */}
-                        {(() => {
-                          const answered = Object.values(dist.counts).reduce((a,b)=>a+b,0)
-                          const chuaLam  = dist.total - answered
-                          if (chuaLam <= 0) return null
-                          const pct = Math.round(chuaLam / dist.total * 100)
-                          return (
-                            <div
-                              onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoUnanswered(q.globalIndex), label: 'Chưa trả lời' })}
-                              onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
-                              onMouseLeave={() => setTooltip(null)}
-                              style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px', cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              ⚠️ {chuaLam} học viên chưa trả lời ({pct}%)
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    )
-                  })()}
-
-                  {/* Fill blank / fill short */}
-                  {(dist.type === 'fill_blank' || dist.type === 'fill_short') && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {dist.slotCounts.map(({ slot, correct, counts, total }) => {
-                        const allAnswers = Object.entries(counts).sort((a,b)=>b[1]-a[1])
-                        const answered   = Object.values(counts).reduce((a,b)=>a+b,0)
+                {dist.type === 'choice' && (() => {
+                  const opts = q.Question_Type === 'mcq' ? getOptions(q) : ['A','B','C','D'].slice(0, parseInt(q.Num_Answers)||4).map(k=>({key:k,value:k}))
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {opts.map(opt => {
+                        const count = dist.counts[opt.key] || 0
+                        const pct   = Math.round(count / dist.total * 100)
+                        const isCorrect = opt.key === dist.correct
+                        const hasVotes  = count > 0
                         return (
-                          <div key={slot} style={{
-                            padding: '10px 14px', borderRadius: '10px',
-                            backgroundColor: 'var(--c-primary-barest)',
-                            border: '1px solid var(--c-primary-bg)',
-                          }}>
-                            {dist.slotCounts.length > 1 && (
-                              <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600' }}>
-                                Ô trống {slot + 1} — Đáp án: <span style={{ color: 'var(--c-success)' }}>{correct}</span>
-                              </p>
-                            )}
-                            {dist.slotCounts.length === 1 && (
-                              <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600' }}>
-                                Đáp án đúng: <span style={{ color: 'var(--c-success)' }}>{correct}</span>
-                              </p>
-                            )}
-                            {allAnswers.length === 0 ? (
-                              <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>Chưa có ai trả lời</span>
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                {allAnswers.map(([ans, cnt]) => {
-                                  const isCorrect = ans.toLowerCase() === correct.toLowerCase()
-                                  const pct       = Math.round(cnt / total * 100)
-                                  return (
-                                    <div key={ans} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <span style={{
-                                        fontSize: '13px', fontWeight: isCorrect ? '600' : '400',
-                                        color: isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
-                                        backgroundColor: isCorrect ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
-                                        padding: '2px 10px', borderRadius: '6px',
-                                        minWidth: '80px',
-                                      }}>
-                                        {isCorrect ? '✓ ' : '✗ '}{ans}
-                                      </span>
-                                      <div style={{ flex: 1, height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', width: `${pct}%`, borderRadius: '99px', backgroundColor: isCorrect ? 'var(--c-success)' : 'var(--c-danger)', transition: 'width 0.4s ease' }} />
-                                      </div>
-                                      <span
-                                        onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoChoseSlot(q.globalIndex, slot, ans), label: `Điền "${ans}"` })}
-                                        onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
-                                        onMouseLeave={() => setTooltip(null)}
-                                        style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap', cursor: 'default', borderBottom: '1px dashed var(--c-text-muted)' }}
-                                      >
-                                        {cnt} ({pct}%)
-                                      </span>
-                                    </div>
-                                  )
-                                })}
-                                {answered < total && (
-                                  <span
-                                    onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoUnansweredSlot(q.globalIndex, slot), label: 'Chưa trả lời' })}
-                                    onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
-                                    onMouseLeave={() => setTooltip(null)}
-                                    style={{ fontSize: '12px', color: 'var(--c-text-muted)', cursor: 'default', borderBottom: '1px dashed var(--c-text-muted)' }}
-                                  >
-                                    ⚠️ {total - answered} chưa trả lời
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                          <div key={opt.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ minWidth: '24px', height: '24px', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', backgroundColor: isCorrect ? 'var(--c-success-bg)' : 'var(--c-primary-bg)', color: isCorrect ? 'var(--c-success-text)' : 'var(--c-primary-mid)', border: isCorrect ? '1.5px solid var(--c-success-border)' : 'none', flexShrink: 0 }}>{opt.key}</span>
+                              {q.Question_Type === 'mcq' && <span style={{ fontSize: '13px', color: 'var(--c-text-soft)', flex: 1 }}>{opt.value}</span>}
+                              <span onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoChose(q.globalIndex, opt.key), label: `Chọn ${opt.key}` })} onMouseMove={e => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)} onMouseLeave={() => setTooltip(null)}
+                                style={{ fontSize: '12px', fontWeight: '600', cursor: 'default', color: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap', borderBottom: '1px dashed currentColor' }}>
+                                {count} người ({pct}%)
+                              </span>
+                            </div>
+                            <div style={{ height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, borderRadius: '99px', backgroundColor: isCorrect ? 'var(--c-success)' : hasVotes ? 'var(--c-danger)' : 'var(--c-primary-pale)', transition: 'width 0.4s ease' }} />
+                            </div>
                           </div>
                         )
                       })}
-                    </div>
-                  )}
-
-                  {/* Fill long */}
-                  {dist.type === 'fill_long' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--c-text-muted)', fontWeight: '500' }}>
-                        {dist.allAnswers.length} bài làm đã nộp
-                      </p>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {dist.allAnswers.map((ans, i) => (
-                          <div key={i} style={{
-                            padding: '10px 14px', borderRadius: '8px',
-                            backgroundColor: 'var(--c-primary-barest)',
-                            border: '1px solid var(--c-primary-bg)',
-                            fontSize: '13px', color: 'var(--c-text-soft)', lineHeight: 1.6,
-                            whiteSpace: 'pre-wrap',
-                          }}>
-                            <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--c-primary-pale)', marginRight: '6px' }}>#{i+1}</span>
-                            {ans}
+                      {(() => {
+                        const answered = Object.values(dist.counts).reduce((a,b)=>a+b,0)
+                        const chuaLam  = dist.total - answered
+                        if (chuaLam <= 0) return null
+                        return (
+                          <div onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoUnanswered(q.globalIndex), label: 'Chưa trả lời' })} onMouseMove={e => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)} onMouseLeave={() => setTooltip(null)}
+                            style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px', cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            ⚠️ {chuaLam} học viên chưa trả lời ({Math.round(chuaLam / dist.total * 100)}%)
                           </div>
-                        ))}
-                        {dist.allAnswers.length === 0 && (
-                          <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>Chưa có bài nộp</span>
-                        )}
-                      </div>
+                        )
+                      })()}
                     </div>
-                  )}
-                </div>
-              )
-            })
-          )}
+                  )
+                })()}
+
+                {(dist.type === 'fill_blank' || dist.type === 'fill_short') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {dist.slotCounts.map(({ slot, correct, counts, total }) => {
+                      const allAnswers = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+                      const answered   = Object.values(counts).reduce((a,b)=>a+b,0)
+                      return (
+                        <div key={slot} style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--c-primary-barest)', border: '1px solid var(--c-primary-bg)' }}>
+                          <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600' }}>
+                            {dist.slotCounts.length > 1 ? `Ô trống ${slot + 1} — ` : ''}Đáp án đúng: <span style={{ color: 'var(--c-success)' }}>{correct}</span>
+                          </p>
+                          {allAnswers.length === 0 ? <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>Chưa có ai trả lời</span> : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              {allAnswers.map(([ans, cnt]) => {
+                                const isCorrect = ans.toLowerCase() === correct.toLowerCase()
+                                const pct       = Math.round(cnt / total * 100)
+                                return (
+                                  <div key={ans} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: isCorrect ? '600' : '400', color: isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)', backgroundColor: isCorrect ? 'var(--c-success-bg)' : 'var(--c-danger-bg)', padding: '2px 10px', borderRadius: '6px', minWidth: '80px' }}>
+                                      {isCorrect ? '✓ ' : '✗ '}{ans}
+                                    </span>
+                                    <div style={{ flex: 1, height: '6px', borderRadius: '99px', backgroundColor: 'var(--c-primary-bg)', overflow: 'hidden' }}>
+                                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: '99px', backgroundColor: isCorrect ? 'var(--c-success)' : 'var(--c-danger)', transition: 'width 0.4s ease' }} />
+                                    </div>
+                                    <span onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoChoseSlot(q.globalIndex, slot, ans), label: `Điền "${ans}"` })} onMouseMove={e => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)} onMouseLeave={() => setTooltip(null)}
+                                      style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap', cursor: 'default', borderBottom: '1px dashed var(--c-text-muted)' }}>
+                                      {cnt} ({pct}%)
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                              {answered < total && (
+                                <span onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, names: getWhoUnansweredSlot(q.globalIndex, slot), label: 'Chưa trả lời' })} onMouseMove={e => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)} onMouseLeave={() => setTooltip(null)}
+                                  style={{ fontSize: '12px', color: 'var(--c-text-muted)', cursor: 'default', borderBottom: '1px dashed var(--c-text-muted)' }}>
+                                  ⚠️ {total - answered} chưa trả lời
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {dist.type === 'fill_long' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--c-text-muted)', fontWeight: '500' }}>{dist.allAnswers.length} bài làm đã nộp</p>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {dist.allAnswers.map((ans, i) => (
+                        <div key={i} style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'var(--c-primary-barest)', border: '1px solid var(--c-primary-bg)', fontSize: '13px', color: 'var(--c-text-soft)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--c-primary-pale)', marginRight: '6px' }}>#{i+1}</span>{ans}
+                        </div>
+                      ))}
+                      {dist.allAnswers.length === 0 && <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>Chưa có bài nộp</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
       <NameTooltip tooltip={tooltip} />
@@ -1402,49 +1349,24 @@ function ModalThongKe({ exercise, submissions, allRows, onClose }) {
 function NameTooltip({ tooltip }) {
   if (!tooltip) return null
   return (
-    <div style={{
-      position: 'fixed',
-      left: tooltip.x + 12,
-      top: tooltip.y - 8,
-      zIndex: 9999,
-      backgroundColor: '#1E293B',
-      borderRadius: '10px',
-      padding: '10px 14px',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-      maxWidth: '220px',
-      pointerEvents: 'none',
-    }}>
-      <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        {tooltip.label}
-      </p>
-      {tooltip.names.length === 0 ? (
-        <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>Không có ai</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          {tooltip.names.map((n, i) => (
-            <span key={i} style={{ fontSize: '13px', color: '#fff', fontWeight: '500' }}>
-              · {n}
-            </span>
-          ))}
-        </div>
-      )}
+    <div style={{ position: 'fixed', left: tooltip.x + 12, top: tooltip.y - 8, zIndex: 9999, backgroundColor: '#1E293B', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', maxWidth: '220px', pointerEvents: 'none' }}>
+      <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tooltip.label}</p>
+      {tooltip.names.length === 0
+        ? <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>Không có ai</p>
+        : <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {tooltip.names.map((n, i) => <span key={i} style={{ fontSize: '13px', color: '#fff', fontWeight: '500' }}>· {n}</span>)}
+          </div>
+      }
     </div>
   )
 }
+
 // ─── Shared ───────────────────────────────────────────────────────────────────
 function Overlay({ onClose, children, width = '420px' }) {
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'var(--c-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div style={{
-        backgroundColor: 'var(--c-surface)', borderRadius: '16px',
-        padding: '32px', width, maxWidth: '95vw',
-        display: 'flex', flexDirection: 'column', gap: '16px',
-        boxShadow: 'var(--shadow-modal)',
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'var(--c-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ backgroundColor: 'var(--c-surface)', borderRadius: '16px', padding: '32px', width, maxWidth: '95vw', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: 'var(--shadow-modal)', maxHeight: '90vh', overflowY: 'auto' }}>
         {children}
       </div>
     </div>
@@ -1456,7 +1378,6 @@ const btnPrimary = {
   backgroundColor: 'var(--c-primary)', color: '#fff',
   fontWeight: '600', cursor: 'pointer', fontSize: '14px',
 }
-
 const btnSecondary = {
   flex: 1, padding: '12px', borderRadius: '9px',
   border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',

@@ -38,11 +38,13 @@ const iconKyNang = {
 
 
 const mauKyNang = {
-  'Reading':   { bg: 'var(--c-primary-mid)', text: 'var(--c-surface)' },
-  'Listening': { bg: 'var(--c-success)',     text: 'var(--c-surface)' },
-  'Writing':   { bg: 'var(--c-writing)',     text: 'var(--c-surface)' },
-  'Speaking':  { bg: 'var(--c-speaking)',    text: 'var(--c-surface)' },
-  'Tổng hợp':  { bg: 'var(--c-tonghop)',     text: 'var(--c-surface)' },
+  'Reading':          { bg: 'var(--c-primary-mid)',      text: 'var(--c-surface)' },
+  'Listening':        { bg: 'var(--c-success)',          text: 'var(--c-surface)' },
+  'Writing':          { bg: 'var(--c-writing)',          text: 'var(--c-surface)' },
+  'Speaking':         { bg: 'var(--c-speaking)',         text: 'var(--c-surface)' },
+  'Vocab Reading':    { bg: 'var(--c-vocab-reading)',    text: 'var(--c-surface)' },
+  'Vocab Listening':  { bg: 'var(--c-vocab-listening)',  text: 'var(--c-surface)' },
+  'Tổng hợp':         { bg: 'var(--c-tonghop)',          text: 'var(--c-surface)' },
 }
 
 const mauMucDo = {

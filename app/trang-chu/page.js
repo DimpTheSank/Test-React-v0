@@ -109,7 +109,7 @@ export default function TrangChu() {
     finally { setLoading(false) }
   }
 
-  const daDam   = baiTapList.filter(b => b.trangThai === 'Đã làm').length
+  const daLam   = baiTapList.filter(b => b.trangThai === 'Đã làm').length
   const dangLam = baiTapList.filter(b => b.trangThai === 'Đang làm').length
   const chuaLam = baiTapList.filter(b => b.trangThai === 'Chưa làm').length
 
@@ -150,7 +150,7 @@ export default function TrangChu() {
             fontSize: '13px', fontWeight: '600',
           }}>
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--c-success)', display: 'inline-block' }} />
-            Đã làm: {daDam}
+            Đã làm: {daLam}
           </span>
           {dangLam > 0 && (
             <span style={{
@@ -253,7 +253,7 @@ function CardBaiTap({ bai }) {
   const [hovered, setHovered] = useState(false)
   const router = useRouter()
 
-  const daDam  = bai.trangThai === 'Đã làm'
+  const daLam  = bai.trangThai === 'Đã làm'
   const mau    = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
   const mauDo  = mauMucDo[bai.mucDo] || null
   const accent = accentKyNang[bai.kyNang] || 'var(--c-primary-mid)'
@@ -283,10 +283,10 @@ function CardBaiTap({ bai }) {
         backgroundColor: 'var(--c-surface)',
         borderRadius: '14px',
         overflow: 'hidden',
-        boxShadow: daDam
+        boxShadow: daLam
           ? (hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card-done)')
           : (hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)'),
-        border: daDam
+        border: daLam
           ? '1px solid var(--c-success-border)'
           : '1px solid var(--c-border-soft)',
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
@@ -347,7 +347,7 @@ function CardBaiTap({ bai }) {
         </div>
 
         {/* Draft progress bar — chỉ hiện khi chưa/đang làm và có dữ liệu nháp */}
-        {!daDam && bai.draftAnswerCount > 0 && (
+        {!daLam && bai.draftAnswerCount > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '11px', color: 'var(--c-warn-text)', fontWeight: '600' }}>
@@ -373,7 +373,7 @@ function CardBaiTap({ bai }) {
         )}
 
         {/* Score + date — chỉ hiện khi đã làm */}
-        {daDam && (
+        {daLam && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '8px 10px',
@@ -428,7 +428,7 @@ function CardBaiTap({ bai }) {
               width: '100%', letterSpacing: '0.01em',
             }}
           >
-            {daDam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
+            {daLam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
           </button>
         </div>
       </div>

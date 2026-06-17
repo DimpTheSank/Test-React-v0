@@ -119,16 +119,6 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
 
   const fs = fontSize || 14
 
-  const goToPrevGroup = () => {
-  // Tìm câu đầu tiên của group hiện tại
-  const firstOfCurrent = questionsInGroup[0]?.globalIndex ?? cauHienTai
-  if (firstOfCurrent === 0) return
-  // Lùi 1 câu từ đầu group hiện tại → đang ở group trước
-  const prevGroupFirstIdx = questions
-    .slice(0, firstOfCurrent)
-    .findIndex(q => q.Group === questions[firstOfCurrent - 1].Group)
-  setCauHienTai(prevGroupFirstIdx === -1 ? 0 : prevGroupFirstIdx)
-  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{
@@ -256,7 +246,6 @@ export default function BaiTap({ params }) {
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
   const [reviewAnswers, setReviewAnswers] = useState({})
 
-  // ── Font size state cho vùng 2 và 3 ──────────────────────────────
   const [fontSizeV2, setFontSizeV2] = useState(14)
   const [fontSizeV3, setFontSizeV3] = useState(14)
 
@@ -448,6 +437,26 @@ export default function BaiTap({ params }) {
   const firstInGroup     = questionsInGroup[0]
   const mauHeader        = mauKyNang[exercise?.kyNang] || 'var(--c-primary)'
 
+  // ── Group navigation ──────────────────────────────────────────────
+  const firstIdxOfGroup = questionsInGroup[0]?.globalIndex ?? 0
+  const lastIdxOfGroup  = questionsInGroup[questionsInGroup.length - 1]?.globalIndex ?? 0
+  const isFirstGroup    = firstIdxOfGroup === 0
+  const isLastGroup     = lastIdxOfGroup === questions.length - 1
+
+  const goToPrevGroup = () => {
+    if (isFirstGroup) return
+    // Câu ngay trước đầu group hiện tại thuộc group trước
+    const prevGroupName = questions[firstIdxOfGroup - 1]?.Group
+    const prevGroupFirstIdx = questions.findIndex(q => q.Group === prevGroupName)
+    setCauHienTai(prevGroupFirstIdx === -1 ? 0 : prevGroupFirstIdx)
+  }
+
+  const goToNextGroup = () => {
+    if (isLastGroup) return
+    // Câu ngay sau cuối group hiện tại là đầu group tiếp theo
+    setCauHienTai(lastIdxOfGroup + 1)
+  }
+
   const getOptions = (q) => {
     if (!q) return []
     return ['A', 'B', 'C', 'D', 'E']
@@ -590,10 +599,10 @@ export default function BaiTap({ params }) {
         {/* Vùng 1: Số câu */}
         <div className="bt-vung1" style={{ width: '72px', minWidth: '72px', backgroundColor: 'var(--c-primary-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: '6px', overflowY: 'auto' }}>
           {questions.map((q, i) => {
+            let bgColor = 'var(--c-surface)', textColor = 'var(--c-primary-mid)', borderColor = 'var(--c-primary-pale)'
+
             if (i === cauHienTai) {
               bgColor = 'var(--c-primary)'; textColor = 'var(--c-surface)'; borderColor = 'var(--c-primary)'
-            } else if (!isReview && questions[i]?.Group === currentGroup) {
-              bgColor = 'var(--c-primary-bg)'; textColor = 'var(--c-primary)'; borderColor = 'var(--c-primary-light)'
             } else if (isReview) {
               const userAns = reviewAnswers[i]
               const correct = q.Correct_Ans?.trim()
@@ -606,10 +615,13 @@ export default function BaiTap({ params }) {
                 else if (allCorrect) { bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)' }
                 else                 { bgColor = 'var(--c-danger-bg)'; textColor = 'var(--c-danger-text)'; borderColor = 'var(--c-danger-border)' }
               } else {
-                if (!userAns)               { bgColor = 'var(--c-warn-bg)'; textColor = 'var(--c-warn-textsoft)'; borderColor = 'var(--c-warn)' }
-                else if (userAns === correct){ bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)' }
-                else                         { bgColor = 'var(--c-danger-bg)'; textColor = 'var(--c-danger-text)'; borderColor = 'var(--c-danger-border)' }
+                if (!userAns)                { bgColor = 'var(--c-warn-bg)'; textColor = 'var(--c-warn-textsoft)'; borderColor = 'var(--c-warn)' }
+                else if (userAns === correct) { bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)' }
+                else                          { bgColor = 'var(--c-danger-bg)'; textColor = 'var(--c-danger-text)'; borderColor = 'var(--c-danger-border)' }
               }
+            } else if (q.Group === currentGroup) {
+              // Các câu cùng group đang xem — highlight nhẹ
+              bgColor = 'var(--c-primary-bg)'; textColor = 'var(--c-primary)'; borderColor = 'var(--c-primary-light)'
             } else if (answers[i]) {
               bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)'
             }
@@ -636,18 +648,11 @@ export default function BaiTap({ params }) {
         {/* Vùng 2 + 3 */}
         <div className="bt-vung2-3">
 
-          {/* ── Vùng 2 wrap (header + content) ── */}
+          {/* ── Vùng 2 wrap ── */}
           <div className="bt-vung2-wrap">
-            {/* Font size control vùng 2 */}
             <div className="bt-vung2-header">
-              <FontSizeControl
-                label="Cỡ chữ"
-                value={fontSizeV2}
-                onChange={setFontSizeV2}
-              />
+              <FontSizeControl label="Cỡ chữ" value={fontSizeV2} onChange={setFontSizeV2} />
             </div>
-
-            {/* Nội dung vùng 2 */}
             <div className="bt-vung2" id="content-panel" style={{ fontSize: `${fontSizeV2}px` }}>
               {firstInGroup?.Audios?.map((src, i) => (
                 <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
@@ -663,18 +668,12 @@ export default function BaiTap({ params }) {
             </div>
           </div>
 
-          {/* ── Vùng 3 wrap (header + content) ── */}
+          {/* ── Vùng 3 wrap ── */}
           <div className="bt-vung3-wrap">
-            {/* Font size control vùng 3 */}
             <div className="bt-vung3-header">
-              <FontSizeControl
-                label="Cỡ chữ"
-                value={fontSizeV3}
-                onChange={setFontSizeV3}
-              />
+              <FontSizeControl label="Cỡ chữ" value={fontSizeV3} onChange={setFontSizeV3} />
             </div>
 
-            {/* Câu hỏi & Đáp án */}
             <div className="bt-vung3" id="question-panel">
               {questionsInGroup.map((q) => (
                 <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? 'var(--c-primary-barest)' : 'transparent', padding: '10px', borderRadius: '8px' }}>
@@ -764,11 +763,9 @@ export default function BaiTap({ params }) {
                   style={{
                     flex: 1, padding: '12px', borderRadius: '8px',
                     border: '1px solid var(--c-primary-pale)',
-                    backgroundColor: 'var(--c-surface)',
-                    color: 'var(--c-primary-mid)',
+                    backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)',
                     cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                    opacity: isFirstGroup ? 0.4 : 1,
-                    fontWeight: '500',
+                    opacity: isFirstGroup ? 0.4 : 1, fontWeight: '500',
                   }}
                 >← Trước</button>
 
@@ -789,8 +786,7 @@ export default function BaiTap({ params }) {
                       flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
                       backgroundColor: 'var(--c-primary-mid)', color: 'var(--c-surface)',
                       cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                      opacity: isLastGroup ? 0.4 : 1,
-                      fontWeight: '500',
+                      opacity: isLastGroup ? 0.4 : 1, fontWeight: '500',
                     }}
                   >Tiếp →</button>
                 )}

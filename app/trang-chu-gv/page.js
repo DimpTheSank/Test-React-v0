@@ -631,17 +631,20 @@ function ModalGiaoBai({ exercises, userInfo, onClose }) {
 }
 
 // ─── TAB TIẾN ĐỘ ─────────────────────────────────────────────────────────────
+// ─── TAB TIẾN ĐỘ ─────────────────────────────────────────────────────────────
 function TabTienDo({ userInfo }) {
   const [classes, setClasses]               = useState([])
   const [selectedLop, setSelectedLop]       = useState(null)
-  const [exercises, setExercises]           = useState([])
+  const [exercises, setExercises]           = useState([])   // tất cả bài của lớp, sort theo ngày giao
+  const [hocViens, setHocViens]             = useState([])   // danh sách HV của lớp
+  const [matrixSubs, setMatrixSubs]         = useState({})   // { userId: { exerciseId: sub } }
   const [selectedExId, setSelectedExId]     = useState('')
   const [rows, setRows]                     = useState([])
   const [loading, setLoading]               = useState(false)
   const [loadingLop, setLoadingLop]         = useState(false)
   const [loadingClasses, setLoadingClasses] = useState(true)
   const [showThongKe, setShowThongKe]       = useState(false)
-  const [selectedHV, setSelectedHV]         = useState(null) // { row, exercise, questions }
+  const [selectedHV, setSelectedHV]         = useState(null)
 
   useEffect(() => { loadClasses() }, [])
 
@@ -655,16 +658,10 @@ function TabTienDo({ userInfo }) {
     finally { setLoadingClasses(false) }
   }
 
-  const loadRows = async (ex, lop) => {
+  const loadRows = async (ex, lop, hvList) => {
     setLoading(true); setRows([])
     try {
-      const hvData = await Promise.all(
-        (lop.hocVienIds || []).map(async uid => {
-          const s = await getDoc(doc(db, 'users', uid))
-          return s.exists() ? { id: uid, ...s.data() } : null
-        })
-      )
-      const hvs = hvData.filter(Boolean)
+      const hvs = hvList || hocViens
       const subSnap = await getDocs(query(collection(db, 'submissions'), where('exerciseId', '==', ex.id)))
       const subMap = {}
       subSnap.docs.forEach(d => {
@@ -678,22 +675,56 @@ function TabTienDo({ userInfo }) {
 
   const handleChonLop = async (cls) => {
     if (selectedLop?.id === cls.id) return
-    setSelectedLop(cls); setSelectedExId(''); setExercises([]); setRows([])
+    setSelectedLop(cls); setSelectedExId(''); setExercises([]); setRows([]); setHocViens([]); setMatrixSubs({})
     setLoadingLop(true)
     try {
+      // Load HV của lớp
+      const hvData = await Promise.all((cls.hocVienIds || []).map(async uid => {
+        const s = await getDoc(doc(db, 'users', uid))
+        return s.exists() ? { id: uid, ...s.data() } : null
+      }))
+      const hvs = hvData.filter(Boolean)
+      setHocViens(hvs)
+
+      // Load assignments của lớp
       const snap = await getDocs(query(collection(db, 'assignments'), where('lopId', '==', cls.lop)))
       const exTimeMap = {}
       snap.docs.forEach(d => {
         const { exerciseId, thoiGianGiao } = d.data()
         if (!exTimeMap[exerciseId] || (thoiGianGiao || '') > exTimeMap[exerciseId]) exTimeMap[exerciseId] = thoiGianGiao || ''
       })
+
+      // Load exercise info
       const exData = await Promise.all(Object.keys(exTimeMap).map(async exId => {
         const s = await getDoc(doc(db, 'exercises', exId))
         return s.exists() ? { id: exId, ...s.data(), thoiGianGiao: exTimeMap[exId] } : null
       }))
       const sorted = exData.filter(Boolean).sort((a, b) => (b.thoiGianGiao || '').localeCompare(a.thoiGianGiao || ''))
       setExercises(sorted)
-      if (sorted.length > 0) { setSelectedExId(sorted[0].id); await loadRows(sorted[0], cls) }
+
+      // Load tất cả submissions của lớp cho matrix
+      if (sorted.length > 0 && hvs.length > 0) {
+        const allSubs = {}
+        hvs.forEach(hv => { allSubs[hv.id] = {} })
+        await Promise.all(sorted.map(async ex => {
+          const subSnap = await getDocs(query(collection(db, 'submissions'), where('exerciseId', '==', ex.id)))
+          subSnap.docs.forEach(d => {
+            const data = d.data()
+            if (!allSubs[data.userId]) return
+            const existing = allSubs[data.userId][ex.id]
+            if (!existing || (data.diem ?? -1) > (existing.diem ?? -1)) {
+              allSubs[data.userId][ex.id] = data
+            }
+          })
+        }))
+        setMatrixSubs(allSubs)
+      }
+
+      // Load chi tiết bảng 2 cho bài gần nhất
+      if (sorted.length > 0) {
+        setSelectedExId(sorted[0].id)
+        await loadRows(sorted[0], cls, hvs)
+      }
     } catch (err) { console.error(err) }
     finally { setLoadingLop(false) }
   }
@@ -702,12 +733,11 @@ function TabTienDo({ userInfo }) {
     if (exId === selectedExId) return
     setSelectedExId(exId)
     const ex = exercises.find(e => e.id === exId)
-    if (ex && selectedLop) await loadRows(ex, selectedLop)
+    if (ex && selectedLop) await loadRows(ex, selectedLop, hocViens)
   }
 
-  // Khi click tên học viên — tải đề bài rồi mở modal
   const handleClickHV = async (row) => {
-    if (!row.sub) return // chưa làm thì không có gì để xem
+    if (!row.sub) return
     const ex = exercises.find(e => e.id === selectedExId)
     if (!ex) return
     try {
@@ -739,12 +769,35 @@ function TabTienDo({ userInfo }) {
 
   const mauEx = selectedEx ? (mauKyNang[selectedEx.kyNang] || { bg: 'var(--c-primary)', text: '#fff' }) : null
 
+  // Kiểm tra HV có được giao bài này không (dựa vào matrixSubs key tồn tại)
+  // Ta dùng assignments để biết HV nào được giao, nhưng để đơn giản:
+  // nếu matrixSubs[hv.id][ex.id] có key thì đã từng sub, nếu không có key thì cần check assignment
+  // → dùng một set assignedMap: { exId: Set<userId> }
+  const [assignedMap, setAssignedMap] = useState({}) // { exId: Set<userId> }
+
+  // Cập nhật assignedMap khi chọn lớp
+  useEffect(() => {
+    if (!selectedLop || exercises.length === 0) return
+    const loadAssigned = async () => {
+      const snap = await getDocs(query(collection(db, 'assignments'), where('lopId', '==', selectedLop.lop)))
+      const map = {}
+      snap.docs.forEach(d => {
+        const { exerciseId, userId } = d.data()
+        if (!map[exerciseId]) map[exerciseId] = new Set()
+        map[exerciseId].add(userId)
+      })
+      setAssignedMap(map)
+    }
+    loadAssigned()
+  }, [selectedLop, exercises])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--c-primary-dark)', lineHeight: 1.2 }}>
         Tiến độ học viên
       </h2>
 
+      {/* Chọn lớp */}
       {loadingClasses ? <SkeletonGVClassButtons /> : (
         <div>
           <p style={{ margin: '0 0 8px', color: 'var(--c-primary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chọn lớp</p>
@@ -764,39 +817,133 @@ function TabTienDo({ userInfo }) {
 
       {loadingLop && <SkeletonGVExerciseDropdown />}
 
-      {!loadingLop && selectedLop && exercises.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
-          padding: '14px 18px', borderRadius: '12px',
-          backgroundColor: 'var(--c-surface)', border: '1px solid var(--c-primary-pale)',
-        }}>
-          <label style={{ fontSize: '13px', color: 'var(--c-primary)', fontWeight: '500', whiteSpace: 'nowrap' }}>Bài tập:</label>
-          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-            <select value={selectedExId} onChange={e => handleChangeEx(e.target.value)} style={{
-              width: '100%', padding: '9px 36px 9px 14px', borderRadius: '8px',
-              border: '1.5px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
-              color: 'var(--c-primary-dark)', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
-              outline: 'none', appearance: 'none', WebkitAppearance: 'none',
-            }}>
-              {exercises.map((ex, idx) => (
-                <option key={ex.id} value={ex.id}>
-                  {idx === 0 ? '★ ' : ''}{ex.kyNang} · {ex.tenBaiTap}
-                  {ex.thoiGianGiao ? `  —  ${formatNgay(ex.thoiGianGiao)}` : ''}
-                </option>
-              ))}
-            </select>
-            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--c-primary-mid)', fontSize: '11px' }}>▼</span>
+      {/* ── BẢNG 1: Ma trận tổng quan ── */}
+      {!loadingLop && selectedLop && exercises.length > 0 && hocViens.length > 0 && (
+        <div>
+          <p style={{ margin: '0 0 10px', color: 'var(--c-primary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Tổng quan · {hocViens.length} học viên · {exercises.length} bài
+          </p>
+          <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--c-primary-pale)' }}>
+            <table style={{ borderCollapse: 'collapse', width: 'max-content', minWidth: '100%' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--c-primary)' }}>
+                  {/* Cột họ tên */}
+                  <th style={{
+                    padding: '10px 16px', textAlign: 'left', fontSize: '13px',
+                    fontWeight: '600', color: '#fff', whiteSpace: 'nowrap',
+                    position: 'sticky', left: 0, backgroundColor: 'var(--c-primary)', zIndex: 2,
+                    minWidth: '160px',
+                  }}>Học viên</th>
+                  {/* Cột từng bài — gần nhất bên trái */}
+                  {exercises.map(ex => {
+                    const mau = mauKyNang[ex.kyNang] || { bg: 'var(--c-primary-mid)', text: '#fff' }
+                    return (
+                      <th key={ex.id} style={{
+                        padding: '8px 12px', textAlign: 'center', fontSize: '12px',
+                        fontWeight: '600', color: '#fff', whiteSpace: 'nowrap',
+                        borderLeft: '1px solid rgba(255,255,255,0.15)',
+                        minWidth: '130px', maxWidth: '180px',
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'center' }}>
+                          <span style={{
+                            padding: '2px 8px', borderRadius: '9999px',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            fontSize: '10px', fontWeight: '600',
+                          }}>{ex.kyNang}</span>
+                          <span style={{
+                            fontSize: '12px', fontWeight: '600',
+                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            maxWidth: '160px', display: 'block',
+                          }} title={ex.tenBaiTap}>{ex.tenBaiTap}</span>
+                          <span style={{ fontSize: '10px', opacity: 0.7 }}>{formatNgay(ex.thoiGianGiao)}</span>
+                        </div>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {hocViens.map((hv, i) => (
+                  <tr key={hv.id} style={{
+                    backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+                  }}>
+                    {/* Tên HV — sticky */}
+                    <td style={{
+                      padding: '10px 16px', fontSize: '14px', fontWeight: '500',
+                      color: 'var(--c-primary-dark)', whiteSpace: 'nowrap',
+                      position: 'sticky', left: 0, zIndex: 1,
+                      backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+                      borderRight: '1px solid var(--c-primary-pale)',
+                    }}>
+                      {hv.ho} {hv.ten}
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--c-text-muted)', fontWeight: '400' }}>{hv.lop}</span>
+                    </td>
+                    {/* Ô điểm từng bài */}
+                    {exercises.map(ex => {
+                      const isAssigned = assignedMap[ex.id]?.has(hv.id)
+                      const sub        = matrixSubs[hv.id]?.[ex.id]
+
+                      // Chưa được giao
+                      if (!isAssigned) {
+                        return (
+                          <td key={ex.id} style={{
+                            padding: '8px 12px', textAlign: 'center',
+                            borderLeft: '1px solid var(--c-primary-bg)',
+                          }}>
+                            <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', fontStyle: 'italic' }}>Không</span>
+                          </td>
+                        )
+                      }
+
+                      // Đã được giao — có sub
+                      if (sub) {
+                        const pct = sub.diem != null ? Math.round(sub.diem / sub.tongCau * 100) : null
+                        const good = pct >= 50
+                        return (
+                          <td key={ex.id} style={{
+                            padding: '8px 12px', textAlign: 'center',
+                            borderLeft: '1px solid var(--c-primary-bg)',
+                          }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                              <span style={{
+                                fontSize: '13px', fontWeight: '700',
+                                color: good ? 'var(--c-success)' : 'var(--c-danger)',
+                              }}>
+                                {sub.diem}/{sub.tongCau}
+                              </span>
+                              {pct != null && (
+                                <span style={{
+                                  fontSize: '11px', fontWeight: '600',
+                                  padding: '1px 7px', borderRadius: '9999px',
+                                  backgroundColor: good ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
+                                  color: good ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+                                }}>{pct}%</span>
+                              )}
+                            </div>
+                          </td>
+                        )
+                      }
+
+                      // Được giao, chưa làm hoặc đang làm
+                      return (
+                        <td key={ex.id} style={{
+                          padding: '8px 12px', textAlign: 'center',
+                          borderLeft: '1px solid var(--c-primary-bg)',
+                        }}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: '500',
+                            padding: '2px 8px', borderRadius: '9999px',
+                            backgroundColor: 'var(--c-danger-bg)',
+                            color: 'var(--c-danger-text)',
+                          }}>Chưa làm</span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {mauEx && (
-            <span style={{ padding: '5px 14px', borderRadius: '9999px', whiteSpace: 'nowrap', backgroundColor: mauEx.bg, color: mauEx.text, fontSize: '12px', fontWeight: '600' }}>
-              {selectedEx.loaiBai} · {selectedEx.kyNang}
-            </span>
-          )}
-          {selectedEx?.thoiGianGiao && (
-            <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap' }}>
-              🕐 Giao: {formatNgay(selectedEx.thoiGianGiao)}
-            </span>
-          )}
         </div>
       )}
 
@@ -804,89 +951,130 @@ function TabTienDo({ userInfo }) {
         <p style={{ color: 'var(--c-text-muted)', fontSize: '14px' }}>Lớp này chưa được giao bài tập nào.</p>
       )}
 
-      {selectedEx && (
-        <div>
-          {loading ? <SkeletonGVProgressTable /> : (
-            <>
-              {/* Stats */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {[
-                  { label: 'Tổng học viên', value: rows.length,                  bg: 'var(--c-primary-bg)',  color: 'var(--c-primary-dark)'  },
-                  { label: 'Đã làm',        value: daDam,                        bg: 'var(--c-success-bg)', color: 'var(--c-success-text)'  },
-                  { label: 'Chưa làm',      value: chuaLam,                      bg: 'var(--c-danger-bg)',  color: 'var(--c-danger-text)'   },
-                  { label: 'Điểm TB',       value: diemTB ? `${diemTB}%` : '—', bg: 'var(--c-warn-bg)',    color: 'var(--c-warn-text)'     },
-                ].map(s => (
-                  <div key={s.label} style={{ padding: '12px 20px', borderRadius: '12px', backgroundColor: s.bg, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '12px', color: s.color, fontWeight: '500' }}>{s.label}</span>
-                    <span style={{ fontSize: '22px', fontWeight: '700', color: s.color }}>{s.value}</span>
-                  </div>
-                ))}
-              </div>
+      {/* ── BẢNG 2: Chi tiết 1 bài ── */}
+      {!loadingLop && selectedLop && exercises.length > 0 && (
+        <>
+          <div style={{ borderTop: '2px solid var(--c-primary-pale)', paddingTop: '20px' }}>
+            <p style={{ margin: '0 0 12px', color: 'var(--c-primary)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chi tiết theo bài</p>
 
-              <div style={{ marginBottom: '16px' }}>
-                <button onClick={() => setShowThongKe(true)} style={{
-                  padding: '10px 20px', borderRadius: '9px', border: 'none',
-                  backgroundColor: 'var(--c-primary)', color: '#fff',
-                  fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}>📊 Xem đề & thống kê</button>
-              </div>
-
-              {/* Bảng học viên */}
-              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px' }}>
-                  {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
-                    <span key={h} style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>{h}</span>
+            {/* Dropdown chọn bài */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+              padding: '14px 18px', borderRadius: '12px',
+              backgroundColor: 'var(--c-surface)', border: '1px solid var(--c-primary-pale)',
+              marginBottom: '16px',
+            }}>
+              <label style={{ fontSize: '13px', color: 'var(--c-primary)', fontWeight: '500', whiteSpace: 'nowrap' }}>Bài tập:</label>
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                <select value={selectedExId} onChange={e => handleChangeEx(e.target.value)} style={{
+                  width: '100%', padding: '9px 36px 9px 14px', borderRadius: '8px',
+                  border: '1.5px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
+                  color: 'var(--c-primary-dark)', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                  outline: 'none', appearance: 'none', WebkitAppearance: 'none',
+                }}>
+                  {exercises.map((ex, idx) => (
+                    <option key={ex.id} value={ex.id}>
+                      {idx === 0 ? '★ ' : ''}{ex.kyNang} · {ex.tenBaiTap}
+                      {ex.thoiGianGiao ? `  —  ${formatNgay(ex.thoiGianGiao)}` : ''}
+                    </option>
                   ))}
-                </div>
-                {rows.map((r, i) => {
-                  const daDamRow = !!r.sub
-                  const phanTram = r.sub?.diem != null ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
-                  return (
-                    <div key={r.id} style={{
-                      display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                      padding: '10px 16px', gap: '8px', alignItems: 'center',
-                      backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
-                      borderTop: '1px solid var(--c-primary-bg)',
-                    }}>
-                      {/* Tên học viên — clickable nếu đã làm */}
-                      <span
-                        onClick={() => daDamRow && handleClickHV(r)}
-                        style={{
-                          fontSize: '14px', fontWeight: '500',
-                          color: daDamRow ? 'var(--c-primary)' : 'var(--c-primary-dark)',
-                          cursor: daDamRow ? 'pointer' : 'default',
-                          textDecoration: daDamRow ? 'underline' : 'none',
-                          textDecorationStyle: 'dotted',
-                          textUnderlineOffset: '3px',
-                        }}
-                        title={daDamRow ? 'Xem chi tiết bài làm' : undefined}
-                      >
-                        {r.ho} {r.ten}
-                      </span>
-                      <span style={{ fontSize: '13px', color: 'var(--c-text-soft)' }}>{r.lop}</span>
-                      <span style={{
-                        fontSize: '12px', fontWeight: '500', padding: '3px 10px', borderRadius: '9999px',
-                        backgroundColor: daDamRow ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
-                        color: daDamRow ? 'var(--c-success-text)' : 'var(--c-danger-text)',
-                        alignSelf: 'center', justifySelf: 'start',
-                      }}>
-                        {daDamRow ? 'Đã làm' : 'Chưa làm'}
-                      </span>
-                      <span style={{
-                        fontSize: '14px', fontWeight: '600',
-                        color: phanTram >= 50 ? 'var(--c-success)' : phanTram != null ? 'var(--c-danger)' : 'var(--c-primary-pale)',
-                      }}>
-                        {r.sub?.diem != null ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)` : '—'}
-                      </span>
-                      <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>{formatNgay(r.sub?.thoiGianNop)}</span>
-                    </div>
-                  )
-                })}
+                </select>
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--c-primary-mid)', fontSize: '11px' }}>▼</span>
               </div>
-            </>
+              {mauEx && (
+                <span style={{ padding: '5px 14px', borderRadius: '9999px', whiteSpace: 'nowrap', backgroundColor: mauEx.bg, color: mauEx.text, fontSize: '12px', fontWeight: '600' }}>
+                  {selectedEx.loaiBai} · {selectedEx.kyNang}
+                </span>
+              )}
+              {selectedEx?.thoiGianGiao && (
+                <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', whiteSpace: 'nowrap' }}>
+                  🕐 Giao: {formatNgay(selectedEx.thoiGianGiao)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {selectedEx && (
+            <div>
+              {loading ? <SkeletonGVProgressTable /> : (
+                <>
+                  {/* Stats */}
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Tổng học viên', value: rows.length,                  bg: 'var(--c-primary-bg)',  color: 'var(--c-primary-dark)'  },
+                      { label: 'Đã làm',        value: daDam,                        bg: 'var(--c-success-bg)', color: 'var(--c-success-text)'  },
+                      { label: 'Chưa làm',      value: chuaLam,                      bg: 'var(--c-danger-bg)',  color: 'var(--c-danger-text)'   },
+                      { label: 'Điểm TB',       value: diemTB ? `${diemTB}%` : '—', bg: 'var(--c-warn-bg)',    color: 'var(--c-warn-text)'     },
+                    ].map(s => (
+                      <div key={s.label} style={{ padding: '12px 20px', borderRadius: '12px', backgroundColor: s.bg, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '12px', color: s.color, fontWeight: '500' }}>{s.label}</span>
+                        <span style={{ fontSize: '22px', fontWeight: '700', color: s.color }}>{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <button onClick={() => setShowThongKe(true)} style={{
+                      padding: '10px 20px', borderRadius: '9px', border: 'none',
+                      backgroundColor: 'var(--c-primary)', color: '#fff',
+                      fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                    }}>📊 Xem đề & thống kê</button>
+                  </div>
+
+                  {/* Bảng chi tiết */}
+                  <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px' }}>
+                      {['Học viên', 'Lớp', 'Trạng thái', 'Điểm cao nhất', 'Thời gian nộp'].map(h => (
+                        <span key={h} style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>{h}</span>
+                      ))}
+                    </div>
+                    {rows.map((r, i) => {
+                      const daDamRow = !!r.sub
+                      const phanTram = r.sub?.diem != null ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
+                      return (
+                        <div key={r.id} style={{
+                          display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                          padding: '10px 16px', gap: '8px', alignItems: 'center',
+                          backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+                          borderTop: '1px solid var(--c-primary-bg)',
+                        }}>
+                          <span
+                            onClick={() => daDamRow && handleClickHV(r)}
+                            style={{
+                              fontSize: '14px', fontWeight: '500',
+                              color: daDamRow ? 'var(--c-primary)' : 'var(--c-primary-dark)',
+                              cursor: daDamRow ? 'pointer' : 'default',
+                              textDecoration: daDamRow ? 'underline' : 'none',
+                              textDecorationStyle: 'dotted', textUnderlineOffset: '3px',
+                            }}
+                            title={daDamRow ? 'Xem chi tiết bài làm' : undefined}
+                          >{r.ho} {r.ten}</span>
+                          <span style={{ fontSize: '13px', color: 'var(--c-text-soft)' }}>{r.lop}</span>
+                          <span style={{
+                            fontSize: '12px', fontWeight: '500', padding: '3px 10px', borderRadius: '9999px',
+                            backgroundColor: daDamRow ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
+                            color: daDamRow ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+                            alignSelf: 'center', justifySelf: 'start',
+                          }}>
+                            {daDamRow ? 'Đã làm' : 'Chưa làm'}
+                          </span>
+                          <span style={{
+                            fontSize: '14px', fontWeight: '600',
+                            color: phanTram >= 50 ? 'var(--c-success)' : phanTram != null ? 'var(--c-danger)' : 'var(--c-primary-pale)',
+                          }}>
+                            {r.sub?.diem != null ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)` : '—'}
+                          </span>
+                          <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>{formatNgay(r.sub?.thoiGianNop)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {showThongKe && selectedEx && (

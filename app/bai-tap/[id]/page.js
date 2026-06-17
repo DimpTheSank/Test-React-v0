@@ -119,6 +119,16 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
 
   const fs = fontSize || 14
 
+  const goToPrevGroup = () => {
+  // Tìm câu đầu tiên của group hiện tại
+  const firstOfCurrent = questionsInGroup[0]?.globalIndex ?? cauHienTai
+  if (firstOfCurrent === 0) return
+  // Lùi 1 câu từ đầu group hiện tại → đang ở group trước
+  const prevGroupFirstIdx = questions
+    .slice(0, firstOfCurrent)
+    .findIndex(q => q.Group === questions[firstOfCurrent - 1].Group)
+  setCauHienTai(prevGroupFirstIdx === -1 ? 0 : prevGroupFirstIdx)
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{
@@ -580,9 +590,10 @@ export default function BaiTap({ params }) {
         {/* Vùng 1: Số câu */}
         <div className="bt-vung1" style={{ width: '72px', minWidth: '72px', backgroundColor: 'var(--c-primary-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: '6px', overflowY: 'auto' }}>
           {questions.map((q, i) => {
-            let bgColor = 'var(--c-surface)', textColor = 'var(--c-primary-mid)', borderColor = 'var(--c-primary-pale)'
             if (i === cauHienTai) {
               bgColor = 'var(--c-primary)'; textColor = 'var(--c-surface)'; borderColor = 'var(--c-primary)'
+            } else if (!isReview && questions[i]?.Group === currentGroup) {
+              bgColor = 'var(--c-primary-bg)'; textColor = 'var(--c-primary)'; borderColor = 'var(--c-primary-light)'
             } else if (isReview) {
               const userAns = reviewAnswers[i]
               const correct = q.Correct_Ans?.trim()
@@ -748,21 +759,39 @@ export default function BaiTap({ params }) {
               {/* Nút điều hướng */}
               <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
                 <button className="bt-nav-btn"
-                  onClick={() => setCauHienTai(i => Math.max(0, i - 1))}
-                  disabled={cauHienTai === 0}
-                  style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)', cursor: cauHienTai === 0 ? 'not-allowed' : 'pointer', opacity: cauHienTai === 0 ? 0.4 : 1, fontWeight: '500' }}
+                  onClick={goToPrevGroup}
+                  disabled={isFirstGroup}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '8px',
+                    border: '1px solid var(--c-primary-pale)',
+                    backgroundColor: 'var(--c-surface)',
+                    color: 'var(--c-primary-mid)',
+                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                    opacity: isFirstGroup ? 0.4 : 1,
+                    fontWeight: '500',
+                  }}
                 >← Trước</button>
 
-                {!isReview && cauHienTai === questions.length - 1 ? (
+                {!isReview && isLastGroup ? (
                   <button className="bt-nav-btn"
                     onClick={() => setShowConfirm(true)}
-                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-success)', color: 'var(--c-surface)', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                      backgroundColor: 'var(--c-success)', color: 'var(--c-surface)',
+                      fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+                    }}
                   >Nộp bài ✓</button>
                 ) : (
                   <button className="bt-nav-btn"
-                    onClick={() => setCauHienTai(i => Math.min(questions.length - 1, i + 1))}
-                    disabled={cauHienTai === questions.length - 1}
-                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-primary-mid)', color: 'var(--c-surface)', cursor: cauHienTai === questions.length - 1 ? 'not-allowed' : 'pointer', opacity: cauHienTai === questions.length - 1 ? 0.4 : 1, fontWeight: '500' }}
+                    onClick={goToNextGroup}
+                    disabled={isLastGroup}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                      backgroundColor: 'var(--c-primary-mid)', color: 'var(--c-surface)',
+                      cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                      opacity: isLastGroup ? 0.4 : 1,
+                      fontWeight: '500',
+                    }}
                   >Tiếp →</button>
                 )}
               </div>

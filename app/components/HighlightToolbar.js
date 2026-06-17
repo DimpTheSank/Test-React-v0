@@ -1,8 +1,14 @@
 'use client'
-/**
- * HighlightToolbar — floating toolbar hiện khi bôi text.
- * Đặt file này tại: app/components/HighlightToolbar.js
- */
+
+const HIGHLIGHT_COLORS = [
+  { color: '#FFF176', label: 'Vàng' },
+  { color: '#A5F3A0', label: 'Xanh lá' },
+  { color: '#93C5FD', label: 'Xanh dương' },
+  { color: '#FCA5A5', label: 'Đỏ' },
+  { color: '#F9A8D4', label: 'Hồng' },
+  { color: '#C4B5FD', label: 'Tím' },
+]
+
 export default function HighlightToolbar({ toolbar, onHighlight, onClose }) {
   if (!toolbar) return null
 
@@ -17,10 +23,10 @@ export default function HighlightToolbar({ toolbar, onHighlight, onClose }) {
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
-        gap: '4px',
+        gap: '6px',
         backgroundColor: '#1E293B',
-        borderRadius: '8px',
-        padding: '5px 8px',
+        borderRadius: '10px',
+        padding: '7px 10px',
         boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
         pointerEvents: 'auto',
         userSelect: 'none',
@@ -39,39 +45,46 @@ export default function HighlightToolbar({ toolbar, onHighlight, onClose }) {
         borderTop: '5px solid #1E293B',
       }} />
 
-      {/* Nút Highlight */}
-      <button
-        onMouseDown={(e) => {
-          e.preventDefault() // Quan trọng: không làm mất selection
-          onHighlight()
-        }}
-        title="Highlight (Ctrl+H)"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '4px 10px',
-          borderRadius: '6px',
-          border: 'none',
-          backgroundColor: '#FFF176',
-          color: '#1E293B',
-          fontSize: '12px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          transition: 'opacity 0.15s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-      >
-        <span style={{ fontSize: '14px' }}>🖊</span>
-        Highlight
-      </button>
+      {/* Label */}
+      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px', paddingRight: '2px' }}>
+        🖊
+      </span>
+
+      {/* Color swatches */}
+      {HIGHLIGHT_COLORS.map(({ color, label }) => (
+        <button
+          key={color}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onHighlight(color)
+          }}
+          title={label}
+          style={{
+            width: '22px',
+            height: '22px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.25)',
+            backgroundColor: color,
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'transform 0.1s, border-color 0.1s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.25)'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
+          }}
+        />
+      ))}
 
       {/* Divider */}
-      <div style={{ width: '1px', height: '16px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+      <div style={{ width: '1px', height: '16px', backgroundColor: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
 
       {/* Phím tắt hint */}
-      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', paddingRight: '2px' }}>
+      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px' }}>
         Ctrl+H
       </span>
 
@@ -80,9 +93,9 @@ export default function HighlightToolbar({ toolbar, onHighlight, onClose }) {
         onMouseDown={(e) => { e.preventDefault(); onClose() }}
         style={{
           background: 'none', border: 'none',
-          color: 'rgba(255,255,255,0.5)',
-          cursor: 'pointer', fontSize: '14px',
-          padding: '0 2px', lineHeight: 1,
+          color: 'rgba(255,255,255,0.45)',
+          cursor: 'pointer', fontSize: '15px',
+          padding: '0 0 0 2px', lineHeight: 1,
         }}
       >
         ×

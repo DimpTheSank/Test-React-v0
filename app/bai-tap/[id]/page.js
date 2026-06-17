@@ -261,11 +261,6 @@ export default function BaiTap({ params }) {
   }, [])
 
   useEffect(() => {
-    if (vung2Ref.current) vung2Ref.current.scrollTop = 0
-    if (vung3Ref.current) vung3Ref.current.scrollTop = 0
-  }, [currentGroup])
-
-  useEffect(() => {
     if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
     if (Object.keys(answers).length === 0) return
@@ -301,14 +296,14 @@ export default function BaiTap({ params }) {
     return () => clearTimeout(saveDraftTimeout.current)
   }, [answers])
 
-  const getUserInfo = () => {
+  function getUserInfo() {
     try {
       const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
       return JSON.parse(decodeURIComponent(raw))
     } catch { return null }
   }
 
-  const loadInfo = async () => {
+  async function loadInfo() {
     try {
       const exSnap = await getDoc(doc(db, 'exercises', id))
       if (!exSnap.exists()) return
@@ -443,6 +438,11 @@ export default function BaiTap({ params }) {
   const questionsInGroup = questions.filter(q => q.Group === currentGroup)
   const firstInGroup     = questionsInGroup[0]
   const mauHeader        = mauKyNang[exercise?.kyNang] || 'var(--c-primary)'
+
+  useEffect(() => {
+    if (vung2Ref.current) vung2Ref.current.scrollTop = 0
+    if (vung3Ref.current) vung3Ref.current.scrollTop = 0
+  }, [currentGroup])
 
   // ── Group navigation ──────────────────────────────────────────────
   const firstIdxOfGroup = questionsInGroup[0]?.globalIndex ?? 0

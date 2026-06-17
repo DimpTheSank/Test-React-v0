@@ -252,11 +252,18 @@ export default function BaiTap({ params }) {
   const saveDraftTimeout = useRef(null)
   const assignmentIdRef  = useRef(null)
   const isFirstLoad      = useRef(true)
+  const vung2Ref = useRef(null)
+  const vung3Ref = useRef(null)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
     loadInfo()
   }, [])
+
+  useEffect(() => {
+    if (vung2Ref.current) vung2Ref.current.scrollTop = 0
+    if (vung3Ref.current) vung3Ref.current.scrollTop = 0
+  }, [currentGroup])
 
   useEffect(() => {
     if (isReview) return
@@ -653,7 +660,7 @@ export default function BaiTap({ params }) {
             <div className="bt-vung2-header">
               <FontSizeControl label="Cỡ chữ" value={fontSizeV2} onChange={setFontSizeV2} />
             </div>
-            <div className="bt-vung2" id="content-panel" style={{ fontSize: `${fontSizeV2}px` }}>
+            <div className="bt-vung2" id="content-panel" ref={vung2Ref} style={{ fontSize: `${fontSizeV2}px` }}>
               {firstInGroup?.Audios?.map((src, i) => (
                 <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
               ))}
@@ -674,7 +681,7 @@ export default function BaiTap({ params }) {
               <FontSizeControl label="Cỡ chữ" value={fontSizeV3} onChange={setFontSizeV3} />
             </div>
 
-            <div className="bt-vung3" id="question-panel">
+            <div className="bt-vung3" id="question-panel" ref={vung3Ref}>
               {questionsInGroup.map((q) => (
                 <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? 'var(--c-primary-barest)' : 'transparent', padding: '10px', borderRadius: '8px' }}>
                   <p style={{ margin: 0, fontSize: `${fontSizeV3}px`, fontWeight: '600', color: 'var(--c-primary)' }}>

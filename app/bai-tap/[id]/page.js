@@ -627,8 +627,9 @@ export default function BaiTap({ params }) {
                 else                          { bgColor = 'var(--c-danger-bg)'; textColor = 'var(--c-danger-text)'; borderColor = 'var(--c-danger-border)' }
               }
             } else if (q.Group === currentGroup) {
-              // Các câu cùng group đang xem — highlight nhẹ
-              bgColor = 'var(--c-primary-bg)'; textColor = 'var(--c-primary)'; borderColor = 'var(--c-primary-light)'
+              // Các câu cùng group đang xem — highlight nhẹ, nhưng giữ viền xanh nếu đã làm
+              bgColor = 'var(--c-primary-bg)'; textColor = 'var(--c-primary)'
+              borderColor = answers[i] ? 'var(--c-success-border)' : 'var(--c-primary-light)'
             } else if (answers[i]) {
               bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)'
             }
@@ -684,10 +685,11 @@ export default function BaiTap({ params }) {
             <div className="bt-vung3" id="question-panel" ref={vung3Ref}>
               {questionsInGroup.map((q) => (
                 <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? 'var(--c-primary-barest)' : 'transparent', padding: '10px', borderRadius: '8px' }}>
-                  <p style={{ margin: 0, fontSize: `${fontSizeV3}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
-                    Câu {q.globalIndex + 1}:{' '}
-                    {q.Question_Type !== 'fill_blank' ? q.Question : ''}
-                  </p>
+                  {q.Question_Type !== 'fill_blank' && (
+                    <p style={{ margin: 0, fontSize: `${fontSizeV3}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
+                      {q.Question}
+                    </p>
+                  )}
 
                   {/* MCQ */}
                   {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (

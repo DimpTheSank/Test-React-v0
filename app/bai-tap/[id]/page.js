@@ -505,7 +505,7 @@ export default function BaiTap({ params }) {
         }
         .bt-vung2-wrap {
           display: flex; flex-direction: column;
-          flex: 1.2; border-bottom: 1px solid var(--c-primary-pale);
+          flex: 1.5; border-bottom: 1px solid var(--c-primary-pale);
           overflow: hidden;
         }
         .bt-vung3-wrap {

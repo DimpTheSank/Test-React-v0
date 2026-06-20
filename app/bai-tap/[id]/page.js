@@ -679,7 +679,7 @@ export default function BaiTap({ params }) {
               ))}
               <div className={layout2Col ? 'vung2-2col' : undefined}>
                 {firstInGroup?.Contexts?.map((ctx, i) => (
-                  <div key={i} style={{ lineHeight: '1.8', color: 'var(--c-primary-dark)', breakInside: 'avoid', marginBottom: '4px' }}>
+                  <div key={i} style={{ lineHeight: '1.8', color: 'var(--c-primary-dark)', breakInside: 'avoid', marginBottom: '4px', textAlign: 'justify', hyphens: 'auto' }}>
                     {ctx.startsWith('http')
                       ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
                       : renderContextBlock(ctx, `ctx-${i}`)

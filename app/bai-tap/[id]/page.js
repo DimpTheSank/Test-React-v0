@@ -9,6 +9,7 @@ import { convertDriveLink } from '@/lib/driveUtils'
 import { useHighlight } from '@/lib/useHighlight'
 import HighlightToolbar from '@/app/components/HighlightToolbar'
 import { SkeletonBaiTap } from '@/app/components/Skeleton'
+import { renderContextBlock } from '@/lib/parseContext'
 
 const mauKyNang = {
   'Reading':   'var(--c-primary-mid)',
@@ -318,7 +319,7 @@ export default function BaiTap({ params }) {
       const { data } = Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
-        transform: (val, col) => (col === 'Group' ? val.trim() : val)
+        transform: (val, col) => (col === 'Group' || col === 'Layout' ? val.trim() : val)
       })
       const splitMedia = (raw, type) =>
         (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
@@ -438,6 +439,7 @@ export default function BaiTap({ params }) {
   const questionsInGroup = questions.filter(q => q.Group === currentGroup)
   const firstInGroup     = questionsInGroup[0]
   const mauHeader        = mauKyNang[exercise?.kyNang] || 'var(--c-primary)'
+  const layout2Col = firstInGroup?.Layout === '2col'
 
   useEffect(() => {
     if (vung2Ref.current) vung2Ref.current.scrollTop = 0
@@ -517,6 +519,7 @@ export default function BaiTap({ params }) {
           .bt-vung2-wrap { border-right: 1px solid var(--c-primary-pale); border-bottom: none; }
           .bt-vung2 { border-bottom: none; }
           .bt-vung2-3 { flex-direction: row; }
+          .vung2-2col { column-count: 2; column-gap: 28px; }
         }
         @media (max-width: 768px) {
           .bt-body { flex-direction: column; overflow-y: auto; overflow-x: hidden; align-items: stretch; }
@@ -537,6 +540,7 @@ export default function BaiTap({ params }) {
           .bt-vung3 { flex: none; overflow: visible; padding: 8px 12px 12px; gap: 16px; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
           .bt-vung3 p, .bt-vung3 div, .bt-vung3 span { word-break: break-word; overflow-wrap: anywhere; }
           .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
+          .vung2-2col { column-count: 1; }
         }
         @keyframes fadeInOut {
           0%   { opacity: 0; transform: translateY(4px); }
@@ -673,11 +677,16 @@ export default function BaiTap({ params }) {
               {firstInGroup?.Audios?.map((src, i) => (
                 <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
               ))}
-              {firstInGroup?.Contexts?.map((ctx, i) => (
-                <div key={i} style={{ lineHeight: '1.8', color: 'var(--c-primary-dark)', whiteSpace: 'pre-wrap' }}>
-                  {ctx.startsWith('http') ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} /> : ctx}
-                </div>
-              ))}
+              <div className={layout2Col ? 'vung2-2col' : undefined}>
+                {firstInGroup?.Contexts?.map((ctx, i) => (
+                  <div key={i} style={{ lineHeight: '1.8', color: 'var(--c-primary-dark)', breakInside: 'avoid', marginBottom: '4px' }}>
+                    {ctx.startsWith('http')
+                      ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
+                      : renderContextBlock(ctx, `ctx-${i}`)
+                    }
+                  </div>
+                ))}
+              </div>
               {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
                 <p style={{ color: 'var(--c-primary-pale)' }}>Không có nội dung chung cho nhóm này</p>
               )}

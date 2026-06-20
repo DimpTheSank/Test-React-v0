@@ -519,14 +519,22 @@ export default function BaiTap({ params }) {
           .bt-vung2-3 { flex-direction: row; }
         }
         @media (max-width: 768px) {
-          .bt-vung1 { width: 48px !important; min-width: 48px !important; border-right: 1px solid var(--c-primary-pale); }
-          .bt-vung1 .so-cau { width: 28px !important; height: 28px !important; font-size: 11px !important; }
-          .bt-body { overflow-y: auto; overflow-x: hidden; align-items: flex-start; }
-          .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; min-width: 0; max-width: 100%; }
-          .bt-vung2-wrap { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); min-width: 0; }
-          .bt-vung3-wrap { flex: none; overflow: visible; min-width: 0; }
-          .bt-vung2 { flex: none; overflow: visible; padding: 8px 12px 12px; min-width: 0; }
-          .bt-vung3 { flex: none; overflow: visible; padding: 8px 12px 12px; gap: 16px; min-width: 0; }
+          .bt-body { flex-direction: column; overflow-y: auto; overflow-x: hidden; align-items: stretch; }
+          .bt-vung1 {
+            width: 100% !important; min-width: 0 !important; max-width: 100% !important;
+            flex-direction: row !important; align-items: center !important;
+            padding: 8px 10px !important; gap: 6px !important;
+            overflow-x: auto !important; overflow-y: hidden !important;
+            border-right: none !important; border-bottom: 1px solid var(--c-primary-pale);
+            flex-shrink: 0; -webkit-overflow-scrolling: touch;
+          }
+          .bt-vung1 .so-cau { width: 30px !important; height: 30px !important; font-size: 12px !important; flex-shrink: 0; }
+          .bt-vung1-submit { display: none !important; }
+          .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; min-width: 0; width: 100%; max-width: 100%; }
+          .bt-vung2-wrap { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); min-width: 0; width: 100%; max-width: 100%; }
+          .bt-vung3-wrap { flex: none; overflow: visible; min-width: 0; width: 100%; max-width: 100%; }
+          .bt-vung2 { flex: none; overflow: visible; padding: 8px 12px 12px; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+          .bt-vung3 { flex: none; overflow: visible; padding: 8px 12px 12px; gap: 16px; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
           .bt-vung3 p, .bt-vung3 div, .bt-vung3 span { word-break: break-word; overflow-wrap: anywhere; }
           .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
         }
@@ -644,12 +652,12 @@ export default function BaiTap({ params }) {
           })}
 
           {!isReview && (
-            <>
+            <div className="bt-vung1-submit" style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%' }}>
               <div style={{ flex: 1 }} />
               <button onClick={() => setShowConfirm(true)} style={{ width: '48px', padding: '8px 0', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-success)', color: 'var(--c-surface)', fontSize: '11px', fontWeight: '600', cursor: 'pointer', marginBottom: '4px', lineHeight: '1.3' }}>
                 Nộp<br/>bài
               </button>
-            </>
+            </div>
           )}
         </div>
 

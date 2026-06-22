@@ -658,7 +658,7 @@ export default function BaiTap({ params }) {
           {!isReview && (
             <div className="bt-vung1-submit" style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%' }}>
               <div style={{ flex: 1 }} />
-              <button onClick={() => setShowConfirm(true)} style={{ width: '48px', padding: '8px 0', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-success)', color: 'var(--c-surface)', fontSize: '11px', fontWeight: '600', cursor: 'pointer', marginBottom: '4px', lineHeight: '1.3' }}>
+              <button onClick={() => setShowConfirm(true)} style={{ width: 'calc(100% - 16px)', padding: '8px 0', borderRadius: '8px', border: 'none', backgroundColor: 'var(--c-success)', color: 'var(--c-surface)', fontSize: '11px', fontWeight: '600', cursor: 'pointer', marginBottom: '4px', lineHeight: '1.3' }}>
                 Nộp<br/>bài
               </button>
             </div>

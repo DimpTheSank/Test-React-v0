@@ -435,11 +435,84 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
   const qByNum = {}
   questions.forEach(q => { qByNum[String(q.Question_Num).trim()] = q })
 
-  // Parse 1 cell: có thể là text thuần, hoặc ___ (n) = ô trống câu n
+  // Parse 1 cell: có thể là text thuần, ___ (n) thuần, hoặc text xen lẫn ___ (n)
   const parseCell = (cell) => {
-    const blankMatch = cell.match(/^___\s*\((\d+)\)$/)
-    if (blankMatch) return { type: 'blank', num: blankMatch[1] }
-    return { type: 'text', value: cell }
+    // Kiểm tra có ___ (n) không
+    if (!cell.includes('___')) return { type: 'text', value: cell }
+    // Kiểm tra toàn bộ cell là ___ (n)
+    const pureBlank = cell.match(/^___\s*\((\d+)\)$/)
+    if (pureBlank) return { type: 'blank', num: pureBlank[1] }
+    // Mixed: text + ___ (n) xen kẽ
+    return { type: 'mixed', value: cell }
+  }
+
+  // Parse mixed cell thành mảng segments [{type:'text',val} | {type:'blank',num}]
+  const parseMixed = (cell) => {
+    const segments = []
+    const regex = /___\s*\((\d+)\)/g
+    let last = 0, m
+    while ((m = regex.exec(cell)) !== null) {
+      if (m.index > last) segments.push({ type: 'text', val: cell.slice(last, m.index) })
+      segments.push({ type: 'blank', num: m[1] })
+      last = regex.lastIndex
+    }
+    if (last < cell.length) segments.push({ type: 'text', val: cell.slice(last) })
+    return segments
+  }
+
+  const renderBlankInput = (num, ci) => {
+    const q       = qByNum[num]
+    const qIdx    = q?.globalIndex
+    const correct = q?.Correct_Ans?.trim() || ''
+    const userVal = q ? (isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
+    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <span key={`blank-${num}-${ci}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
+        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
+        {isReview ? (
+          <>
+            <span style={{
+              fontSize: `${Math.max(11, fontSize - 1)}px`, fontWeight: '600', padding: '1px 8px',
+              borderRadius: '5px', border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+            }}>
+              {userVal.trim() || '—'}
+            </span>
+            {!isCorrect && correct && (
+              <span style={{ fontSize: '11px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            )}
+            <span style={{ fontSize: '12px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+          </>
+        ) : (
+          <input
+            type="text"
+            value={userVal}
+            onChange={e => q && onChange(qIdx, e.target.value)}
+            placeholder="..."
+            style={{
+              width: '90px', padding: '3px 7px', borderRadius: '5px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
+              fontFamily: 'inherit', color: 'var(--c-primary-dark)', textAlign: 'center',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+            onBlur={e => e.currentTarget.style.borderColor = borderColor}
+          />
+        )}
+      </span>
+    )
   }
 
   const renderCell = (cell, ci, ri) => {
@@ -453,72 +526,28 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
       )
     }
 
-    // Blank cell
-    const num     = parsed.num
-    const q       = qByNum[num]
-    const qIdx    = q?.globalIndex
-    const correct = q?.Correct_Ans?.trim() || ''
-    const userVal = q ? (isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
-    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
-
-    let borderColor = 'var(--c-primary-pale)'
-    let bgColor     = 'transparent'
-    if (isReview) {
-      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
-      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
-      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
-    } else if (userVal.trim()) {
-      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    if (parsed.type === 'blank') {
+      // Toàn bộ cell là 1 ô trống
+      return (
+        <td key={ci} style={tdStyle(true)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {renderBlankInput(parsed.num, ci)}
+          </div>
+        </td>
+      )
     }
 
+    // Mixed: text xen lẫn ô trống
+    const segments = parseMixed(parsed.value)
     return (
-      <td key={ci} style={tdStyle(true, bgColor)}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-          {/* Số câu */}
-          <span style={{
-            fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)',
-            flexShrink: 0, minWidth: '16px',
-          }}>{num}.</span>
-
-          {isReview ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{
-                fontSize: `${Math.max(11, fontSize - 1)}px`, fontWeight: '600',
-                color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
-              }}>
-                {userVal.trim() || '—'}
-              </span>
-              {!isCorrect && correct && (
-                <span style={{ fontSize: '11px', color: 'var(--c-success)', fontWeight: '700' }}>
-                  → {correct}
-                </span>
-              )}
-              <span style={{ fontSize: '13px' }}>
-                {!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}
-              </span>
-            </div>
-          ) : (
-            <input
-              type="text"
-              value={userVal}
-              onChange={e => q && onChange(qIdx, e.target.value)}
-              placeholder="..."
-              style={{
-                width: '110px', padding: '4px 8px',
-                borderRadius: '6px',
-                border: `1.5px solid ${borderColor}`,
-                backgroundColor: bgColor || 'var(--c-surface)',
-                fontSize: `${Math.max(11, fontSize - 1)}px`,
-                outline: 'none', fontFamily: 'inherit',
-                color: 'var(--c-primary-dark)',
-                textAlign: 'center',
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
-              onBlur={e => e.currentTarget.style.borderColor = borderColor}
-            />
+      <td key={ci} style={{ ...tdStyle(false), textAlign: 'left' }}>
+        <span style={{ fontSize: `${fontSize}px`, lineHeight: '2' }}>
+          {segments.map((seg, si) =>
+            seg.type === 'text'
+              ? <span key={si}>{parseInline(seg.val)}</span>
+              : renderBlankInput(seg.num, `${ci}-${si}`)
           )}
-        </div>
+        </span>
       </td>
     )
   }

@@ -9,6 +9,8 @@ import {
 } from 'firebase/firestore'
 import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
+import { useHighlight } from '@/lib/useHighlight'
+import HighlightToolbar from '@/app/components/HighlightToolbar'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +91,7 @@ function PassagePanel({ passage, audios, fontSize }) {
       </div>
 
       {/* Content */}
-      <div style={{
+      <div id="ielts-passage-panel" style={{
         flex: 1, overflowY: 'auto', padding: '24px 28px',
         fontSize: `${fontSize.value}px`, lineHeight: '1.85',
         color: 'var(--c-primary-dark)',
@@ -176,7 +178,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       </div>
 
       {/* Scrollable questions */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div id="ielts-questions-panel" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         {groups.map((group, gi) => (
           <QuestionGroup
             key={gi}
@@ -473,6 +475,8 @@ export default function BaiTapIELTS({ params }) {
 
   const [fontPassage, setFontPassage] = useState(15)
   const [fontQuestions, setFontQuestions] = useState(14)
+
+  const { toolbar, applyHighlight, hideToolbar } = useHighlight(['ielts-passage-panel', 'ielts-questions-panel'])
 
   const assignmentIdRef  = useRef(null)
   const saveDraftTimeout = useRef(null)
@@ -788,6 +792,8 @@ export default function BaiTapIELTS({ params }) {
         </div>
 
       </div>
+
+      <HighlightToolbar toolbar={toolbar} onHighlight={applyHighlight} onClose={hideToolbar} />
     </main>
   )
 }

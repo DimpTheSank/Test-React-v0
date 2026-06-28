@@ -74,7 +74,7 @@ function PassagePanel({ passage, audios, fontSize }) {
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
       borderRight: '1px solid var(--c-primary-pale)',
-      minWidth: 0,
+      minWidth: 0, minHeight: 0, overflow: 'hidden',
     }}>
       {/* Toolbar */}
       <div style={{
@@ -90,9 +90,10 @@ function PassagePanel({ passage, audios, fontSize }) {
         <FontSizeControl label="Cỡ chữ" value={fontSize.value} onChange={fontSize.set} />
       </div>
 
-      {/* Content */}
+      {/* Content — flex: 1 + minHeight: 0 cho phép scroll */}
       <div id="ielts-passage-panel" style={{
-        flex: 1, overflowY: 'auto', padding: '24px 28px',
+        flex: 1, minHeight: 0, overflowY: 'auto',
+        padding: '24px 28px',
         fontSize: `${fontSize.value}px`, lineHeight: '1.85',
         color: 'var(--c-primary-dark)',
       }}>
@@ -161,7 +162,8 @@ function parseInline(text) {
 function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fontSize }) {
   return (
     <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0,
+      flex: 1, display: 'flex', flexDirection: 'column',
+      minWidth: 0, minHeight: 0, overflow: 'hidden',
     }}>
       {/* Toolbar */}
       <div style={{
@@ -178,7 +180,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       </div>
 
       {/* Scrollable questions */}
-      <div id="ielts-questions-panel" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         {groups.map((group, gi) => (
           <QuestionGroup
             key={gi}
@@ -771,7 +773,7 @@ export default function BaiTapIELTS({ params }) {
       <div className="ielts-body" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Passage */}
-        <div className="ielts-passage" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, overflow: 'hidden' }}>
+        <div className="ielts-passage" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           <PassagePanel
             passage={passage}
             audios={audios}
@@ -780,7 +782,7 @@ export default function BaiTapIELTS({ params }) {
         </div>
 
         {/* Questions */}
-        <div className="ielts-questions" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <div className="ielts-questions" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           <QuestionsPanel
             groups={groups}
             answers={answers}

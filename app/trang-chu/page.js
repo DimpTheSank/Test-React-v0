@@ -404,7 +404,7 @@ function CardBaiTap({ bai }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: 'auto', paddingTop: '4px' }}>
           {bai.duocXemLai && (
             <button
-              onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, '?review=true'))}
+              onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, bai.loaiBai, '?review=true'))}
               style={{
                 padding: '8px 0', borderRadius: '9px',
                 border: '1.5px solid var(--c-success-border)',
@@ -419,7 +419,7 @@ function CardBaiTap({ bai }) {
           )}
 
           <button
-            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId))}
+            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, bai.loaiBai))}
             style={{
               padding: '9px 0', borderRadius: '9px', border: 'none',
               backgroundColor: hovered ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)',

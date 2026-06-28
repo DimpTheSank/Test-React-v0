@@ -664,7 +664,7 @@ export default function BaiTapIELTS({ params }) {
   if (!exercise || questions.length === 0) return <SkeletonIELTS />
 
   return (
-    <main style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
+    <main style={{ minHeight: 'calc(100vh - 56px)', height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
       <style>{`
         @keyframes fadeInOut {
@@ -770,7 +770,7 @@ export default function BaiTapIELTS({ params }) {
       />
 
       {/* ── Body: 2 panel ── */}
-      <div className="ielts-body" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="ielts-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
         {/* Passage */}
         <div className="ielts-passage" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>

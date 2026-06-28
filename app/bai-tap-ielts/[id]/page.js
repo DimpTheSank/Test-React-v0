@@ -202,10 +202,11 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
 function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, fontSize }) {
   const firstQ = group.questions[0]
   const label  = firstQ?.Question_Label || ''
+  const type   = firstQ?.Question_Type?.toLowerCase()
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {/* Group label — vd: "Questions 1–5: Choose ONE letter, A, B or C" */}
+      {/* Group label */}
       {label && (
         <div style={{
           padding: '10px 14px', borderRadius: '8px',
@@ -218,45 +219,57 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         </div>
       )}
 
-      {/* Render từng câu theo type */}
-      {group.questions.map((q) => {
-        const type = q.Question_Type?.toLowerCase()
-        const userAns   = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
-        const onChangeFn = (val) => !isReview && onChange(q.globalIndex, val)
+      {/* Table: render toàn bộ group thành 1 bảng */}
+      {type === 'table' ? (
+        <TableQuestion
+          questions={group.questions}
+          answers={answers}
+          reviewAnswers={reviewAnswers}
+          isReview={isReview}
+          onChange={onChange}
+          fontSize={fontSize}
+        />
+      ) : (
+        /* Render từng câu theo type */
+        group.questions.map((q) => {
+          const qType      = q.Question_Type?.toLowerCase()
+          const userAns    = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
+          const onChangeFn = (val) => !isReview && onChange(q.globalIndex, val)
 
-        if (type === 'mc') {
+          if (qType === 'mc') {
+            return (
+              <McQuestion
+                key={q.globalIndex}
+                q={q}
+                userAns={userAns}
+                isReview={isReview}
+                onChange={onChangeFn}
+                fontSize={fontSize}
+              />
+            )
+          }
+
+          if (qType === 'fill') {
+            return (
+              <FillQuestion
+                key={q.globalIndex}
+                q={q}
+                userAns={userAns}
+                isReview={isReview}
+                onChange={onChangeFn}
+                fontSize={fontSize}
+              />
+            )
+          }
+
+          // Fallback
           return (
-            <McQuestion
-              key={q.globalIndex}
-              q={q}
-              userAns={userAns}
-              isReview={isReview}
-              onChange={onChangeFn}
-              fontSize={fontSize}
-            />
+            <div key={q.globalIndex} style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+              [{qType}] — dạng này sẽ được thêm sau.
+            </div>
           )
-        }
-
-        if (type === 'fill') {
-          return (
-            <FillQuestion
-              key={q.globalIndex}
-              q={q}
-              userAns={userAns}
-              isReview={isReview}
-              onChange={onChangeFn}
-              fontSize={fontSize}
-            />
-          )
-        }
-
-        // Fallback
-        return (
-          <div key={q.globalIndex} style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
-            [{type}] — dạng này sẽ được thêm sau.
-          </div>
-        )
-      })}
+        })
+      )}
     </div>
   )
 }
@@ -388,6 +401,173 @@ function FillQuestion({ q, userAns, isReview, onChange, fontSize }) {
       </div>
     </div>
   )
+}
+
+// ─── Table Question ───────────────────────────────────────────────────────────
+//
+// Sheet format (cột Question, chỉ điền ở row đầu tiên của group):
+//   Hàng 1 = header:  Type;;Location;;Height
+//   Hàng 2+= data:    Waterfall;;___ (5);;23m
+//                     ___ (6);;North;;___ (7)
+//
+// Mỗi ___ trong bảng map lần lượt với 1 row trong group (theo Question_Num).
+// Correct_Ans của mỗi row = đáp án cho ___ đó.
+// Ô có (số) sau ___ dùng để hiển thị số câu trong ô trống.
+
+function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ   = questions[0]
+  const tableRaw = firstQ?.Question?.trim() || ''
+
+  // Parse bảng: tách hàng theo \n, tách cột theo ;;
+  const rows = tableRaw
+    .split('\n')
+    .map(r => r.trim())
+    .filter(Boolean)
+    .map(r => r.split(';;').map(c => c.trim()))
+
+  if (rows.length === 0) return null
+
+  const headerRow = rows[0]
+  const dataRows  = rows.slice(1)
+
+  // Map số câu → question object để lấy đáp án
+  // Mỗi ___ (n) trong bảng → question có Question_Num === n
+  const qByNum = {}
+  questions.forEach(q => { qByNum[String(q.Question_Num).trim()] = q })
+
+  // Parse 1 cell: có thể là text thuần, hoặc ___ (n) = ô trống câu n
+  const parseCell = (cell) => {
+    const blankMatch = cell.match(/^___\s*\((\d+)\)$/)
+    if (blankMatch) return { type: 'blank', num: blankMatch[1] }
+    return { type: 'text', value: cell }
+  }
+
+  const renderCell = (cell, ci, ri) => {
+    const parsed = parseCell(cell)
+
+    if (parsed.type === 'text') {
+      return (
+        <td key={ci} style={tdStyle(false)}>
+          <span style={{ fontSize: `${fontSize}px` }}>{parseInline(parsed.value)}</span>
+        </td>
+      )
+    }
+
+    // Blank cell
+    const num     = parsed.num
+    const q       = qByNum[num]
+    const qIdx    = q?.globalIndex
+    const correct = q?.Correct_Ans?.trim() || ''
+    const userVal = q ? (isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
+    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'transparent'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <td key={ci} style={tdStyle(true, bgColor)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+          {/* Số câu */}
+          <span style={{
+            fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)',
+            flexShrink: 0, minWidth: '16px',
+          }}>{num}.</span>
+
+          {isReview ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{
+                fontSize: `${Math.max(11, fontSize - 1)}px`, fontWeight: '600',
+                color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+              }}>
+                {userVal.trim() || '—'}
+              </span>
+              {!isCorrect && correct && (
+                <span style={{ fontSize: '11px', color: 'var(--c-success)', fontWeight: '700' }}>
+                  → {correct}
+                </span>
+              )}
+              <span style={{ fontSize: '13px' }}>
+                {!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}
+              </span>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={userVal}
+              onChange={e => q && onChange(qIdx, e.target.value)}
+              placeholder="..."
+              style={{
+                width: '110px', padding: '4px 8px',
+                borderRadius: '6px',
+                border: `1.5px solid ${borderColor}`,
+                backgroundColor: bgColor || 'var(--c-surface)',
+                fontSize: `${Math.max(11, fontSize - 1)}px`,
+                outline: 'none', fontFamily: 'inherit',
+                color: 'var(--c-primary-dark)',
+                textAlign: 'center',
+                transition: 'border-color 0.15s',
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+              onBlur={e => e.currentTarget.style.borderColor = borderColor}
+            />
+          )}
+        </div>
+      </td>
+    )
+  }
+
+  return (
+    <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--c-primary-pale)' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px' }}>
+        {/* Header */}
+        <thead>
+          <tr style={{ backgroundColor: 'var(--c-primary)' }}>
+            {headerRow.map((h, i) => (
+              <th key={i} style={{
+                padding: '10px 14px', textAlign: 'center',
+                fontSize: `${Math.max(11, fontSize - 1)}px`,
+                fontWeight: '700', color: '#fff',
+                borderRight: i < headerRow.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                whiteSpace: 'nowrap',
+              }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        {/* Data rows */}
+        <tbody>
+          {dataRows.map((row, ri) => (
+            <tr key={ri} style={{
+              backgroundColor: ri % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+            }}>
+              {row.map((cell, ci) => renderCell(cell, ci, ri))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function tdStyle(isBlank, bg) {
+  return {
+    padding: '10px 14px',
+    borderTop: '1px solid var(--c-primary-bg)',
+    borderRight: '1px solid var(--c-primary-bg)',
+    textAlign: isBlank ? 'center' : 'left',
+    verticalAlign: 'middle',
+    backgroundColor: bg || 'transparent',
+    minWidth: isBlank ? '160px' : '80px',
+  }
 }
 
 // ─── Question number badge ────────────────────────────────────────────────────

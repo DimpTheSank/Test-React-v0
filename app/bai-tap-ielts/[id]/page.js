@@ -229,6 +229,15 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           onChange={onChange}
           fontSize={fontSize}
         />
+      ) : type === 'flowchart' ? (
+        <FlowchartQuestion
+          questions={group.questions}
+          answers={answers}
+          reviewAnswers={reviewAnswers}
+          isReview={isReview}
+          onChange={onChange}
+          fontSize={fontSize}
+        />
       ) : (
         /* Render từng câu theo type */
         group.questions.map((q) => {
@@ -599,6 +608,150 @@ function tdStyle(isBlank, bg) {
   }
 }
 
+// ─── Flowchart Question ───────────────────────────────────────────────────────
+//
+// Sheet format — 1 row duy nhất cho cả group:
+//   Question_Type: flowchart
+//   Question_Num:  số câu đầu tiên (dùng để map ___ (n))
+//   Question:      các bước cách nhau bằng \n, mỗi bước có thể có ___ (n)
+//   Correct_Ans:   đáp án pipe-separated theo thứ tự số câu
+//
+// Ví dụ Question:
+//   Elephants located by ___ (5)
+//   Herd selected — same family, similar ___ (6)
+//   Transported by ___ (7) to new location
+//   Released into reserve
+
+function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ = questions[0]
+  const raw    = firstQ?.Question?.trim() || ''
+
+  // Build qByNum map từ tất cả rows trong group
+  const qByNum = {}
+  questions.forEach(q => { qByNum[String(q.Question_Num).trim()] = q })
+
+  // Tách từng bước theo \n
+  const steps = raw.split('\n').map(s => s.trim()).filter(Boolean)
+
+  // Parse 1 đoạn text có thể chứa ___ (n) xen kẽ
+  const parseSegments = (text) => {
+    const segments = []
+    const regex = /___\s*\((\d+)\)/g
+    let last = 0, m
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) segments.push({ type: 'text', val: text.slice(last, m.index) })
+      segments.push({ type: 'blank', num: m[1] })
+      last = regex.lastIndex
+    }
+    if (last < text.length) segments.push({ type: 'text', val: text.slice(last) })
+    return segments
+  }
+
+  const renderInlineBlank = (num) => {
+    const q       = qByNum[num]
+    const qIdx    = q?.globalIndex
+    const correct = q?.Correct_Ans?.trim() || ''
+    const userVal = q ? (isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
+    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <span key={`fc-blank-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 3px' }}>
+        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
+        {isReview ? (
+          <>
+            <span style={{
+              padding: '2px 10px', borderRadius: '5px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, fontWeight: '600',
+              color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+            }}>
+              {userVal.trim() || '—'}
+            </span>
+            {!isCorrect && correct && (
+              <span style={{ fontSize: '11px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            )}
+            <span style={{ fontSize: '12px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+          </>
+        ) : (
+          <input
+            type="text"
+            value={userVal}
+            onChange={e => q && onChange(qIdx, e.target.value)}
+            placeholder="..."
+            style={{
+              width: '100px', padding: '3px 8px', borderRadius: '6px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
+              fontFamily: 'inherit', color: 'var(--c-primary-dark)', textAlign: 'center',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+            onBlur={e => e.currentTarget.style.borderColor = borderColor}
+          />
+        )}
+      </span>
+    )
+  }
+
+  const renderStep = (text) => {
+    const segments = parseSegments(text)
+    const hasBlank = segments.some(s => s.type === 'blank')
+    return (
+      <div style={{
+        padding: '12px 20px',
+        borderRadius: '10px',
+        border: `1.5px solid ${hasBlank ? 'var(--c-primary-light)' : 'var(--c-primary-pale)'}`,
+        backgroundColor: hasBlank ? 'var(--c-primary-barest)' : 'var(--c-surface)',
+        fontSize: `${fontSize}px`,
+        lineHeight: '2',
+        color: 'var(--c-primary-dark)',
+        textAlign: 'center',
+        minWidth: '220px',
+        maxWidth: '420px',
+        width: '100%',
+      }}>
+        {segments.map((seg, si) =>
+          seg.type === 'text'
+            ? <span key={si}>{parseInline(seg.val)}</span>
+            : renderInlineBlank(seg.num)
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0', padding: '8px 0' }}>
+      {steps.map((step, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+          {renderStep(step)}
+          {/* Mũi tên giữa các bước, trừ bước cuối */}
+          {i < steps.length - 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0', gap: '0' }}>
+              <div style={{ width: '2px', height: '12px', backgroundColor: 'var(--c-primary-light)' }} />
+              <div style={{
+                width: 0, height: 0,
+                borderLeft: '7px solid transparent',
+                borderRight: '7px solid transparent',
+                borderTop: '9px solid var(--c-primary-light)',
+              }} />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Question number badge ────────────────────────────────────────────────────
 
 function QuestionNumber({ num }) {
@@ -818,7 +971,7 @@ export default function BaiTapIELTS({ params }) {
 
         if (type === 'mc') {
           if (userAns === correct) soCauDung++
-        } else if (type === 'fill') {
+        } else if (type === 'fill' || type === 'table' || type === 'flowchart') {
           if (userAns.toLowerCase() === correct.toLowerCase()) soCauDung++
         }
       })

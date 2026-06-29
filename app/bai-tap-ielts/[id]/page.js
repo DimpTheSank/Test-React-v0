@@ -764,8 +764,8 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
 
 function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
   const firstQ   = questions[0]
-  const imageUrl = firstQ?.Context?.trim()
-    ? convertDriveLink(firstQ.Context.trim(), 'image')
+  const imageUrl = firstQ?.Map_Image?.trim()
+    ? convertDriveLink(firstQ.Map_Image.trim(), 'image')
     : null
 
   return (
@@ -1032,10 +1032,8 @@ export default function BaiTapIELTS({ params }) {
 
       setQuestions(processed)
 
-      // Lấy passage từ row đầu tiên có Context (bỏ qua row dạng map vì Context của map là ảnh)
-      const passageRow = processed.find(r =>
-        r.Context?.trim() && r.Question_Type?.toLowerCase() !== 'map'
-      )
+      // Lấy passage từ row đầu tiên có Context
+      const passageRow = processed.find(r => r.Context?.trim())
       if (passageRow) setPassage(passageRow.Context)
 
       // Lấy audio từ row đầu tiên có Audio

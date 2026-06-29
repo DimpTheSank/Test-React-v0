@@ -41,8 +41,7 @@ function FontSizeControl({ label, value, onChange, min = 11, max = 22 }) {
           color: value <= min ? 'var(--c-primary-pale)' : 'var(--c-primary)',
           fontSize: '14px', fontWeight: '700', cursor: value <= min ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          lineHeight: 1, padding: 0,
-          transition: 'background-color 0.15s',
+          lineHeight: 1, padding: 0, transition: 'background-color 0.15s',
         }}
       >−</button>
       <span style={{
@@ -58,15 +57,336 @@ function FontSizeControl({ label, value, onChange, min = 11, max = 22 }) {
           color: value >= max ? 'var(--c-primary-pale)' : 'var(--c-primary)',
           fontSize: '14px', fontWeight: '700', cursor: value >= max ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          lineHeight: 1, padding: 0,
-          transition: 'background-color 0.15s',
+          lineHeight: 1, padding: 0, transition: 'background-color 0.15s',
         }}
       >+</button>
     </div>
   )
 }
 
-// ─── FillBlankQuestion Component ─────────────────────────────────────────────
+// ─── Navigator Bar (ngang, giống IELTS) ──────────────────────────────────────
+function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGroup, onJump }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '5px',
+      padding: '6px 16px', overflowX: 'auto',
+      borderBottom: '1px solid var(--c-primary-pale)',
+      backgroundColor: 'var(--c-sidebar-bg)',
+      flexShrink: 0,
+    }}>
+      <span style={{
+        fontSize: '11px', color: 'var(--c-text-muted)', fontWeight: '600',
+        whiteSpace: 'nowrap', marginRight: '4px',
+      }}>Câu:</span>
+
+      {questions.map((q, i) => {
+        const userAns   = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
+        const correct   = q.Correct_Ans?.trim()
+        const inCurrent = q.Group === currentGroup
+
+        let bg = 'var(--c-surface)', color = 'var(--c-primary-mid)', border = 'var(--c-primary-pale)'
+
+        if (inCurrent && !isReview) {
+          bg = 'var(--c-primary)'; color = '#fff'; border = 'var(--c-primary)'
+        } else if (isReview) {
+          if (q.Question_Type === 'fill_blank') {
+            const correctParts = (correct || '').split('|').map(s => s.trim().toLowerCase())
+            const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
+            const allCorrect   = correctParts.every((c, ci) => c === userParts[ci])
+            const anyFilled    = (userAns || []).some(Boolean)
+            if (!anyFilled)      { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-textsoft)';  border = 'var(--c-warn)'          }
+            else if (allCorrect) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)';   border = 'var(--c-success-border)' }
+            else                 { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';    border = 'var(--c-danger-border)'  }
+          } else {
+            if (!userAns)               { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-textsoft)';  border = 'var(--c-warn)'          }
+            else if (userAns === correct){ bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)';   border = 'var(--c-success-border)' }
+            else                        { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';    border = 'var(--c-danger-border)'  }
+          }
+          // Highlight nhẹ câu đang xem (review mode)
+          if (inCurrent) { border = 'var(--c-primary)'; }
+        } else if (userAns) {
+          bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)'
+          // Cùng group đang xem nhưng đã làm
+          if (inCurrent) { border = 'var(--c-primary-mid)' }
+        } else if (inCurrent) {
+          bg = 'var(--c-primary-bg)'; color = 'var(--c-primary)'; border = 'var(--c-primary-light)'
+        }
+
+        return (
+          <div
+            key={i}
+            onClick={() => onJump(i)}
+            style={{
+              width: '30px', height: '30px', borderRadius: '6px', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+              backgroundColor: bg, color, border: `1px solid ${border}`,
+              transition: 'all 0.15s',
+            }}
+          >
+            {i + 1}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Context Panel (trái) ─────────────────────────────────────────────────────
+function ContextPanel({ firstInGroup, fontSize }) {
+  const layout2Col = firstInGroup?.Layout === '2col'
+
+  return (
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      borderRight: '1px solid var(--c-primary-pale)',
+      minWidth: 0, minHeight: 0, overflow: 'hidden',
+    }}>
+      {/* Toolbar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 16px',
+        borderBottom: '1px solid var(--c-primary-pale)',
+        backgroundColor: 'var(--c-primary-barest)',
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          📄 Context
+        </span>
+        <FontSizeControl label="Cỡ chữ" value={fontSize.value} onChange={fontSize.set} />
+      </div>
+
+      {/* Content */}
+      <div
+        id="content-panel"
+        style={{
+          flex: 1, minHeight: 0, overflowY: 'auto',
+          padding: '20px 24px',
+          fontSize: `${fontSize.value}px`, lineHeight: '1.85',
+          color: 'var(--c-primary-dark)',
+          display: 'flex', flexDirection: 'column', gap: '16px',
+        }}
+      >
+        {firstInGroup?.Audios?.map((src, i) => (
+          <iframe key={src + i} src={src} width="100%" height="80"
+            style={{ border: 'none', borderRadius: '8px', flexShrink: 0 }} />
+        ))}
+
+        <div className={layout2Col ? 'vung2-2col' : undefined}>
+          {firstInGroup?.Contexts?.map((ctx, i) => (
+            <div key={i} style={{
+              lineHeight: '1.85', color: 'var(--c-primary-dark)',
+              breakInside: 'avoid', marginBottom: '4px',
+              textAlign: 'justify', hyphens: 'auto',
+            }}>
+              {ctx.startsWith('http')
+                ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
+                : renderContextBlock(ctx, `ctx-${i}`)
+              }
+            </div>
+          ))}
+        </div>
+
+        {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
+          <p style={{ color: 'var(--c-primary-pale)', fontStyle: 'italic' }}>
+            Không có nội dung chung cho nhóm này.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Questions Panel (phải) ───────────────────────────────────────────────────
+function QuestionsPanel({
+  questionsInGroup, cauHienTai, answers, reviewAnswers,
+  isReview, fontSize, onAnswer,
+  isFirstGroup, isLastGroup, goToPrevGroup, goToNextGroup,
+  onNopBai, getOptions, getReviewBorderColor,
+}) {
+  return (
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      minWidth: 0, minHeight: 0, overflow: 'hidden',
+    }}>
+      {/* Toolbar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 16px',
+        borderBottom: '1px solid var(--c-primary-pale)',
+        backgroundColor: 'var(--c-primary-barest)',
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          ✏️ Questions
+        </span>
+        <FontSizeControl label="Cỡ chữ" value={fontSize.value} onChange={fontSize.set} />
+      </div>
+
+      {/* Scrollable questions */}
+      <div
+        id="question-panel"
+        style={{
+          flex: 1, minHeight: 0, overflowY: 'auto',
+          padding: '20px 24px',
+          display: 'flex', flexDirection: 'column', gap: '28px',
+        }}
+      >
+        {questionsInGroup.map((q) => (
+          <QuestionItem
+            key={q.globalIndex}
+            q={q}
+            isCurrent={q.globalIndex === cauHienTai}
+            isReview={isReview}
+            answers={answers}
+            reviewAnswers={reviewAnswers}
+            fontSize={fontSize.value}
+            onAnswer={onAnswer}
+            getOptions={getOptions}
+            getReviewBorderColor={getReviewBorderColor}
+          />
+        ))}
+
+        {/* Nav buttons */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
+          <button
+            onClick={goToPrevGroup}
+            disabled={isFirstGroup}
+            style={{
+              flex: 1, padding: '12px', borderRadius: '8px',
+              border: '1px solid var(--c-primary-pale)',
+              backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)',
+              cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+              opacity: isFirstGroup ? 0.4 : 1, fontWeight: '500', fontSize: '14px',
+            }}
+          >← Trước</button>
+
+          {!isReview && isLastGroup ? (
+            <button
+              onClick={onNopBai}
+              style={{
+                flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                backgroundColor: 'var(--c-success)', color: '#fff',
+                fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+              }}
+            >Nộp bài ✓</button>
+          ) : (
+            <button
+              onClick={goToNextGroup}
+              disabled={isLastGroup}
+              style={{
+                flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                backgroundColor: 'var(--c-primary-mid)', color: '#fff',
+                cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                opacity: isLastGroup ? 0.4 : 1, fontWeight: '500', fontSize: '14px',
+              }}
+            >Tiếp →</button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Single Question Item ─────────────────────────────────────────────────────
+function QuestionItem({ q, isCurrent, isReview, answers, reviewAnswers, fontSize, onAnswer, getOptions, getReviewBorderColor }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: '12px',
+      backgroundColor: isCurrent ? 'var(--c-primary-barest)' : 'transparent',
+      padding: '10px', borderRadius: '8px',
+    }}>
+      {q.Question_Type !== 'fill_blank' && (
+        <p style={{ margin: 0, fontSize: `${fontSize}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
+          {q.Question}
+        </p>
+      )}
+
+      {/* MCQ */}
+      {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {q.Question_Type === 'mcq'
+            ? getOptions(q).map(opt => {
+                const border = isReview ? getReviewBorderColor(q, opt.key) : (answers[q.globalIndex] === opt.key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
+                const bg     = isReview
+                  ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)')
+                  : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
+                const color  = isReview
+                  ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-primary-mid)')
+                  : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)')
+                return (
+                  <div key={opt.key} onClick={() => !isReview && onAnswer(q.globalIndex, opt.key)}
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: `${fontSize}px`, cursor: isReview ? 'default' : 'pointer', transition: 'all 0.15s' }}>
+                    {opt.key}. {opt.value}
+                  </div>
+                )
+              })
+            : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
+                const border = isReview ? getReviewBorderColor(q, key) : (answers[q.globalIndex] === key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
+                const bg     = isReview
+                  ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)')
+                  : (answers[q.globalIndex] === key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
+                const color  = isReview
+                  ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-text-muted)')
+                  : (answers[q.globalIndex] === key ? 'var(--c-primary-dark)' : 'var(--c-text-muted)')
+                return (
+                  <div key={key} onClick={() => !isReview && onAnswer(q.globalIndex, key)}
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: `${fontSize}px`, cursor: isReview ? 'default' : 'pointer', fontWeight: '600', textAlign: 'center' }}>
+                    {key}
+                  </div>
+                )
+              })
+          }
+        </div>
+      )}
+
+      {/* Fill short */}
+      {q.Question_Type === 'fill_short' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
+            <input key={i} type="text"
+              placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
+              value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
+              readOnly={isReview}
+              onChange={(e) => {
+                if (isReview) return
+                const prev = answers[q.globalIndex] || []
+                const newArr = [...prev]; newArr[i] = e.target.value
+                onAnswer(q.globalIndex, newArr)
+              }}
+              style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)', fontSize: `${fontSize}px` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Fill long */}
+      {q.Question_Type === 'fill_long' && (
+        <textarea
+          placeholder="Nhập bài làm của bạn..."
+          value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
+          readOnly={isReview}
+          onChange={(e) => { if (isReview) return; onAnswer(q.globalIndex, e.target.value) }}
+          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', minHeight: '120px', resize: 'vertical', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)', fontSize: `${fontSize}px` }}
+        />
+      )}
+
+      {/* Fill blank */}
+      {q.Question_Type === 'fill_blank' && (
+        <FillBlankQuestion
+          q={q}
+          isReview={isReview}
+          userAnswer={isReview ? null : answers[q.globalIndex]}
+          reviewAnswer={isReview ? reviewAnswers[q.globalIndex] : null}
+          onChange={(newSlots) => onAnswer(q.globalIndex, newSlots)}
+          fontSize={fontSize}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── FillBlankQuestion Component ──────────────────────────────────────────────
 function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fontSize }) {
   const correctParts = (q.Correct_Ans || '').split('|').map(s => s.trim())
   const wordBankRaw  = (q.Word_Bank   || '').split('|').map(s => s.trim()).filter(Boolean)
@@ -87,15 +407,13 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
     if (isReview) return
     const firstEmpty = slots.findIndex(s => !s)
     if (firstEmpty === -1) return
-    const newSlots = [...slots]
-    newSlots[firstEmpty] = word
+    const newSlots = [...slots]; newSlots[firstEmpty] = word
     onChange(newSlots)
   }
 
   const handleClickSlot = (slotIdx) => {
     if (isReview) return
-    const newSlots = [...slots]
-    newSlots[slotIdx] = null
+    const newSlots = [...slots]; newSlots[slotIdx] = null
     onChange(newSlots)
   }
 
@@ -110,9 +428,9 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
   const getSlotStyle = (slotIdx) => {
     if (isReview) {
       const revAns = (reviewAnswer || [])[slotIdx]
-      if (!revAns)                            return { bg: 'var(--c-warn-bgsoft)', border: 'var(--c-warn)', color: 'var(--c-warn-textsoft)' }
-      if (revAns === correctParts[slotIdx])   return { bg: 'var(--c-success-bg)', border: 'var(--c-success)', color: 'var(--c-success-text)' }
-      return                                         { bg: 'var(--c-danger-bg)', border: 'var(--c-danger)', color: 'var(--c-danger-text)' }
+      if (!revAns)                          return { bg: 'var(--c-warn-bgsoft)', border: 'var(--c-warn)', color: 'var(--c-warn-textsoft)' }
+      if (revAns === correctParts[slotIdx]) return { bg: 'var(--c-success-bg)', border: 'var(--c-success)', color: 'var(--c-success-text)' }
+      return                                       { bg: 'var(--c-danger-bg)', border: 'var(--c-danger)', color: 'var(--c-danger-text)' }
     }
     if (slots[slotIdx]) return { bg: 'var(--c-primary-bg)', border: 'var(--c-primary-mid)', color: 'var(--c-primary-dark)' }
     return                     { bg: 'var(--c-surface)',   border: 'var(--c-primary-pale)', color: 'var(--c-primary-pale)' }
@@ -129,32 +447,19 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
       }}>
         {segments.map((seg, si) => {
           if (seg.type === 'text') return <span key={si}>{seg.val}</span>
-
           const idx    = seg.idx
           const style  = getSlotStyle(idx)
           const filled = isReview ? (reviewAnswer || [])[idx] : slots[idx]
-
           return (
-            <span
-              key={si}
-              onClick={() => filled && handleClickSlot(idx)}
+            <span key={si} onClick={() => filled && handleClickSlot(idx)}
               title={filled && !isReview ? 'Click để bỏ chọn' : undefined}
               style={{
-                display: 'inline-block',
-                minWidth: '90px',
-                padding: '3px 12px',
-                margin: '0 3px',
-                borderRadius: '6px',
-                border: `1.5px dashed ${style.border}`,
-                backgroundColor: style.bg,
-                color: style.color,
-                fontSize: `${Math.max(11, fs - 1)}px`,
-                fontWeight: filled ? '600' : '400',
+                display: 'inline-block', minWidth: '90px', padding: '3px 12px', margin: '0 3px',
+                borderRadius: '6px', border: `1.5px dashed ${style.border}`,
+                backgroundColor: style.bg, color: style.color,
+                fontSize: `${Math.max(11, fs - 1)}px`, fontWeight: filled ? '600' : '400',
                 cursor: filled && !isReview ? 'pointer' : 'default',
-                textAlign: 'center',
-                verticalAlign: 'middle',
-                transition: 'all 0.15s',
-                userSelect: 'none',
+                textAlign: 'center', verticalAlign: 'middle', transition: 'all 0.15s', userSelect: 'none',
               }}
               onMouseEnter={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = 'var(--c-danger-bg)' }}
               onMouseLeave={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = style.bg }}
@@ -175,8 +480,7 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
           display: 'flex', flexWrap: 'wrap', gap: '8px',
           padding: '12px 14px', borderRadius: '10px',
           border: '1.5px solid var(--c-primary-pale)',
-          backgroundColor: 'var(--c-primary-bgsoft)',
-          minHeight: '48px',
+          backgroundColor: 'var(--c-primary-bgsoft)', minHeight: '48px',
         }}>
           {bankWords.length === 0 && (
             <span style={{ color: 'var(--c-primary-pale)', fontSize: `${Math.max(11, fs - 1)}px`, fontStyle: 'italic', alignSelf: 'center' }}>
@@ -184,17 +488,13 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
             </span>
           )}
           {bankWords.map((word, wi) => (
-            <span
-              key={`${word}-${wi}`}
-              onClick={() => handleClickWord(word)}
+            <span key={`${word}-${wi}`} onClick={() => handleClickWord(word)}
               style={{
                 padding: '6px 14px', borderRadius: '20px',
                 border: '1.5px solid var(--c-primary-pale)',
-                backgroundColor: 'var(--c-surface)',
-                color: 'var(--c-primary)',
+                backgroundColor: 'var(--c-surface)', color: 'var(--c-primary)',
                 fontSize: `${Math.max(11, fs - 1)}px`, fontWeight: '500',
-                cursor: 'pointer', userSelect: 'none',
-                transition: 'all 0.15s',
+                cursor: 'pointer', userSelect: 'none', transition: 'all 0.15s',
                 boxShadow: '0 1px 3px rgba(24,95,165,0.08)',
               }}
               onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'; e.currentTarget.style.borderColor = 'var(--c-primary-mid)' }}
@@ -234,33 +534,33 @@ export default function BaiTap({ params }) {
   const searchParams = useSearchParams()
   const isReview = searchParams.get('review') === 'true'
 
-  const [exercise, setExercise] = useState(null)
-  const [questions, setQuestions] = useState([])
+  const [exercise, setExercise]     = useState(null)
+  const [questions, setQuestions]   = useState([])
   const [cauHienTai, setCauHienTai] = useState(0)
-  const [answers, setAnswers] = useState({})
-  const [showConfirm, setShowConfirm] = useState(false)
+  const [answers, setAnswers]       = useState({})
+  const [showConfirm, setShowConfirm]   = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitDone, setSubmitDone] = useState(false)
-  const [ketQua, setKetQua] = useState(null)
-  const [draftSaved, setDraftSaved] = useState(false)
-
-  const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
+  const [submitDone, setSubmitDone]     = useState(false)
+  const [ketQua, setKetQua]             = useState(null)
+  const [draftSaved, setDraftSaved]     = useState(false)
   const [reviewAnswers, setReviewAnswers] = useState({})
 
-  const [fontSizeV2, setFontSizeV2] = useState(14)
-  const [fontSizeV3, setFontSizeV3] = useState(14)
+  const [fontSizeContext, setFontSizeContext]     = useState(14)
+  const [fontSizeQuestions, setFontSizeQuestions] = useState(14)
+
+  const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
 
   const saveDraftTimeout = useRef(null)
   const assignmentIdRef  = useRef(null)
   const isFirstLoad      = useRef(true)
-  const vung2Ref = useRef(null)
-  const vung3Ref = useRef(null)
 
+  // ── Auth & load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) router.push('/')
     loadInfo()
   }, [])
 
+  // ── Auto-save draft ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
@@ -283,8 +583,7 @@ export default function BaiTap({ params }) {
         }
         if (assignId) {
           await updateDoc(doc(db, 'assignments', assignId), {
-            trangThai: 'Đang làm',
-            answers,
+            trangThai: 'Đang làm', answers,
             tongCauDraft: questions.length,
             thoiGianLuuNhap: new Date().toISOString(),
           })
@@ -317,15 +616,13 @@ export default function BaiTap({ params }) {
       const text = await response.text()
 
       const { data } = Papa.parse(text, {
-        header: true,
-        skipEmptyLines: true,
+        header: true, skipEmptyLines: true,
         transform: (val, col) => (col === 'Group' || col === 'Layout' ? val.trim() : val)
       })
       const splitMedia = (raw, type) =>
         (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
       const processedData = data.map((item, index) => ({
-        ...item,
-        globalIndex: index,
+        ...item, globalIndex: index,
         Contexts: splitMedia(item.Context, 'image'),
         Audios:   splitMedia(item.Audio,   'audio'),
       }))
@@ -341,8 +638,7 @@ export default function BaiTap({ params }) {
           where('exerciseId', '==', id)
         ))
         if (!subSnap.empty) {
-          const best = subSnap.docs
-            .map(d => d.data())
+          const best = subSnap.docs.map(d => d.data())
             .reduce((a, b) => (a.diem ?? -1) >= (b.diem ?? -1) ? a : b)
           setReviewAnswers(best.answers || {})
         }
@@ -361,10 +657,19 @@ export default function BaiTap({ params }) {
           }
         }
       }
-    } catch (error) {
-      console.error("Lỗi khi tải bài tập:", error)
-    }
+    } catch (error) { console.error("Lỗi khi tải bài tập:", error) }
   }
+
+  // ── Computed ────────────────────────────────────────────────────────────────
+  const currentCau       = questions[cauHienTai]
+  const currentGroup     = currentCau?.Group
+  const questionsInGroup = questions.filter(q => q.Group === currentGroup)
+  const firstInGroup     = questionsInGroup[0]
+  const firstIdxOfGroup  = questionsInGroup[0]?.globalIndex ?? 0
+  const lastIdxOfGroup   = questionsInGroup[questionsInGroup.length - 1]?.globalIndex ?? 0
+  const isFirstGroup     = firstIdxOfGroup === 0
+  const isLastGroup      = lastIdxOfGroup === questions.length - 1
+  const mauHeader        = mauKyNang[exercise?.kyNang] || 'var(--c-primary)'
 
   const soCauChuaLam = questions.filter(q => {
     const ans = answers[q.globalIndex]
@@ -375,13 +680,53 @@ export default function BaiTap({ params }) {
     return !ans
   }).length
 
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  const goToPrevGroup = () => {
+    if (isFirstGroup) return
+    const prevGroupName = questions[firstIdxOfGroup - 1]?.Group
+    const prevGroupFirstIdx = questions.findIndex(q => q.Group === prevGroupName)
+    setCauHienTai(prevGroupFirstIdx === -1 ? 0 : prevGroupFirstIdx)
+  }
+
+  const goToNextGroup = () => {
+    if (isLastGroup) return
+    setCauHienTai(lastIdxOfGroup + 1)
+  }
+
+  const handleJump = (i) => {
+    setCauHienTai(i)
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const getOptions = (q) => {
+    if (!q) return []
+    return ['A', 'B', 'C', 'D', 'E']
+      .map(k => ({ key: k, value: q[`Opt_${k}`] }))
+      .filter(o => o.value && o.value.trim() !== '')
+  }
+
+  const getReviewBorderColor = (q, optKey) => {
+    const userAns = reviewAnswers[q.globalIndex]
+    const correct = q.Correct_Ans?.trim()
+    if (!userAns) return 'var(--c-warn)'
+    if (optKey === correct) return 'var(--c-success)'
+    if (optKey === userAns) return 'var(--c-danger)'
+    return 'var(--c-primary-pale)'
+  }
+
+  const handleAnswer = (globalIndex, val) => {
+    if (isReview) return
+    setAnswers(prev => ({ ...prev, [globalIndex]: val }))
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
   const handleNopBai = async () => {
     setIsSubmitting(true)
     try {
       const userInfo = getUserInfo()
       const taiKhoan = userInfo?.taiKhoan
-
       let soCauDung = 0
+
       questions.forEach((q) => {
         const correctRaw = q.Correct_Ans?.trim()
         if (!correctRaw) return
@@ -400,8 +745,7 @@ export default function BaiTap({ params }) {
         }
       })
 
-      const assignQuery  = query(collection(db, 'assignments'), where('userId', '==', taiKhoan), where('exerciseId', '==', id))
-      const assignSnap   = await getDocs(assignQuery)
+      const assignSnap   = await getDocs(query(collection(db, 'assignments'), where('userId', '==', taiKhoan), where('exerciseId', '==', id)))
       const assignmentId = assignSnap.docs[0]?.id || null
 
       await addDoc(collection(db, 'submissions'), {
@@ -425,121 +769,17 @@ export default function BaiTap({ params }) {
     } finally { setIsSubmitting(false) }
   }
 
-  const getReviewBorderColor = (q, optKey) => {
-    const userAns = reviewAnswers[q.globalIndex]
-    const correct = q.Correct_Ans?.trim()
-    if (!userAns) return 'var(--c-warn)'
-    if (optKey === correct) return 'var(--c-success)'
-    if (optKey === userAns) return 'var(--c-danger)'
-    return 'var(--c-primary-pale)'
-  }
-
-  const currentCau       = questions[cauHienTai]
-  const currentGroup     = currentCau?.Group
-  const questionsInGroup = questions.filter(q => q.Group === currentGroup)
-  const firstInGroup     = questionsInGroup[0]
-  const mauHeader        = mauKyNang[exercise?.kyNang] || 'var(--c-primary)'
-  const layout2Col = firstInGroup?.Layout === '2col'
-
-  useEffect(() => {
-    if (vung2Ref.current) vung2Ref.current.scrollTop = 0
-    if (vung3Ref.current) vung3Ref.current.scrollTop = 0
-  }, [currentGroup])
-
-  // ── Group navigation ──────────────────────────────────────────────
-  const firstIdxOfGroup = questionsInGroup[0]?.globalIndex ?? 0
-  const lastIdxOfGroup  = questionsInGroup[questionsInGroup.length - 1]?.globalIndex ?? 0
-  const isFirstGroup    = firstIdxOfGroup === 0
-  const isLastGroup     = lastIdxOfGroup === questions.length - 1
-
-  const goToPrevGroup = () => {
-    if (isFirstGroup) return
-    // Câu ngay trước đầu group hiện tại thuộc group trước
-    const prevGroupName = questions[firstIdxOfGroup - 1]?.Group
-    const prevGroupFirstIdx = questions.findIndex(q => q.Group === prevGroupName)
-    setCauHienTai(prevGroupFirstIdx === -1 ? 0 : prevGroupFirstIdx)
-  }
-
-  const goToNextGroup = () => {
-    if (isLastGroup) return
-    // Câu ngay sau cuối group hiện tại là đầu group tiếp theo
-    setCauHienTai(lastIdxOfGroup + 1)
-  }
-
-  const getOptions = (q) => {
-    if (!q) return []
-    return ['A', 'B', 'C', 'D', 'E']
-      .map(k => ({ key: k, value: q[`Opt_${k}`] }))
-      .filter(o => o.value && o.value.trim() !== '')
-  }
-
-  const chonDapAn = (index, key) => {
-    if (isReview) return
-    setAnswers(prev => ({ ...prev, [index]: key }))
-  }
-
   if (!exercise || questions.length === 0) return <SkeletonBaiTap />
 
   return (
     <main style={{ minHeight: 'calc(100vh - 56px)', height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
       <style>{`
-        .bt-body { display: flex; flex: 1; overflow: hidden; }
-        .bt-vung2-3 { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        .bt-vung2-header {
-          display: flex; align-items: center; justify-content: flex-end;
-          padding: 6px 12px 0;
-          flex-shrink: 0;
-        }
-        .bt-vung3-header {
-          display: flex; align-items: center; justify-content: flex-end;
-          padding: 6px 12px 0;
-          flex-shrink: 0;
-        }
-        .bt-vung2 {
-          flex: 1.2; border-bottom: 1px solid var(--c-primary-pale);
-          padding: 12px 20px 20px; overflow-y: auto;
-          display: flex; flex-direction: column; gap: 16px;
-        }
-        .bt-vung3 {
-          flex: 1; padding: 12px 20px 20px; overflow-y: auto;
-          display: flex; flex-direction: column; gap: 35px;
-        }
-        .bt-vung2-wrap {
-          display: flex; flex-direction: column;
-          flex: 1.5; border-bottom: 1px solid var(--c-primary-pale);
-          overflow: hidden;
-        }
-        .bt-vung3-wrap {
-          display: flex; flex-direction: column;
-          flex: 1; overflow: hidden;
-        }
-        @media (min-width: 769px) {
-          .bt-vung1 { border-right: 1px solid var(--c-primary-pale); }
-          .bt-vung2-wrap { border-right: 1px solid var(--c-primary-pale); border-bottom: none; }
-          .bt-vung2 { border-bottom: none; }
-          .bt-vung2-3 { flex-direction: row; }
-          .vung2-2col { column-count: 2; column-gap: 28px; }
-        }
+        .vung2-2col { column-count: 2; column-gap: 28px; }
         @media (max-width: 768px) {
-          .bt-body { flex-direction: column; overflow-y: auto; overflow-x: hidden; align-items: stretch; }
-          .bt-vung1 {
-            width: 100% !important; min-width: 0 !important; max-width: 100% !important;
-            flex-direction: row !important; align-items: center !important;
-            padding: 8px 10px !important; gap: 6px !important;
-            overflow-x: auto !important; overflow-y: hidden !important;
-            border-right: none !important; border-bottom: 1px solid var(--c-primary-pale);
-            flex-shrink: 0; -webkit-overflow-scrolling: touch;
-          }
-          .bt-vung1 .so-cau { width: 30px !important; height: 30px !important; font-size: 12px !important; flex-shrink: 0; }
-          .bt-vung1-submit { display: none !important; }
-          .bt-vung2-3 { flex-direction: column; overflow: visible; flex: none; min-width: 0; width: 100%; max-width: 100%; }
-          .bt-vung2-wrap { flex: none; overflow: visible; border-right: none; border-bottom: 1px solid var(--c-primary-pale); min-width: 0; width: 100%; max-width: 100%; }
-          .bt-vung3-wrap { flex: none; overflow: visible; min-width: 0; width: 100%; max-width: 100%; }
-          .bt-vung2 { flex: none; overflow: visible; padding: 8px 12px 12px; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
-          .bt-vung3 { flex: none; overflow: visible; padding: 8px 12px 12px; gap: 16px; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
-          .bt-vung3 p, .bt-vung3 div, .bt-vung3 span { word-break: break-word; overflow-wrap: anywhere; }
-          .bt-nav-btn { padding: 8px 4px !important; font-size: 12px !important; }
+          .ielts-body { flex-direction: column !important; }
+          .bt-panel-left  { border-right: none !important; border-bottom: 1px solid var(--c-primary-pale); max-height: 45vh; }
+          .bt-panel-right { max-height: 55vh; }
           .vung2-2col { column-count: 1; }
         }
         @keyframes fadeInOut {
@@ -551,10 +791,10 @@ export default function BaiTap({ params }) {
         .draft-saved-toast { animation: fadeInOut 2s ease forwards; }
       `}</style>
 
-      {/* Dialog xác nhận nộp bài */}
+      {/* ── Confirm dialog ── */}
       {showConfirm && !submitDone && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'var(--c-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: 'var(--c-surface)', borderRadius: '16px', padding: '32px', width: '340px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 8px 32px var(--shadow-modal)' }}>
+          <div style={{ backgroundColor: 'var(--c-surface)', borderRadius: '16px', padding: '32px', width: '340px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: 'var(--shadow-modal)' }}>
             <h3 style={{ margin: 0, color: 'var(--c-primary-dark)', textAlign: 'center' }}>Xác nhận nộp bài</h3>
             {soCauChuaLam > 0 ? (
               <div style={{ backgroundColor: 'var(--c-warn-bg)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
@@ -568,7 +808,8 @@ export default function BaiTap({ params }) {
             <p style={{ margin: 0, color: 'var(--c-text-soft)', fontSize: '14px', textAlign: 'center' }}>Sau khi nộp bạn không thể chỉnh sửa đáp án.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowConfirm(false)} style={btnSecondary}>Làm tiếp</button>
-              <button onClick={handleNopBai} disabled={isSubmitting} style={{ ...btnPrimary, backgroundColor: 'var(--c-success)', opacity: isSubmitting ? 0.7 : 1 }}>
+              <button onClick={handleNopBai} disabled={isSubmitting}
+                style={{ ...btnPrimary, backgroundColor: 'var(--c-success)', opacity: isSubmitting ? 0.7 : 1 }}>
                 {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
               </button>
             </div>
@@ -576,10 +817,10 @@ export default function BaiTap({ params }) {
         </div>
       )}
 
-      {/* Dialog nộp thành công */}
+      {/* ── Submit done dialog ── */}
       {submitDone && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'var(--c-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: 'var(--c-surface)', borderRadius: '16px', padding: '40px 32px', width: '340px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', boxShadow: '0 8px 32px var(--shadow-modal)' }}>
+          <div style={{ backgroundColor: 'var(--c-surface)', borderRadius: '16px', padding: '40px 32px', width: '340px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', boxShadow: 'var(--shadow-modal)' }}>
             <div style={{ fontSize: '48px' }}>🎉</div>
             <h3 style={{ margin: 0, color: 'var(--c-primary-dark)', textAlign: 'center' }}>Nộp bài thành công!</h3>
             <p style={{ fontSize: '20px', fontWeight: '700', color: 'var(--c-success)', margin: 0 }}>{ketQua?.dung} / {ketQua?.tong} câu đúng</p>
@@ -588,8 +829,11 @@ export default function BaiTap({ params }) {
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ backgroundColor: isReview ? 'var(--c-text-muted)' : mauHeader, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, position: 'relative' }}>
+      {/* ── Header ── */}
+      <div style={{
+        backgroundColor: isReview ? 'var(--c-text-muted)' : mauHeader,
+        padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
+      }}>
         <span style={{ color: 'var(--c-surface)', fontWeight: '600', fontSize: '14px' }}>{exercise.loaiBai} · {exercise.kyNang}</span>
         <span style={{ color: 'rgba(255,255,255,0.7)' }}>—</span>
         <span style={{ color: 'var(--c-surface)', fontSize: '14px' }}>{exercise.tenBaiTap}</span>
@@ -599,245 +843,60 @@ export default function BaiTap({ params }) {
         {draftSaved && (
           <span className="draft-saved-toast" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '4px' }}>✓ Đã lưu nháp</span>
         )}
-        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>Câu {cauHienTai + 1} / {questions.length}</span>
+        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+          {questions.length} câu
+        </span>
         {!isReview && (
           <button
             onClick={() => setShowConfirm(true)}
-            style={{ marginLeft: '12px', padding: '7px 18px', borderRadius: '8px', border: '2px solid white', backgroundColor: 'transparent', color: 'var(--c-surface)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s', whiteSpace: 'nowrap' }}
+            style={{ marginLeft: '8px', padding: '7px 18px', borderRadius: '8px', border: '2px solid white', backgroundColor: 'transparent', color: 'var(--c-surface)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            Nộp bài ✓
-          </button>
+          >Nộp bài ✓</button>
         )}
       </div>
 
-      {/* Body */}
-      <div className="bt-body">
+      {/* ── Navigator bar ngang ── */}
+      <NavigatorBar
+        questions={questions}
+        answers={answers}
+        reviewAnswers={reviewAnswers}
+        isReview={isReview}
+        currentGroup={currentGroup}
+        onJump={handleJump}
+      />
 
-        {/* Vùng 1: Số câu */}
-        <div className="bt-vung1" style={{ width: '72px', minWidth: '72px', backgroundColor: 'var(--c-primary-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: '6px', overflowY: 'auto' }}>
-          {questions.map((q, i) => {
-            let bgColor = 'var(--c-surface)', textColor = 'var(--c-primary-mid)', borderColor = 'var(--c-primary-pale)'
+      {/* ── Body: 2 panel ── */}
+      <div className="ielts-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
-            if (i === cauHienTai) {
-              bgColor = 'var(--c-primary)'; textColor = 'var(--c-surface)'; borderColor = 'var(--c-primary)'
-            } else if (isReview) {
-              const userAns = reviewAnswers[i]
-              const correct = q.Correct_Ans?.trim()
-              if (q.Question_Type === 'fill_blank') {
-                const correctParts = (correct || '').split('|').map(s => s.trim().toLowerCase())
-                const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
-                const allCorrect   = correctParts.every((c, ci) => c === userParts[ci])
-                const anyFilled    = (userAns || []).some(Boolean)
-                if (!anyFilled)      { bgColor = 'var(--c-warn-bg)'; textColor = 'var(--c-warn-textsoft)'; borderColor = 'var(--c-warn)' }
-                else if (allCorrect) { bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)' }
-                else                 { bgColor = 'var(--c-danger-bg)'; textColor = 'var(--c-danger-text)'; borderColor = 'var(--c-danger-border)' }
-              } else {
-                if (!userAns)                { bgColor = 'var(--c-warn-bg)'; textColor = 'var(--c-warn-textsoft)'; borderColor = 'var(--c-warn)' }
-                else if (userAns === correct) { bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)' }
-                else                          { bgColor = 'var(--c-danger-bg)'; textColor = 'var(--c-danger-text)'; borderColor = 'var(--c-danger-border)' }
-              }
-            } else if (q.Group === currentGroup) {
-              // Các câu cùng group đang xem — highlight nhẹ, nhưng giữ viền xanh nếu đã làm
-              bgColor = 'var(--c-primary-bg)'; textColor = 'var(--c-primary)'
-              borderColor = answers[i] ? 'var(--c-success-border)' : 'var(--c-primary-light)'
-            } else if (answers[i]) {
-              bgColor = 'var(--c-success-bg)'; textColor = 'var(--c-success-text)'; borderColor = 'var(--c-success-border)'
-            }
-
-            return (
-              <div key={i} className="so-cau" onClick={() => setCauHienTai(i)}
-                style={{ width: '36px', height: '36px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '500', cursor: 'pointer', backgroundColor: bgColor, color: textColor, border: `1px solid ${borderColor}`, transition: 'all 0.2s' }}
-              >
-                {i + 1}
-              </div>
-            )
-          })}
-
-          {!isReview && (
-            <div className="bt-vung1-submit" style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%' }}>
-              <div style={{ flex: 1 }} />
-              <button
-                onClick={() => setShowConfirm(true)}
-                style={{
-                  width: '48px',
-                  padding: '8px 0',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: 'var(--c-success)',
-                  color: 'var(--c-surface)',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginTop: 'auto',
-                  marginBottom: '8px',
-                  lineHeight: '1.3',
-                  alignSelf: 'center',  // ← thêm cái này
-                }}
-              >
-                Nộp<br/>bài
-              </button>
-            </div>
-          )}
+        {/* Panel trái: Context */}
+        <div className="bt-panel-left" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+          <ContextPanel
+            firstInGroup={firstInGroup}
+            fontSize={{ value: fontSizeContext, set: setFontSizeContext }}
+          />
         </div>
 
-        {/* Vùng 2 + 3 */}
-        <div className="bt-vung2-3">
-
-          {/* ── Vùng 2 wrap ── */}
-          <div className="bt-vung2-wrap">
-            <div className="bt-vung2-header">
-              <FontSizeControl label="Cỡ chữ" value={fontSizeV2} onChange={setFontSizeV2} />
-            </div>
-            <div className="bt-vung2" id="content-panel" ref={vung2Ref} style={{ fontSize: `${fontSizeV2}px` }}>
-              {firstInGroup?.Audios?.map((src, i) => (
-                <iframe key={src + i} src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px' }} />
-              ))}
-              <div className={layout2Col ? 'vung2-2col' : undefined}>
-                {firstInGroup?.Contexts?.map((ctx, i) => (
-                  <div key={i} style={{ lineHeight: '1.8', color: 'var(--c-primary-dark)', breakInside: 'avoid', marginBottom: '4px', textAlign: 'justify', hyphens: 'auto' }}>
-                    {ctx.startsWith('http')
-                      ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
-                      : renderContextBlock(ctx, `ctx-${i}`)
-                    }
-                  </div>
-                ))}
-              </div>
-              {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
-                <p style={{ color: 'var(--c-primary-pale)' }}>Không có nội dung chung cho nhóm này</p>
-              )}
-            </div>
-          </div>
-
-          {/* ── Vùng 3 wrap ── */}
-          <div className="bt-vung3-wrap">
-            <div className="bt-vung3-header">
-              <FontSizeControl label="Cỡ chữ" value={fontSizeV3} onChange={setFontSizeV3} />
-            </div>
-
-            <div className="bt-vung3" id="question-panel" ref={vung3Ref}>
-              {questionsInGroup.map((q) => (
-                <div key={q.globalIndex} style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: q.globalIndex === cauHienTai ? 'var(--c-primary-barest)' : 'transparent', padding: '10px', borderRadius: '8px' }}>
-                  {q.Question_Type !== 'fill_blank' && (
-                    <p style={{ margin: 0, fontSize: `${fontSizeV3}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
-                      {q.Question}
-                    </p>
-                  )}
-
-                  {/* MCQ */}
-                  {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {q.Question_Type === 'mcq'
-                        ? getOptions(q).map(opt => {
-                            const border = isReview ? getReviewBorderColor(q, opt.key) : (answers[q.globalIndex] === opt.key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
-                            const bg     = isReview ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)') : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
-                            const color  = isReview ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-primary-mid)') : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)')
-                            return (
-                              <div key={opt.key} onClick={() => chonDapAn(q.globalIndex, opt.key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: `${fontSizeV3}px`, cursor: isReview ? 'default' : 'pointer', transition: 'all 0.15s' }}>
-                                {opt.key}. {opt.value}
-                              </div>
-                            )
-                          })
-                        : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
-                            const border = isReview ? getReviewBorderColor(q, key) : (answers[q.globalIndex] === key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
-                            const bg     = isReview ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)') : (answers[q.globalIndex] === key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
-                            const color  = isReview ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-text-muted)') : (answers[q.globalIndex] === key ? 'var(--c-primary-dark)' : 'var(--c-text-muted)')
-                            return (
-                              <div key={key} onClick={() => chonDapAn(q.globalIndex, key)} style={{ padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${border}`, backgroundColor: bg, color, fontSize: `${fontSizeV3}px`, cursor: isReview ? 'default' : 'pointer', fontWeight: '600', textAlign: 'center' }}>
-                                {key}
-                              </div>
-                            )
-                          })
-                      }
-                    </div>
-                  )}
-
-                  {/* Fill short */}
-                  {q.Question_Type === 'fill_short' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {Array.from({ length: parseInt(q.Num_Answers) || 1 }, (_, i) => (
-                        <input key={i} type="text"
-                          placeholder={`Đáp án ${parseInt(q.Num_Answers) > 1 ? i + 1 : ''}`}
-                          value={isReview ? (reviewAnswers[q.globalIndex]?.[i] || '') : (answers[q.globalIndex]?.[i] || '')}
-                          readOnly={isReview}
-                          onChange={(e) => {
-                            if (isReview) return
-                            const prev = answers[q.globalIndex] || []
-                            const newArr = [...prev]; newArr[i] = e.target.value
-                            setAnswers(a => ({ ...a, [q.globalIndex]: newArr }))
-                          }}
-                          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)', fontSize: `${fontSizeV3}px` }}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Fill long */}
-                  {q.Question_Type === 'fill_long' && (
-                    <textarea
-                      placeholder="Nhập bài làm của bạn..."
-                      value={isReview ? (reviewAnswers[q.globalIndex] || '') : (answers[q.globalIndex] || '')}
-                      readOnly={isReview}
-                      onChange={(e) => { if (isReview) return; setAnswers(a => ({ ...a, [q.globalIndex]: e.target.value })) }}
-                      style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)', minHeight: '120px', resize: 'vertical', outline: 'none', backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)', fontSize: `${fontSizeV3}px` }}
-                    />
-                  )}
-
-                  {/* Fill blank */}
-                  {q.Question_Type === 'fill_blank' && (
-                    <FillBlankQuestion
-                      q={q}
-                      isReview={isReview}
-                      userAnswer={isReview ? null : answers[q.globalIndex]}
-                      reviewAnswer={isReview ? reviewAnswers[q.globalIndex] : null}
-                      onChange={(newSlots) => setAnswers(a => ({ ...a, [q.globalIndex]: newSlots }))}
-                      fontSize={fontSizeV3}
-                    />
-                  )}
-                </div>
-              ))}
-
-              {/* Nút điều hướng */}
-              <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', padding: '10px 0' }}>
-                <button className="bt-nav-btn"
-                  onClick={goToPrevGroup}
-                  disabled={isFirstGroup}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '8px',
-                    border: '1px solid var(--c-primary-pale)',
-                    backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)',
-                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                    opacity: isFirstGroup ? 0.4 : 1, fontWeight: '500',
-                  }}
-                >← Trước</button>
-
-                {!isReview && isLastGroup ? (
-                  <button className="bt-nav-btn"
-                    onClick={() => setShowConfirm(true)}
-                    style={{
-                      flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                      backgroundColor: 'var(--c-success)', color: 'var(--c-surface)',
-                      fontWeight: '600', cursor: 'pointer', fontSize: '14px',
-                    }}
-                  >Nộp bài ✓</button>
-                ) : (
-                  <button className="bt-nav-btn"
-                    onClick={goToNextGroup}
-                    disabled={isLastGroup}
-                    style={{
-                      flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                      backgroundColor: 'var(--c-primary-mid)', color: 'var(--c-surface)',
-                      cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                      opacity: isLastGroup ? 0.4 : 1, fontWeight: '500',
-                    }}
-                  >Tiếp →</button>
-                )}
-              </div>
-            </div>
-          </div>
-
+        {/* Panel phải: Questions */}
+        <div className="bt-panel-right" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+          <QuestionsPanel
+            questionsInGroup={questionsInGroup}
+            cauHienTai={cauHienTai}
+            answers={answers}
+            reviewAnswers={reviewAnswers}
+            isReview={isReview}
+            fontSize={{ value: fontSizeQuestions, set: setFontSizeQuestions }}
+            onAnswer={handleAnswer}
+            isFirstGroup={isFirstGroup}
+            isLastGroup={isLastGroup}
+            goToPrevGroup={goToPrevGroup}
+            goToNextGroup={goToNextGroup}
+            onNopBai={() => setShowConfirm(true)}
+            getOptions={getOptions}
+            getReviewBorderColor={getReviewBorderColor}
+          />
         </div>
+
       </div>
 
       <HighlightToolbar toolbar={toolbar} onHighlight={applyHighlight} onClose={hideToolbar} />

@@ -11,6 +11,7 @@ import Papa from 'papaparse'
 import { convertDriveLink } from '@/lib/driveUtils'
 import { useHighlight } from '@/lib/useHighlight'
 import HighlightToolbar from '@/app/components/HighlightToolbar'
+import { renderContextBlock } from '@/lib/parseContext'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

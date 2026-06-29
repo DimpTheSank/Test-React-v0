@@ -626,14 +626,17 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
   const firstQ = questions[0]
   const raw    = firstQ?.Question?.trim() || ''
 
-  // Build qByNum map từ tất cả rows trong group
+  // Mỗi row = 1 câu, Question_Num là key để map với ___ (n) trong text
   const qByNum = {}
-  questions.forEach(q => { qByNum[String(q.Question_Num).trim()] = q })
+  questions.forEach(q => {
+    const num = String(q.Question_Num ?? '').trim()
+    if (num) qByNum[num] = q
+  })
 
   // Tách từng bước theo \n
   const steps = raw.split('\n').map(s => s.trim()).filter(Boolean)
 
-  // Parse 1 đoạn text có thể chứa ___ (n) xen kẽ
+  // Parse text có ___ (n) xen kẽ
   const parseSegments = (text) => {
     const segments = []
     const regex = /___\s*\((\d+)\)/g
@@ -651,7 +654,7 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
     const q       = qByNum[num]
     const qIdx    = q?.globalIndex
     const correct = q?.Correct_Ans?.trim() || ''
-    const userVal = q ? (isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
+    const userVal = q ? String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
     const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
 
     let borderColor = 'var(--c-primary-pale)'
@@ -665,7 +668,7 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
     }
 
     return (
-      <span key={`fc-blank-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 3px' }}>
+      <span key={`fc-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 3px' }}>
         <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
         {isReview ? (
           <>
@@ -686,7 +689,7 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
           <input
             type="text"
             value={userVal}
-            onChange={e => q && onChange(qIdx, e.target.value)}
+            onChange={e => q && !isReview && onChange(qIdx, e.target.value)}
             placeholder="..."
             style={{
               width: '100px', padding: '3px 8px', borderRadius: '6px',
@@ -708,17 +711,12 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
     const hasBlank = segments.some(s => s.type === 'blank')
     return (
       <div style={{
-        padding: '12px 20px',
-        borderRadius: '10px',
+        padding: '12px 20px', borderRadius: '10px',
         border: `1.5px solid ${hasBlank ? 'var(--c-primary-light)' : 'var(--c-primary-pale)'}`,
         backgroundColor: hasBlank ? 'var(--c-primary-barest)' : 'var(--c-surface)',
-        fontSize: `${fontSize}px`,
-        lineHeight: '2',
-        color: 'var(--c-primary-dark)',
-        textAlign: 'center',
-        minWidth: '220px',
-        maxWidth: '420px',
-        width: '100%',
+        fontSize: `${fontSize}px`, lineHeight: '2.2',
+        color: 'var(--c-primary-dark)', textAlign: 'center',
+        minWidth: '220px', maxWidth: '480px', width: '100%',
       }}>
         {segments.map((seg, si) =>
           seg.type === 'text'
@@ -730,20 +728,14 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0', padding: '8px 0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0' }}>
       {steps.map((step, i) => (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
           {renderStep(step)}
-          {/* Mũi tên giữa các bước, trừ bước cuối */}
           {i < steps.length - 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0', gap: '0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0' }}>
               <div style={{ width: '2px', height: '12px', backgroundColor: 'var(--c-primary-light)' }} />
-              <div style={{
-                width: 0, height: 0,
-                borderLeft: '7px solid transparent',
-                borderRight: '7px solid transparent',
-                borderTop: '9px solid var(--c-primary-light)',
-              }} />
+              <div style={{ width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '9px solid var(--c-primary-light)' }} />
             </div>
           )}
         </div>

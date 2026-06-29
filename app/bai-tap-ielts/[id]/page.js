@@ -205,14 +205,13 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
   const label   = firstQ?.Question_Label || ''
   const type    = firstQ?.Question_Type?.toLowerCase()
   const mapRaw  = firstQ?.Map_Image?.trim() || ''
-
-  // Detect URL vs text
-  const isUrl = mapRaw.startsWith('http')
+  const isUrl   = mapRaw.startsWith('http')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {/* Group label */}
-      {label && (
+
+      {/* Group label — chỉ hiện với các dạng KHÔNG tự render label riêng */}
+      {label && type !== 'matching_headings' && (
         <div style={{
           padding: '10px 14px', borderRadius: '8px',
           backgroundColor: 'var(--c-primary-bg)',
@@ -227,11 +226,8 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
       {/* Map_Image block */}
       {mapRaw && (
         isUrl
-          ? <img
-              src={mapRaw}
-              alt="Exercise content"
-              style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--c-primary-pale)' }}
-            />
+          ? <img src={mapRaw} alt="Exercise content"
+              style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--c-primary-pale)' }} />
           : <div style={{
               padding: '12px 16px', borderRadius: '8px',
               backgroundColor: 'var(--c-primary-barest)',
@@ -239,36 +235,51 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
               fontSize: `${fontSize}px`, lineHeight: '1.7',
               color: 'var(--c-primary-dark)',
             }}>
-              {renderContextBlock(mapRaw, `map-${group.questions[0]?.globalIndex}`)}
+              {renderContextBlock(mapRaw, `map-${firstQ?.globalIndex}`)}
             </div>
       )}
 
-      {/* Questions */}
-      {type === 'table' ? (
-        <TableQuestion
-          questions={group.questions}
-          answers={answers}
-          reviewAnswers={reviewAnswers}
-          isReview={isReview}
-          onChange={onChange}
-          fontSize={fontSize}
-        />
-      ) : (
+      {/* Dispatch theo type */}
+      {type === 'table' && (
+        <TableQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
+
+      {type === 'flowchart' && (
+        <FlowchartQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
+
+      {type === 'map' && (
+        <MapQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
+
+      {type === 'matching_headings' && (
+        <MatchingHeadingsQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
+
+      {(type === 'tfng' || type === 'ynng') && (
+        <TFNGQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} type={type} />
+      )}
+
+      {(type === 'mc' || type === 'fill') && (
         group.questions.map((q) => {
-          const qType      = q.Question_Type?.toLowerCase()
           const userAns    = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
           const onChangeFn = (val) => !isReview && onChange(q.globalIndex, val)
-
-          if (qType === 'mc')   return <McQuestion   key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
-          if (qType === 'fill') return <FillQuestion key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
-
-          return (
-            <div key={q.globalIndex} style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
-              [{qType}] — dạng này sẽ được thêm sau.
-            </div>
-          )
+          if (type === 'mc')   return <McQuestion   key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
+          if (type === 'fill') return <FillQuestion key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
         })
       )}
+
+      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill'].includes(type) && (
+        <div style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+          [{type}] — dạng này sẽ được thêm sau.
+        </div>
+      )}
+
     </div>
   )
 }

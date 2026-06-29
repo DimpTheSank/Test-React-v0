@@ -247,6 +247,25 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           onChange={onChange}
           fontSize={fontSize}
         />
+      ) : type === 'matching_headings' ? (
+        <MatchingHeadingsQuestion
+          questions={group.questions}
+          answers={answers}
+          reviewAnswers={reviewAnswers}
+          isReview={isReview}
+          onChange={onChange}
+          fontSize={fontSize}
+        />
+      ) : type === 'tfng' || type === 'ynng' ? (
+        <TFNGQuestion
+          questions={group.questions}
+          answers={answers}
+          reviewAnswers={reviewAnswers}
+          isReview={isReview}
+          onChange={onChange}
+          fontSize={fontSize}
+          type={type}
+        />
       ) : (
         /* Render từng câu theo type */
         group.questions.map((q) => {
@@ -764,8 +783,8 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
 
 function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
   const firstQ   = questions[0]
-  const imageUrl = firstQ?.Map_Image?.trim()
-    ? convertDriveLink(firstQ.Map_Image.trim(), 'image')
+  const imageUrl = firstQ?.Context?.trim()
+    ? convertDriveLink(firstQ.Context.trim(), 'image')
     : null
 
   return (
@@ -818,7 +837,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
               {/* Tên địa danh */}
               <span style={{
                 flex: 1, fontSize: `${fontSize}px`,
-                color: 'var(--c-primary-dark)', fontStyle: 'normal',
+                color: 'var(--c-primary-dark)', fontStyle: 'italic',
               }}>
                 {q.Question}
               </span>
@@ -847,6 +866,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
                   type="text"
                   value={userVal}
                   onChange={e => !isReview && onChange(qIdx, e.target.value.toUpperCase())}
+                  placeholder="A/B/C..."
                   maxLength={2}
                   style={{
                     width: '60px', padding: '8px', borderRadius: '8px',
@@ -866,6 +886,221 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── Matching Headings ────────────────────────────────────────────────────────
+//
+// Sheet format — mỗi row = 1 đoạn văn cần chọn heading:
+//   Question_Type:  matching_headings
+//   Question_Label: danh sách headings, mỗi cái 1 dòng, vd:
+//                   "i. The history of...\nii. Problems with...\niii. A new solution"
+//   Question_Num:   số câu
+//   Question:       tên đoạn (vd: "Paragraph A")
+//   Correct_Ans:    chữ số La Mã đúng (vd: ii)
+
+function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ  = questions[0]
+  // Parse danh sách headings từ Question_Label (mỗi dòng 1 heading)
+  const headings = (firstQ?.Question_Label || '')
+    .split('\n').map(h => h.trim()).filter(Boolean)
+
+  const renderInput = (q) => {
+    const qIdx      = q.globalIndex
+    const correct   = q.Correct_Ans?.trim() || ''
+    const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || ''))
+    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <div key={qIdx} style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '10px 14px', borderRadius: '9px',
+        border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+        transition: 'all 0.15s',
+      }}>
+        <QuestionNumber num={q.Question_Num || qIdx + 1} />
+        <span style={{ flex: 1, fontSize: `${fontSize}px`, color: 'var(--c-primary-dark)', fontWeight: '500' }}>
+          {q.Question}
+        </span>
+        {isReview ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span style={{
+              padding: '4px 12px', borderRadius: '6px', fontWeight: '700',
+              fontSize: `${fontSize}px`, border: `1.5px solid ${borderColor}`,
+              backgroundColor: bgColor,
+              color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+            }}>
+              {userVal.trim() || '—'}
+            </span>
+            {!isCorrect && correct && (
+              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            )}
+            <span style={{ fontSize: '16px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+          </div>
+        ) : (
+          <input
+            type="text"
+            value={userVal}
+            onChange={e => !isReview && onChange(qIdx, e.target.value)}
+            placeholder="i / ii / iii..."
+            style={{
+              width: '80px', padding: '8px', borderRadius: '8px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: 'var(--c-surface)',
+              fontSize: `${fontSize}px`, fontWeight: '600',
+              outline: 'none', textAlign: 'center',
+              fontFamily: 'inherit', color: 'var(--c-primary-dark)',
+              transition: 'border-color 0.15s', flexShrink: 0,
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+            onBlur={e => e.currentTarget.style.borderColor = borderColor}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Danh sách headings */}
+      {headings.length > 0 && (
+        <div style={{
+          padding: '12px 16px', borderRadius: '10px',
+          backgroundColor: 'var(--c-primary-barest)',
+          border: '1px solid var(--c-primary-bg)',
+          display: 'flex', flexDirection: 'column', gap: '6px',
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            List of Headings
+          </span>
+          {headings.map((h, i) => (
+            <span key={i} style={{ fontSize: `${Math.max(12, fontSize - 1)}px`, color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>
+              {h}
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Các câu hỏi */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {questions.map(q => renderInput(q))}
+      </div>
+    </div>
+  )
+}
+
+// ─── TRUE/FALSE/NOT GIVEN & YES/NO/NOT GIVEN ──────────────────────────────────
+//
+// Sheet format — mỗi row = 1 phát biểu:
+//   Question_Type:  tfng  (hoặc ynng)
+//   Question_Num:   số câu
+//   Question:       phát biểu cần đánh giá
+//   Correct_Ans:    TRUE / FALSE / NOT GIVEN  (hoặc YES / NO / NOT GIVEN)
+
+function TFNGQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize, type }) {
+  const isYNNG  = type === 'ynng'
+  const options = isYNNG ? ['YES', 'NO', 'NOT GIVEN'] : ['TRUE', 'FALSE', 'NOT GIVEN']
+
+  const renderInput = (q) => {
+    const qIdx      = q.globalIndex
+    const correct   = q.Correct_Ans?.trim().toUpperCase() || ''
+    const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')).toUpperCase()
+    const isCorrect = userVal === correct
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <div key={qIdx} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Số câu + phát biểu */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+          <QuestionNumber num={q.Question_Num || qIdx + 1} />
+          <p style={{ margin: 0, fontSize: `${fontSize}px`, color: 'var(--c-primary-dark)', lineHeight: 1.6, flex: 1 }}>
+            {parseInline(q.Question || '')}
+          </p>
+        </div>
+
+        {/* Input + gợi ý options */}
+        <div style={{ paddingLeft: '34px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {isReview ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px 14px', borderRadius: '8px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+            }}>
+              <span style={{
+                fontSize: `${fontSize}px`, fontWeight: '700',
+                color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+              }}>
+                {userVal.trim() || '(trống)'}
+              </span>
+              {!isCorrect && correct && (
+                <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+              )}
+              <span style={{ fontSize: '16px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={answers[qIdx] || ''}
+                onChange={e => !isReview && onChange(qIdx, e.target.value.toUpperCase())}
+                placeholder={options[0]}
+                style={{
+                  width: '130px', padding: '8px 12px', borderRadius: '8px',
+                  border: `1.5px solid ${borderColor}`, backgroundColor: 'var(--c-surface)',
+                  fontSize: `${fontSize}px`, fontWeight: '600',
+                  outline: 'none', fontFamily: 'inherit', color: 'var(--c-primary-dark)',
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+                onBlur={e => e.currentTarget.style.borderColor = borderColor}
+              />
+              {/* Hint chips */}
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                {options.map(opt => (
+                  <span
+                    key={opt}
+                    onClick={() => !isReview && onChange(qIdx, opt)}
+                    style={{
+                      padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: '600', userSelect: 'none',
+                      border: `1px solid ${(answers[qIdx] || '').toUpperCase() === opt ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+                      backgroundColor: (answers[qIdx] || '').toUpperCase() === opt ? 'var(--c-primary)' : 'transparent',
+                      color: (answers[qIdx] || '').toUpperCase() === opt ? '#fff' : 'var(--c-text-muted)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {opt}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {questions.map(q => renderInput(q))}
     </div>
   )
 }
@@ -1091,6 +1326,10 @@ export default function BaiTapIELTS({ params }) {
           if (userAns === correct) soCauDung++
         } else if (type === 'fill' || type === 'table' || type === 'flowchart') {
           if (userAns.toLowerCase() === correct.toLowerCase()) soCauDung++
+        } else if (type === 'map' || type === 'matching_headings') {
+          if (userAns.toLowerCase() === correct.toLowerCase()) soCauDung++
+        } else if (type === 'tfng' || type === 'ynng') {
+          if (userAns.toUpperCase() === correct.toUpperCase()) soCauDung++
         }
       })
 

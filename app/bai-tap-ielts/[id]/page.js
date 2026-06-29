@@ -847,7 +847,6 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
                   type="text"
                   value={userVal}
                   onChange={e => !isReview && onChange(qIdx, e.target.value.toUpperCase())}
-                  placeholder="A/B/C..."
                   maxLength={2}
                   style={{
                     width: '60px', padding: '8px', borderRadius: '8px',

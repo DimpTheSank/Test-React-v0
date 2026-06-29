@@ -210,8 +210,8 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-      {/* Group label */}
-      {label && type !== 'matching_headings' && (
+      {/* Group label — hiện với tất cả các dạng */}
+      {label && (
         <div style={{
           padding: '10px 14px', borderRadius: '8px',
           backgroundColor: 'var(--c-primary-bg)',
@@ -223,11 +223,10 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         </div>
       )}
 
-      {/* Question_Info block — tất cả dạng trừ map */}
-      {infoRaw && type !== 'map' && (
+      {/* Question_Info — tất cả dạng trừ map và matching_headings (tự render) */}
+      {infoRaw && type !== 'map' && type !== 'matching_headings' && (
         isInfoUrl
-          ? <img src={infoRaw} alt="Info"
-              style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--c-primary-pale)' }} />
+          ? <img src={infoRaw} alt="Info" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--c-primary-pale)' }} />
           : <div style={{
               padding: '12px 16px', borderRadius: '8px',
               backgroundColor: 'var(--c-primary-barest)',
@@ -749,8 +748,8 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
 
 function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
   const firstQ   = questions[0]
-  const imageUrl = firstQ?.Context?.trim()
-    ? convertDriveLink(firstQ.Context.trim(), 'image')
+  const imageUrl = firstQ?.Map_Image?.trim()
+    ? convertDriveLink(firstQ.Map_Image.trim(), 'image')
     : null
 
   return (
@@ -868,8 +867,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
 
 function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
   const firstQ  = questions[0]
-  // Parse danh sách headings từ Question_Label (mỗi dòng 1 heading)
-  const headings = (firstQ?.Question_Label || '')
+  const headings = (firstQ?.Question_Info || '')
     .split('\n').map(h => h.trim()).filter(Boolean)
 
   const renderInput = (q) => {

@@ -204,13 +204,13 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
   const firstQ  = group.questions[0]
   const label   = firstQ?.Question_Label || ''
   const type    = firstQ?.Question_Type?.toLowerCase()
-  const mapRaw  = firstQ?.Map_Image?.trim() || ''
-  const isUrl   = mapRaw.startsWith('http')
+  const infoRaw = firstQ?.Question_Info?.trim() || ''
+  const isInfoUrl = infoRaw.startsWith('http')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-      {/* Group label — chỉ hiện với các dạng KHÔNG tự render label riêng */}
+      {/* Group label */}
       {label && type !== 'matching_headings' && (
         <div style={{
           padding: '10px 14px', borderRadius: '8px',
@@ -223,10 +223,10 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         </div>
       )}
 
-      {/* Map_Image block */}
-      {mapRaw && (
-        isUrl
-          ? <img src={mapRaw} alt="Exercise content"
+      {/* Question_Info block — tất cả dạng trừ map */}
+      {infoRaw && type !== 'map' && (
+        isInfoUrl
+          ? <img src={infoRaw} alt="Info"
               style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--c-primary-pale)' }} />
           : <div style={{
               padding: '12px 16px', borderRadius: '8px',
@@ -235,7 +235,7 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
               fontSize: `${fontSize}px`, lineHeight: '1.7',
               color: 'var(--c-primary-dark)',
             }}>
-              {renderContextBlock(mapRaw, `map-${firstQ?.globalIndex}`)}
+              {renderContextBlock(infoRaw, `info-${firstQ?.globalIndex}`)}
             </div>
       )}
 
@@ -244,27 +244,22 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         <TableQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} />
       )}
-
       {type === 'flowchart' && (
         <FlowchartQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} />
       )}
-
       {type === 'map' && (
         <MapQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} />
       )}
-
       {type === 'matching_headings' && (
         <MatchingHeadingsQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} />
       )}
-
       {(type === 'tfng' || type === 'ynng') && (
         <TFNGQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} type={type} />
       )}
-
       {(type === 'mc' || type === 'fill') && (
         group.questions.map((q) => {
           const userAns    = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
@@ -273,8 +268,7 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           if (type === 'fill') return <FillQuestion key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
         })
       )}
-
-      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill'].includes(type) && (
+      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill'].includes(type) && type && (
         <div style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
           [{type}] — dạng này sẽ được thêm sau.
         </div>
@@ -283,7 +277,6 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
     </div>
   )
 }
-
 // ─── MC Question ──────────────────────────────────────────────────────────────
 
 function McQuestion({ q, userAns, isReview, onChange, fontSize }) {

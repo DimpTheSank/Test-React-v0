@@ -1032,8 +1032,10 @@ export default function BaiTapIELTS({ params }) {
 
       setQuestions(processed)
 
-      // Lấy passage từ row đầu tiên có Context
-      const passageRow = processed.find(r => r.Context?.trim())
+      // Lấy passage từ row đầu tiên có Context (bỏ qua row dạng map vì Context của map là ảnh)
+      const passageRow = processed.find(r =>
+        r.Context?.trim() && r.Question_Type?.toLowerCase() !== 'map'
+      )
       if (passageRow) setPassage(passageRow.Context)
 
       // Lấy audio từ row đầu tiên có Audio

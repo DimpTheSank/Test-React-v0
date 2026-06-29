@@ -818,7 +818,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
               {/* Tên địa danh */}
               <span style={{
                 flex: 1, fontSize: `${fontSize}px`,
-                color: 'var(--c-primary-dark)', fontStyle: 'italic',
+                color: 'var(--c-primary-dark)', fontStyle: 'normal',
               }}>
                 {q.Question}
               </span>

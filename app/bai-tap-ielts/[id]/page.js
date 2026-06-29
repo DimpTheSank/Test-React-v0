@@ -238,6 +238,15 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           onChange={onChange}
           fontSize={fontSize}
         />
+      ) : type === 'map' ? (
+        <MapQuestion
+          questions={group.questions}
+          answers={answers}
+          reviewAnswers={reviewAnswers}
+          isReview={isReview}
+          onChange={onChange}
+          fontSize={fontSize}
+        />
       ) : (
         /* Render từng câu theo type */
         group.questions.map((q) => {
@@ -740,6 +749,124 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── Map Question ─────────────────────────────────────────────────────────────
+//
+// Sheet format — mỗi row = 1 câu:
+//   Question_Type: map
+//   Context:       link Drive ảnh map (chỉ điền ở row đầu của group)
+//   Question_Num:  số câu
+//   Question:      tên địa danh (vd: "the car park")
+//   Correct_Ans:   chữ cái đúng trên map (vd: A, B, C...)
+
+function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ   = questions[0]
+  const imageUrl = firstQ?.Context?.trim()
+    ? convertDriveLink(firstQ.Context.trim(), 'image')
+    : null
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+      {/* Hình map căn giữa */}
+      {imageUrl && (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <img
+            src={imageUrl}
+            alt="Map"
+            style={{
+              maxWidth: '100%', borderRadius: '10px',
+              border: '1px solid var(--c-primary-pale)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          />
+        </div>
+      )}
+
+      {/* Danh sách câu hỏi */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {questions.map((q) => {
+          const qIdx      = q.globalIndex
+          const correct   = q.Correct_Ans?.trim() || ''
+          const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || ''))
+          const isCorrect = userVal.trim().toUpperCase() === correct.toUpperCase()
+
+          let borderColor = 'var(--c-primary-pale)'
+          let bgColor     = 'var(--c-surface)'
+          if (isReview) {
+            if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+            else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+            else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+          } else if (userVal.trim()) {
+            borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+          }
+
+          return (
+            <div key={qIdx} style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '10px 14px', borderRadius: '9px',
+              border: `1.5px solid ${borderColor}`,
+              backgroundColor: bgColor,
+              transition: 'all 0.15s',
+            }}>
+              {/* Số câu */}
+              <QuestionNumber num={q.Question_Num || qIdx + 1} />
+
+              {/* Tên địa danh */}
+              <span style={{
+                flex: 1, fontSize: `${fontSize}px`,
+                color: 'var(--c-primary-dark)', fontStyle: 'italic',
+              }}>
+                {q.Question}
+              </span>
+
+              {/* Input hoặc chip review */}
+              {isReview ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    minWidth: '36px', height: '36px', borderRadius: '8px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: `${fontSize}px`, fontWeight: '700',
+                    border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+                    color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+                  }}>
+                    {userVal.trim() || '—'}
+                  </span>
+                  {!isCorrect && correct && (
+                    <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+                  )}
+                  <span style={{ fontSize: '16px' }}>
+                    {!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}
+                  </span>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={userVal}
+                  onChange={e => !isReview && onChange(qIdx, e.target.value.toUpperCase())}
+                  placeholder="A/B/C..."
+                  maxLength={2}
+                  style={{
+                    width: '60px', padding: '8px', borderRadius: '8px',
+                    border: `1.5px solid ${borderColor}`,
+                    backgroundColor: 'var(--c-surface)',
+                    fontSize: `${fontSize}px`, fontWeight: '700',
+                    outline: 'none', textAlign: 'center',
+                    fontFamily: 'inherit', color: 'var(--c-primary-dark)',
+                    transition: 'border-color 0.15s',
+                    flexShrink: 0,
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+                  onBlur={e => e.currentTarget.style.borderColor = borderColor}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

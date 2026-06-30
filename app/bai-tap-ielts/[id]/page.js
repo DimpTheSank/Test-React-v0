@@ -33,7 +33,7 @@ const mauKyNang = {
 
 // ─── Font size control ────────────────────────────────────────────────────────
 
-function FontSizeControl({ label, value, onChange, min = 11, max = 22 }) {
+function FontSizeControl({ label, value, onChange, min = 11, max = 36 }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '4px',

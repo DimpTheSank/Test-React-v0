@@ -160,7 +160,7 @@ function parseInline(text) {
 
 // ─── Questions panel (Vùng phải) ─────────────────────────────────────────────
 
-function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fontSize }) {
+function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fontSize, audios, centered }) {
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -181,18 +181,28 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       </div>
 
       {/* Scrollable questions */}
-      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-        {groups.map((group, gi) => (
-          <QuestionGroup
-            key={gi}
-            group={group}
-            answers={answers}
-            reviewAnswers={reviewAnswers}
-            isReview={isReview}
-            onChange={onChange}
-            fontSize={fontSize.value}
-          />
-        ))}
+      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: '28px',
+          maxWidth: centered ? '720px' : 'none',
+          margin: centered ? '0 auto' : 0,
+        }}>
+          {centered && audios?.map((src, i) => (
+            <iframe key={i} src={src} width="100%" height="80"
+              style={{ border: 'none', borderRadius: '8px' }} />
+          ))}
+          {groups.map((group, gi) => (
+            <QuestionGroup
+              key={gi}
+              group={group}
+              answers={answers}
+              reviewAnswers={reviewAnswers}
+              isReview={isReview}
+              onChange={onChange}
+              fontSize={fontSize.value}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -1451,18 +1461,19 @@ export default function BaiTapIELTS({ params }) {
         current={currentQ}
         onJump={setCurrentQ}
       />
-
+      
       {/* ── Body: 2 panel ── */}
       <div className="ielts-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
-        {/* Passage */}
-        <div className="ielts-passage" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
-          <PassagePanel
-            passage={passage}
-            audios={audios}
-            fontSize={{ value: fontPassage, set: setFontPassage }}
-          />
-        </div>
+        {exercise.kyNang !== 'Listening' && (
+          <div className="ielts-passage" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+            <PassagePanel
+              passage={passage}
+              audios={audios}
+              fontSize={{ value: fontPassage, set: setFontPassage }}
+            />
+          </div>
+        )}
 
         {/* Questions */}
         <div className="ielts-questions" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
@@ -1473,6 +1484,8 @@ export default function BaiTapIELTS({ params }) {
             isReview={isReview}
             onChange={(idx, val) => setAnswers(a => ({ ...a, [idx]: val }))}
             fontSize={{ value: fontQuestions, set: setFontQuestions }}
+            audios={audios}
+            centered={exercise.kyNang === 'Listening'}
           />
         </div>
 

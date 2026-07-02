@@ -14,7 +14,7 @@ import {
   SkeletonGVProgressTable,
 } from '@/app/components/Skeleton'
 import Papa from 'papaparse'
-
+import { isAnswerCorrect } from '@/lib/answerUtils'
 
 const accentKyNang = {
   'Reading':          'var(--c-primary-mid)',
@@ -1119,16 +1119,15 @@ function ModalChiTietHV({ row, exercise, questions, onClose }) {
 
     if (type === 'mcq' || type === 'mcq_blank') {
       if (!userAns) return { type: 'choice', isCorrect: false, isEmpty: true, userAns: null, correct }
-      return { type: 'choice', isCorrect: userAns === correct, isEmpty: false, userAns, correct }
+      return { type: 'choice', isCorrect: isAnswerCorrect(userAns, correct), isEmpty: false, userAns, correct }
     }
-
     if (type === 'fill_short' || type === 'fill_blank') {
       const correctParts = (correct || '').split('|').map(s => s.trim())
       const userParts    = (userAns || []).map(s => (s || '').trim())
       const slotResults  = correctParts.map((c, i) => ({
         correct: c,
         user: userParts[i] || '',
-        isCorrect: (userParts[i] || '').toLowerCase() === c.toLowerCase(),
+        isCorrect: isAnswerCorrect(userParts[i], c),
       }))
       const allCorrect = slotResults.every(s => s.isCorrect)
       return { type: 'slots', slotResults, allCorrect }
@@ -1434,7 +1433,7 @@ function ModalThongKe({ exercise, submissions, allRows, onClose }) {
                       {opts.map(opt => {
                         const count = dist.counts[opt.key] || 0
                         const pct   = Math.round(count / dist.total * 100)
-                        const isCorrect = opt.key === dist.correct
+                        const isCorrect = isAnswerCorrect(opt.key, dist.correct)
                         const hasVotes  = count > 0
                         return (
                           <div key={opt.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1480,7 +1479,7 @@ function ModalThongKe({ exercise, submissions, allRows, onClose }) {
                           {allAnswers.length === 0 ? <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>Chưa có ai trả lời</span> : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               {allAnswers.map(([ans, cnt]) => {
-                                const isCorrect = ans.toLowerCase() === correct.toLowerCase()
+                                const isCorrect = isAnswerCorrect(ans, correct)
                                 const pct       = Math.round(cnt / total * 100)
                                 return (
                                   <div key={ans} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

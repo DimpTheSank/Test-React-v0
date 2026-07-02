@@ -10,6 +10,7 @@ import { useHighlight } from '@/lib/useHighlight'
 import HighlightToolbar from '@/app/components/HighlightToolbar'
 import { SkeletonBaiTap } from '@/app/components/Skeleton'
 import { renderContextBlock } from '@/lib/parseContext'
+import { isAnswerCorrect } from '@/lib/answerUtils'
 
 const mauKyNang = {
   'Reading':   'var(--c-primary-mid)',
@@ -90,17 +91,17 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGrou
           bg = 'var(--c-primary)'; color = '#fff'; border = 'var(--c-primary)'
         } else if (isReview) {
           if (q.Question_Type === 'fill_blank') {
-            const correctParts = (correct || '').split('|').map(s => s.trim().toLowerCase())
-            const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
-            const allCorrect   = correctParts.every((c, ci) => c === userParts[ci])
+            const correctParts = (correct || '').split('|').map(s => s.trim())
+            const userParts    = (userAns || []).map(s => s || '')
+            const allCorrect   = correctParts.every((c, ci) => isAnswerCorrect(userParts[ci], c))
             const anyFilled    = (userAns || []).some(Boolean)
             if (!anyFilled)      { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-textsoft)';  border = 'var(--c-warn)'          }
             else if (allCorrect) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)';   border = 'var(--c-success-border)' }
             else                 { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';    border = 'var(--c-danger-border)'  }
           } else {
-            if (!userAns)               { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-textsoft)';  border = 'var(--c-warn)'          }
-            else if (userAns === correct){ bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)';   border = 'var(--c-success-border)' }
-            else                        { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';    border = 'var(--c-danger-border)'  }
+            if (!userAns)                              { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-textsoft)';  border = 'var(--c-warn)'          }
+            else if (isAnswerCorrect(userAns, correct)) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)';   border = 'var(--c-success-border)' }
+            else                                        { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';    border = 'var(--c-danger-border)'  }
           }
           // Highlight nhẹ câu đang xem (review mode)
           if (inCurrent) { border = 'var(--c-primary)'; }
@@ -309,10 +310,10 @@ function QuestionItem({ q, isCurrent, isReview, answers, reviewAnswers, fontSize
             ? getOptions(q).map(opt => {
                 const border = isReview ? getReviewBorderColor(q, opt.key) : (answers[q.globalIndex] === opt.key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
                 const bg     = isReview
-                  ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)')
+                  ? (isAnswerCorrect(opt.key, q.Correct_Ans) ? 'var(--c-success-bg)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)')
                   : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
                 const color  = isReview
-                  ? (opt.key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-primary-mid)')
+                  ? (isAnswerCorrect(opt.key, q.Correct_Ans) ? 'var(--c-success-text)' : opt.key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-primary-mid)')
                   : (answers[q.globalIndex] === opt.key ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)')
                 return (
                   <div key={opt.key} onClick={() => !isReview && onAnswer(q.globalIndex, opt.key)}
@@ -324,10 +325,10 @@ function QuestionItem({ q, isCurrent, isReview, answers, reviewAnswers, fontSize
             : ['A', 'B', 'C', 'D'].slice(0, parseInt(q.Num_Answers) || 4).map(key => {
                 const border = isReview ? getReviewBorderColor(q, key) : (answers[q.globalIndex] === key ? 'var(--c-primary)' : 'var(--c-primary-pale)')
                 const bg     = isReview
-                  ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-bg)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)')
+                  ? (isAnswerCorrect(key, q.Correct_Ans) ? 'var(--c-success-bg)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-bg)' : !reviewAnswers[q.globalIndex] ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)')
                   : (answers[q.globalIndex] === key ? 'var(--c-primary-bg)' : 'var(--c-surface)')
                 const color  = isReview
-                  ? (key === q.Correct_Ans?.trim() ? 'var(--c-success-text)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-text-muted)')
+                  ? (isAnswerCorrect(key, q.Correct_Ans) ? 'var(--c-success-text)' : key === reviewAnswers[q.globalIndex] ? 'var(--c-danger-text)' : 'var(--c-text-muted)')
                   : (answers[q.globalIndex] === key ? 'var(--c-primary-dark)' : 'var(--c-text-muted)')
                 return (
                   <div key={key} onClick={() => !isReview && onAnswer(q.globalIndex, key)}
@@ -428,9 +429,9 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
   const getSlotStyle = (slotIdx) => {
     if (isReview) {
       const revAns = (reviewAnswer || [])[slotIdx]
-      if (!revAns)                          return { bg: 'var(--c-warn-bgsoft)', border: 'var(--c-warn)', color: 'var(--c-warn-textsoft)' }
-      if (revAns === correctParts[slotIdx]) return { bg: 'var(--c-success-bg)', border: 'var(--c-success)', color: 'var(--c-success-text)' }
-      return                                       { bg: 'var(--c-danger-bg)', border: 'var(--c-danger)', color: 'var(--c-danger-text)' }
+      if (!revAns)                                          return { bg: 'var(--c-warn-bgsoft)', border: 'var(--c-warn)', color: 'var(--c-warn-textsoft)' }
+      if (isAnswerCorrect(revAns, correctParts[slotIdx])) return { bg: 'var(--c-success-bg)', border: 'var(--c-success)', color: 'var(--c-success-text)' }
+      return                                                       { bg: 'var(--c-danger-bg)', border: 'var(--c-danger)', color: 'var(--c-danger-text)' }
     }
     if (slots[slotIdx]) return { bg: 'var(--c-primary-bg)', border: 'var(--c-primary-mid)', color: 'var(--c-primary-dark)' }
     return                     { bg: 'var(--c-surface)',   border: 'var(--c-primary-pale)', color: 'var(--c-primary-pale)' }
@@ -465,7 +466,7 @@ function FillBlankQuestion({ q, isReview, userAnswer, reviewAnswer, onChange, fo
               onMouseLeave={e => { if (filled && !isReview) e.currentTarget.style.backgroundColor = style.bg }}
             >
               {filled || <span style={{ opacity: 0.35, fontStyle: 'italic', fontWeight: 400, fontSize: `${Math.max(11, fs - 2)}px` }}>...</span>}
-              {isReview && filled && filled !== correctParts[idx] && (
+              {isReview && filled && !isAnswerCorrect(filled, correctParts[idx]) && (
                 <span style={{ marginLeft: '6px', color: 'var(--c-success)', fontWeight: '600', fontSize: `${Math.max(11, fs - 2)}px` }}>
                   → {correctParts[idx]}
                 </span>
@@ -709,7 +710,7 @@ export default function BaiTap({ params }) {
     const userAns = reviewAnswers[q.globalIndex]
     const correct = q.Correct_Ans?.trim()
     if (!userAns) return 'var(--c-warn)'
-    if (optKey === correct) return 'var(--c-success)'
+    if (isAnswerCorrect(optKey, correct)) return 'var(--c-success)'
     if (optKey === userAns) return 'var(--c-danger)'
     return 'var(--c-primary-pale)'
   }
@@ -733,15 +734,15 @@ export default function BaiTap({ params }) {
         const userAns = answers[q.globalIndex]
 
         if (q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') {
-          if (userAns === correctRaw) soCauDung++
+          if (isAnswerCorrect(userAns, correctRaw)) soCauDung++
         } else if (q.Question_Type === 'fill_short') {
-          const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
-          const userParts    = (userAns || []).map(s => s.trim().toLowerCase())
-          if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
+          const correctParts = correctRaw.split('|').map(s => s.trim())
+          const userParts    = userAns || []
+          if (correctParts.every((c, i) => isAnswerCorrect(userParts[i], c))) soCauDung++
         } else if (q.Question_Type === 'fill_blank') {
-          const correctParts = correctRaw.split('|').map(s => s.trim().toLowerCase())
-          const userParts    = (userAns || []).map(s => (s || '').trim().toLowerCase())
-          if (correctParts.every((c, i) => c === userParts[i])) soCauDung++
+          const correctParts = correctRaw.split('|').map(s => s.trim())
+          const userParts    = userAns || []
+          if (correctParts.every((c, i) => isAnswerCorrect(userParts[i], c))) soCauDung++
         }
       })
 

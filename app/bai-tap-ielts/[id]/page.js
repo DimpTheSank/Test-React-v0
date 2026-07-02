@@ -12,6 +12,7 @@ import { convertDriveLink } from '@/lib/driveUtils'
 import { useHighlight } from '@/lib/useHighlight'
 import HighlightToolbar from '@/app/components/HighlightToolbar'
 import { renderContextBlock } from '@/lib/parseContext'
+import { isAnswerCorrect } from '@/lib/answerUtils'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -296,7 +297,7 @@ function McQuestion({ q, userAns, isReview, onChange, fontSize }) {
 
   const getStyle = (key) => {
     if (isReview) {
-      const isCorrectOpt = key === correct
+      const isCorrectOpt = isAnswerCorrect(key, correct)
       const isUserOpt    = key === userAns
       if (isCorrectOpt)              return { bg: 'var(--c-success-bg)', border: 'var(--c-success)', color: 'var(--c-success-text)' }
       if (isUserOpt && !isCorrectOpt) return { bg: 'var(--c-danger-bg)',  border: 'var(--c-danger)',  color: 'var(--c-danger-text)'  }
@@ -336,8 +337,8 @@ function McQuestion({ q, userAns, isReview, onChange, fontSize }) {
             >
               <span style={{ fontWeight: '700', flexShrink: 0, minWidth: '18px' }}>{opt.key}.</span>
               <span style={{ flex: 1, lineHeight: 1.5 }}>{parseInline(opt.value)}</span>
-              {isReview && opt.key === correct  && <span style={{ flexShrink: 0, fontSize: '14px' }}>✅</span>}
-              {isReview && opt.key === userAns && opt.key !== correct && <span style={{ flexShrink: 0, fontSize: '14px' }}>❌</span>}
+              {isReview && isAnswerCorrect(opt.key, correct)  && <span style={{ flexShrink: 0, fontSize: '14px' }}>✅</span>}
+              {isReview && opt.key === userAns && !isAnswerCorrect(opt.key, correct) && <span style={{ flexShrink: 0, fontSize: '14px' }}>❌</span>}
             </div>
           )
         })}
@@ -356,7 +357,7 @@ function McQuestion({ q, userAns, isReview, onChange, fontSize }) {
 function FillQuestion({ q, userAns, isReview, onChange, fontSize }) {
   const correct   = q.Correct_Ans?.trim() || ''
   const val       = userAns || ''
-  const isCorrect = val.trim().toLowerCase() === correct.toLowerCase()
+  const isCorrect = isAnswerCorrect(val, correct)
 
   let borderColor = 'var(--c-primary-pale)'
   let bgColor     = 'var(--c-surface)'
@@ -477,7 +478,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
     const qIdx    = q?.globalIndex
     const correct = q?.Correct_Ans?.trim() || ''
     const userVal = q ? (isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
-    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+    const isCorrect = isAnswerCorrect(userVal, correct)
 
     let borderColor = 'var(--c-primary-pale)'
     let bgColor     = 'var(--c-surface)'
@@ -658,7 +659,7 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
     const qIdx    = q?.globalIndex
     const correct = q?.Correct_Ans?.trim() || ''
     const userVal = q ? String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
-    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+    const isCorrect = isAnswerCorrect(userVal, correct)
 
     let borderColor = 'var(--c-primary-pale)'
     let bgColor     = 'var(--c-surface)'
@@ -786,7 +787,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
           const qIdx      = q.globalIndex
           const correct   = q.Correct_Ans?.trim() || ''
           const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || ''))
-          const isCorrect = userVal.trim().toUpperCase() === correct.toUpperCase()
+          const isCorrect = isAnswerCorrect(userVal, correct)
 
           let borderColor = 'var(--c-primary-pale)'
           let bgColor     = 'var(--c-surface)'
@@ -884,7 +885,7 @@ function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview,
     const qIdx      = q.globalIndex
     const correct   = q.Correct_Ans?.trim() || ''
     const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || ''))
-    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+    const isCorrect = isAnswerCorrect(userVal, correct)
 
     let borderColor = 'var(--c-primary-pale)'
     let bgColor     = 'var(--c-surface)'
@@ -988,7 +989,7 @@ function TFNGQuestion({ questions, answers, reviewAnswers, isReview, onChange, f
     const qIdx      = q.globalIndex
     const correct   = q.Correct_Ans?.trim().toUpperCase() || ''
     const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')).toUpperCase()
-    const isCorrect = userVal === correct
+    const isCorrect = isAnswerCorrect(userVal, correct)
 
     let borderColor = 'var(--c-primary-pale)'
     let bgColor     = 'var(--c-surface)'
@@ -1119,7 +1120,7 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, current, on
           bg = 'var(--c-primary)'; color = '#fff'; border = 'var(--c-primary)'
         } else if (isReview) {
           if (!userAns)              { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-text)';    border = 'var(--c-warn)'          }
-          else if (userAns === correct) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)' }
+          else if (isAnswerCorrect(userAns, correct)) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)' }
           else                       { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';  border = 'var(--c-danger-border)'  }
         } else if (userAns) {
           bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)'
@@ -1294,17 +1295,7 @@ export default function BaiTapIELTS({ params }) {
         const correct = q.Correct_Ans?.trim()
         if (!correct) return
         const userAns = String(answers[q.globalIndex] || '').trim()
-        const type    = q.Question_Type?.toLowerCase()
-
-        if (type === 'mc') {
-          if (userAns === correct) soCauDung++
-        } else if (type === 'fill' || type === 'table' || type === 'flowchart') {
-          if (userAns.toLowerCase() === correct.toLowerCase()) soCauDung++
-        } else if (type === 'map' || type === 'matching_headings') {
-          if (userAns.toLowerCase() === correct.toLowerCase()) soCauDung++
-        } else if (type === 'tfng' || type === 'ynng') {
-          if (userAns.toUpperCase() === correct.toUpperCase()) soCauDung++
-        }
+        if (isAnswerCorrect(userAns, correct)) soCauDung++
       })
 
       const assignSnap = await getDocs(query(

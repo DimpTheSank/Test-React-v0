@@ -201,6 +201,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
               isReview={isReview}
               onChange={onChange}
               fontSize={fontSize.value}
+              isListening={isListening}
             />
           ))}
         </div>
@@ -220,6 +221,12 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+      {/* Audio của nhóm — chỉ hiện khi Listening */}
+      {isListening && group.audios?.map((src, i) => (
+        <iframe key={i} src={src} width="100%" height="80"
+          style={{ border: 'none', borderRadius: '8px', flexShrink: 0 }} />
+      ))}
 
       {/* Group label — hiện với tất cả các dạng */}
       {label && (
@@ -1340,7 +1347,13 @@ export default function BaiTapIELTS({ params }) {
       if (!map.has(g)) map.set(g, [])
       map.get(g).push(q)
     })
-    return [...map.values()].map(qs => ({ questions: qs }))
+    return [...map.values()].map(qs => ({
+      questions: qs,
+      audios: (qs[0]?.Audio || '')
+        .split('|')
+        .map(s => convertDriveLink(s.trim(), 'audio'))
+        .filter(Boolean),
+    }))
   })()
 
   const mauHeader = mauKyNang[exercise?.kyNang] || 'var(--c-primary)'
@@ -1475,8 +1488,7 @@ export default function BaiTapIELTS({ params }) {
             isReview={isReview}
             onChange={(idx, val) => setAnswers(a => ({ ...a, [idx]: val }))}
             fontSize={{ value: fontQuestions, set: setFontQuestions }}
-            audios={audios}
-            centered={exercise.kyNang === 'Listening'}
+            isListening={exercise.kyNang === 'Listening'}
           />
         </div>
 

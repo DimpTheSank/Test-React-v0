@@ -270,7 +270,7 @@ function parseInline(text) {
 
 // ─── Questions panel (Vùng phải) ─────────────────────────────────────────────
 
-function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fontSize, audios, centered }) {
+function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fontSize, audios, centered, isListening }) {
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -320,7 +320,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
 
 // ─── Question Group ───────────────────────────────────────────────────────────
 
-function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, fontSize }) {
+function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, fontSize, isListening }) {
   const firstQ  = group.questions[0]
   const label   = firstQ?.Question_Label || ''
   const type    = firstQ?.Question_Type?.toLowerCase()

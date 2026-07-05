@@ -403,8 +403,7 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
 
       {/* Audio của nhóm — chỉ hiện khi Listening */}
       {isListening && group.audios?.map((src, i) => (
-        <iframe key={i} src={src} width="100%" height="80"
-          style={{ border: 'none', borderRadius: '8px', flexShrink: 0 }} />
+        <AudioPlayer key={src + i} src={src} />
       ))}
 
       {/* Group label — hiện với tất cả các dạng */}

@@ -69,6 +69,114 @@ function FontSizeControl({ label, value, onChange, min = 11, max = 36 }) {
   )
 }
 
+// ─── Custom Audio Player (thay cho iframe Drive) ─────────────────────────────
+function AudioPlayer({ src }) {
+  const audioRef = useRef(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateDuration = () => setDuration(audio.duration || 0)
+    const handleEnded = () => setIsPlaying(false)
+
+    audio.addEventListener('timeupdate', updateTime)
+    audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('ended', handleEnded)
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime)
+      audio.removeEventListener('loadedmetadata', updateDuration)
+      audio.removeEventListener('ended', handleEnded)
+    }
+  }, [src])
+
+  const togglePlay = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (isPlaying) { audio.pause(); setIsPlaying(false) }
+    else { audio.play(); setIsPlaying(true) }
+  }
+
+  const skip = (sec) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const next = Math.min(Math.max(audio.currentTime + sec, 0), duration || audio.duration || 0)
+    audio.currentTime = next
+    setCurrentTime(next)
+  }
+
+  const handleSeek = (e) => {
+    const audio = audioRef.current
+    const val = parseFloat(e.target.value)
+    if (!audio || isNaN(val)) return
+    audio.currentTime = val
+    setCurrentTime(val)
+  }
+
+  const formatTime = (t) => {
+    if (!t || isNaN(t)) return '0:00'
+    const m = Math.floor(t / 60)
+    const s = Math.floor(t % 60)
+    return `${m}:${String(s).padStart(2, '0')}`
+  }
+
+  const btnStyle = {
+    padding: '6px 12px', borderRadius: '8px',
+    border: '1px solid var(--c-primary-pale)',
+    backgroundColor: 'var(--c-surface)', color: 'var(--c-primary)',
+    fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, transition: 'background-color 0.15s',
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px',
+      padding: '10px 14px', borderRadius: '10px',
+      backgroundColor: 'var(--c-primary-barest)',
+      border: '1px solid var(--c-primary-bg)',
+    }}>
+      <audio ref={audioRef} src={src} preload="metadata" />
+
+      <button onClick={() => skip(-5)} title="Lùi 5 giây" style={btnStyle}>⏪ 5s</button>
+
+      <button
+        onClick={togglePlay}
+        title={isPlaying ? 'Tạm dừng' : 'Phát'}
+        style={{
+          ...btnStyle, width: '38px', height: '38px', borderRadius: '50%',
+          backgroundColor: 'var(--c-primary)', color: '#fff', fontSize: '15px',
+        }}
+      >
+        {isPlaying ? '⏸' : '▶'}
+      </button>
+
+      <button onClick={() => skip(5)} title="Tiến 5 giây" style={btnStyle}>5s ⏩</button>
+
+      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', minWidth: '36px', textAlign: 'right' }}>
+        {formatTime(currentTime)}
+      </span>
+
+      <input
+        type="range"
+        min="0"
+        max={duration || 0}
+        step="0.1"
+        value={currentTime}
+        onChange={handleSeek}
+        style={{ flex: 1, accentColor: 'var(--c-primary)' }}
+      />
+
+      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', minWidth: '36px' }}>
+        {formatTime(duration)}
+      </span>
+    </div>
+  )
+}
+
 // ─── Passage renderer (Vùng trái) ────────────────────────────────────────────
 
 function PassagePanel({ passage, audios, fontSize }) {
@@ -101,8 +209,9 @@ function PassagePanel({ passage, audios, fontSize }) {
       }}>
         {/* Audio nếu có */}
         {audios?.map((src, i) => (
-          <iframe key={i} src={src} width="100%" height="80"
-            style={{ border: 'none', borderRadius: '8px', marginBottom: '16px' }} />
+          <div key={i} style={{ marginBottom: '16px' }}>
+            <AudioPlayer src={src} />
+          </div>
         ))}
 
         {/* Passage text */}
@@ -189,8 +298,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
           margin: centered ? '0 auto' : 0,
         }}>
           {centered && audios?.map((src, i) => (
-            <iframe key={i} src={src} width="100%" height="80"
-              style={{ border: 'none', borderRadius: '8px' }} />
+            <AudioPlayer key={i} src={src} />
           ))}
           {groups.map((group, gi) => (
             <QuestionGroup

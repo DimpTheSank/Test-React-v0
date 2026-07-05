@@ -75,21 +75,29 @@ function AudioPlayer({ src }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hoverTime, setHoverTime] = useState(null) // vị trí hover trên thanh tiến trình
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
     const updateTime = () => setCurrentTime(audio.currentTime)
-    const updateDuration = () => setDuration(audio.duration || 0)
+    const updateDuration = () => { setDuration(audio.duration || 0); setIsLoading(false) }
     const handleEnded = () => setIsPlaying(false)
+    const handleWaiting = () => setIsLoading(true)
+    const handlePlaying = () => setIsLoading(false)
 
     audio.addEventListener('timeupdate', updateTime)
     audio.addEventListener('loadedmetadata', updateDuration)
     audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('waiting', handleWaiting)
+    audio.addEventListener('playing', handlePlaying)
     return () => {
       audio.removeEventListener('timeupdate', updateTime)
       audio.removeEventListener('loadedmetadata', updateDuration)
       audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('waiting', handleWaiting)
+      audio.removeEventListener('playing', handlePlaying)
     }
   }, [src])
 
@@ -103,7 +111,8 @@ function AudioPlayer({ src }) {
   const skip = (sec) => {
     const audio = audioRef.current
     if (!audio) return
-    const next = Math.min(Math.max(audio.currentTime + sec, 0), duration || audio.duration || 0)
+    const max = duration || audio.duration || 0
+    const next = Math.min(Math.max(audio.currentTime + sec, 0), max)
     audio.currentTime = next
     setCurrentTime(next)
   }
@@ -123,56 +132,118 @@ function AudioPlayer({ src }) {
     return `${m}:${String(s).padStart(2, '0')}`
   }
 
-  const btnStyle = {
-    padding: '6px 12px', borderRadius: '8px',
-    border: '1px solid var(--c-primary-pale)',
+  const pct = duration ? (currentTime / duration) * 100 : 0
+
+  const skipBtnStyle = (size) => ({
+    width: size, height: size, borderRadius: '50%',
+    border: '1.5px solid var(--c-primary-pale)',
     backgroundColor: 'var(--c-surface)', color: 'var(--c-primary)',
-    fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+    fontSize: '11px', fontWeight: '700', cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0, transition: 'background-color 0.15s',
-  }
+    flexShrink: 0, transition: 'all 0.15s', gap: '1px',
+    boxShadow: '0 1px 2px rgba(24,95,165,0.08)',
+  })
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: '10px',
-      padding: '10px 14px', borderRadius: '10px',
-      backgroundColor: 'var(--c-primary-barest)',
-      border: '1px solid var(--c-primary-bg)',
+      display: 'flex', flexDirection: 'column', gap: '10px',
+      width: '100%', padding: '16px 20px', borderRadius: '14px',
+      background: 'linear-gradient(135deg, var(--c-primary-bg) 0%, var(--c-primary-barest) 100%)',
+      border: '1px solid var(--c-primary-pale)',
+      boxShadow: 'var(--shadow-card)',
+      boxSizing: 'border-box',
     }}>
       <audio ref={audioRef} src={src} preload="metadata" />
 
-      <button onClick={() => skip(-5)} title="Lùi 5 giây" style={btnStyle}>⏪ 5s</button>
+      {/* Hàng trên: label + thời gian */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)',
+          textTransform: 'uppercase', letterSpacing: '0.05em',
+        }}>
+          🎧 Audio {isLoading && <span style={{ fontWeight: '400', textTransform: 'none', color: 'var(--c-text-muted)' }}>đang tải...</span>}
+        </span>
+        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--c-primary-dark)', fontVariantNumeric: 'tabular-nums' }}>
+          {formatTime(currentTime)} <span style={{ color: 'var(--c-text-muted)', fontWeight: '400' }}>/ {formatTime(duration)}</span>
+        </span>
+      </div>
 
-      <button
-        onClick={togglePlay}
-        title={isPlaying ? 'Tạm dừng' : 'Phát'}
-        style={{
-          ...btnStyle, width: '38px', height: '38px', borderRadius: '50%',
-          backgroundColor: 'var(--c-primary)', color: '#fff', fontSize: '15px',
-        }}
-      >
-        {isPlaying ? '⏸' : '▶'}
-      </button>
+      {/* Thanh tiến trình — trải toàn bộ chiều ngang */}
+      <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.01"
+          value={currentTime}
+          onChange={handleSeek}
+          style={{
+            width: '100%', height: '6px', borderRadius: '99px',
+            appearance: 'none', WebkitAppearance: 'none',
+            background: `linear-gradient(to right, var(--c-primary) 0%, var(--c-primary-mid) ${pct}%, var(--c-primary-pale) ${pct}%, var(--c-primary-pale) 100%)`,
+            outline: 'none', cursor: 'pointer', accentColor: 'var(--c-primary)',
+          }}
+        />
+        <style>{`
+          input[type="range"]::-webkit-slider-thumb {
+            appearance: none; -webkit-appearance: none;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--c-surface); border: 3px solid var(--c-primary);
+            cursor: pointer; box-shadow: 0 1px 4px rgba(24,95,165,0.35);
+            transition: transform 0.15s;
+          }
+          input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+          input[type="range"]::-moz-range-thumb {
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--c-surface); border: 3px solid var(--c-primary);
+            cursor: pointer;
+          }
+        `}</style>
+      </div>
 
-      <button onClick={() => skip(5)} title="Tiến 5 giây" style={btnStyle}>5s ⏩</button>
+      {/* Hàng nút điều khiển: -10 -5 ▶ +5 +10 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+        <button onClick={() => skip(-10)} title="Lùi 10 giây" style={skipBtnStyle('34px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          <span style={{ fontSize: '13px' }}>⏮</span>10
+        </button>
 
-      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', minWidth: '36px', textAlign: 'right' }}>
-        {formatTime(currentTime)}
-      </span>
+        <button onClick={() => skip(-5)} title="Lùi 5 giây" style={skipBtnStyle('30px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          <span style={{ fontSize: '12px' }}>◀</span>5
+        </button>
 
-      <input
-        type="range"
-        min="0"
-        max={duration || 0}
-        step="0.1"
-        value={currentTime}
-        onChange={handleSeek}
-        style={{ flex: 1, accentColor: 'var(--c-primary)' }}
-      />
+        <button
+          onClick={togglePlay}
+          title={isPlaying ? 'Tạm dừng' : 'Phát'}
+          style={{
+            width: '52px', height: '52px', borderRadius: '50%', border: 'none', cursor: 'pointer',
+            backgroundColor: 'var(--c-primary)', color: '#fff', fontSize: '20px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 3px 10px rgba(24,95,165,0.35)', flexShrink: 0,
+            transition: 'transform 0.15s, background-color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.06)'; e.currentTarget.style.backgroundColor = 'var(--c-primary-dark)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = 'var(--c-primary)' }}
+        >
+          {isPlaying ? '⏸' : '▶'}
+        </button>
 
-      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', minWidth: '36px' }}>
-        {formatTime(duration)}
-      </span>
+        <button onClick={() => skip(5)} title="Tiến 5 giây" style={skipBtnStyle('30px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          5<span style={{ fontSize: '12px' }}>▶</span>
+        </button>
+
+        <button onClick={() => skip(10)} title="Tiến 10 giây" style={skipBtnStyle('34px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          10<span style={{ fontSize: '13px' }}>⏭</span>
+        </button>
+      </div>
     </div>
   )
 }

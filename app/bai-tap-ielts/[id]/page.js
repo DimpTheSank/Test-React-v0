@@ -385,6 +385,10 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         <TFNGQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} type={type} />
       )}
+      {(type === 'fill_note') && (
+        <FillNoteQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
       {(type === 'mc' || type === 'fill') && (
         group.questions.map((q) => {
           const userAns    = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
@@ -1191,6 +1195,166 @@ function TFNGQuestion({ questions, answers, reviewAnswers, isReview, onChange, f
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {questions.map(q => renderInput(q))}
+    </div>
+  )
+}
+
+// ─── Fill Note Question ───────────────────────────────────────────────────────
+//
+// Sheet format — mỗi row = 1 câu:
+//   Question_Type:  fill_note
+//   Question_Label: hướng dẫn (chỉ row đầu)
+//   Question:       toàn bộ đoạn văn có ___ (n) (chỉ row đầu)
+//   Question_Num:   số câu (n) để map với ___ (n) trong đoạn văn
+//   Correct_Ans:    đáp án cho câu đó
+//
+// Ví dụ Question (row đầu):
+//   "Reasons for overpopulation:\n- Strict ___ (1) of anti-poaching laws\n
+//    - Successful ___ (2)\n\nProblems:\n- Damage to ___ (3) in the park"
+
+function FillNoteQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ = questions[0]
+  const raw    = firstQ?.Question?.trim() || ''
+
+  // Map Question_Num → question object
+  const qByNum = {}
+  questions.forEach(q => {
+    const num = String(q.Question_Num ?? '').trim()
+    if (num) qByNum[num] = q
+  })
+
+  // Parse đoạn văn: tách theo \n thành các dòng, mỗi dòng parse inline ___ (n)
+  const lines = raw.split('\n')
+
+  const parseSegments = (text) => {
+    const segments = []
+    const regex = /___\s*\((\d+)\)/g
+    let last = 0, m
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) segments.push({ type: 'text', val: text.slice(last, m.index) })
+      segments.push({ type: 'blank', num: m[1] })
+      last = regex.lastIndex
+    }
+    if (last < text.length) segments.push({ type: 'text', val: text.slice(last) })
+    return segments
+  }
+
+  const renderInlineBlank = (num) => {
+    const q       = qByNum[num]
+    const qIdx    = q?.globalIndex
+    const correct = q?.Correct_Ans?.trim() || ''
+    const userVal = q ? String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
+    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <span key={`fn-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
+        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
+        {isReview ? (
+          <>
+            <span style={{
+              padding: '2px 10px', borderRadius: '5px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, fontWeight: '600',
+              color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+            }}>
+              {userVal.trim() || '—'}
+            </span>
+            {!isCorrect && correct && (
+              <span style={{ fontSize: '11px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            )}
+            <span style={{ fontSize: '12px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+          </>
+        ) : (
+          <input
+            type="text"
+            value={userVal}
+            onChange={e => q && !isReview && onChange(qIdx, e.target.value)}
+            placeholder="..."
+            style={{
+              width: '110px', padding: '3px 8px', borderRadius: '5px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
+              fontFamily: 'inherit', color: 'var(--c-primary-dark)',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+            onBlur={e => e.currentTarget.style.borderColor = borderColor}
+          />
+        )}
+      </span>
+    )
+  }
+
+  const renderLine = (line, li) => {
+    if (!line.trim()) return <div key={li} style={{ height: '8px' }} />
+
+    // Heading: bắt đầu bằng ## hoặc **...**
+    const isHeading = line.trim().startsWith('## ') || /^\*\*[^*]+\*\*$/.test(line.trim())
+    const cleanLine = line.replace(/^##\s*/, '').replace(/^\*\*|\*\*$/g, '')
+
+    // Bullet: bắt đầu bằng - hoặc •
+    const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('• ')
+    const bulletContent = line.trim().replace(/^[-•]\s+/, '')
+
+    const segments = parseSegments(isHeading ? cleanLine : isBullet ? bulletContent : line)
+
+    const rendered = segments.map((seg, si) =>
+      seg.type === 'text'
+        ? <span key={si}>{parseInline(seg.val)}</span>
+        : renderInlineBlank(seg.num)
+    )
+
+    if (isHeading) {
+      return (
+        <div key={li} style={{
+          fontWeight: '700', fontSize: `${fontSize}px`,
+          color: 'var(--c-primary-dark)', marginTop: '10px', marginBottom: '2px',
+        }}>
+          {rendered}
+        </div>
+      )
+    }
+
+    if (isBullet) {
+      return (
+        <div key={li} style={{
+          display: 'flex', gap: '8px', alignItems: 'flex-start',
+          fontSize: `${fontSize}px`, lineHeight: '2.2',
+          color: 'var(--c-primary-dark)',
+        }}>
+          <span style={{ color: 'var(--c-primary-mid)', flexShrink: 0, marginTop: '1px' }}>•</span>
+          <span style={{ flex: 1 }}>{rendered}</span>
+        </div>
+      )
+    }
+
+    return (
+      <div key={li} style={{
+        fontSize: `${fontSize}px`, lineHeight: '2.2',
+        color: 'var(--c-primary-dark)',
+      }}>
+        {rendered}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      padding: '16px 20px', borderRadius: '10px',
+      border: '1px solid var(--c-primary-pale)',
+      backgroundColor: 'var(--c-primary-barest)',
+    }}>
+      {lines.map((line, li) => renderLine(line, li))}
     </div>
   )
 }

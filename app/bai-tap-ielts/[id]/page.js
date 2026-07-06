@@ -414,7 +414,7 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           borderLeft: '3px solid var(--c-primary-mid)',
         }}>
           <span style={{ fontSize: `${Math.max(12, fontSize - 1)}px`, fontWeight: '600', color: 'var(--c-primary-dark)' }}>
-            {label}
+            {parseInline(label)}
           </span>
         </div>
       )}
@@ -1004,7 +1004,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
                 flex: 1, fontSize: `${fontSize}px`,
                 color: 'var(--c-primary-dark)', fontStyle: 'italic',
               }}>
-                {q.Question}
+                {parseInline(q.Question || '')}
               </span>
 
               {/* Input hoặc chip review */}
@@ -1095,7 +1095,7 @@ function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview,
       }}>
         <QuestionNumber num={q.Question_Num || qIdx + 1} />
         <span style={{ flex: 1, fontSize: `${fontSize}px`, color: 'var(--c-primary-dark)', fontWeight: '500' }}>
-          {q.Question}
+          {parseInline(q.Question || '')}
         </span>
         {isReview ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -1149,7 +1149,7 @@ function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview,
           </span>
           {headings.map((h, i) => (
             <span key={i} style={{ fontSize: `${Math.max(12, fontSize - 1)}px`, color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>
-              {h}
+              {parseInline(h)}
             </span>
           ))}
         </div>

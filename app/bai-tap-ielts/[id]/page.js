@@ -1514,8 +1514,8 @@ export default function BaiTapIELTS({ params }) {
   const [ketQua, setKetQua]           = useState(null)
   const [draftSaved, setDraftSaved]   = useState(false)
 
-  const [fontPassage, setFontPassage] = useState(20)
-  const [fontQuestions, setFontQuestions] = useState(20)
+  const [fontPassage, setFontPassage] = useState(12)
+  const [fontQuestions, setFontQuestions] = useState(12)
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['ielts-passage-panel', 'ielts-questions-panel'])
 

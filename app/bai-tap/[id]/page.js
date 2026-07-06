@@ -546,8 +546,8 @@ export default function BaiTap({ params }) {
   const [draftSaved, setDraftSaved]     = useState(false)
   const [reviewAnswers, setReviewAnswers] = useState({})
 
-  const [fontSizeContext, setFontSizeContext]     = useState(20)
-  const [fontSizeQuestions, setFontSizeQuestions] = useState(20)
+  const [fontSizeContext, setFontSizeContext]     = useState(16)
+  const [fontSizeQuestions, setFontSizeQuestions] = useState(16)
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['content-panel', 'question-panel'])
 

@@ -413,7 +413,13 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           backgroundColor: 'var(--c-primary-bg)',
           borderLeft: '3px solid var(--c-primary-mid)',
         }}>
-          <span style={{ fontSize: `${Math.max(12, fontSize - 1)}px`, fontWeight: '600', color: 'var(--c-primary-dark)' }}>
+          <span style={{
+            fontSize: `${Math.max(12, fontSize - 1)}px`,
+            fontWeight: '600',
+            color: 'var(--c-primary-dark)',
+            whiteSpace: 'pre-wrap',   // ← thêm dòng này
+            lineHeight: 1.6,          // (tuỳ chọn) cho dễ đọc khi có nhiều dòng
+          }}>
             {parseInline(label)}
           </span>
         </div>

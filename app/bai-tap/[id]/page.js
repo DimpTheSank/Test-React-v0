@@ -160,6 +160,7 @@ function ContextPanel({ firstInGroup, fontSize }) {
       {/* Content */}
       <div
         id="content-panel"
+        key={firstInGroup?.Group ?? firstInGroup?.globalIndex ?? 'empty'}
         style={{
           flex: 1, minHeight: 0, overflowY: 'auto',
           padding: '20px 24px',
@@ -686,15 +687,18 @@ export default function BaiTap({ params }) {
     if (isFirstGroup) return
     const prevGroupName = questions[firstIdxOfGroup - 1]?.Group
     const prevGroupFirstIdx = questions.findIndex(q => q.Group === prevGroupName)
+    hideToolbar()
     setCauHienTai(prevGroupFirstIdx === -1 ? 0 : prevGroupFirstIdx)
   }
 
   const goToNextGroup = () => {
     if (isLastGroup) return
+    hideToolbar()
     setCauHienTai(lastIdxOfGroup + 1)
   }
 
   const handleJump = (i) => {
+    hideToolbar()
     setCauHienTai(i)
   }
 

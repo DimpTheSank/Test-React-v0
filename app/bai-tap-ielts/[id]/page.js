@@ -362,27 +362,37 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       </div>
 
       {/* Scrollable questions */}
-      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px' }}>
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: '28px',
-          maxWidth: centered ? '720px' : 'none',
-          margin: centered ? '0 auto' : 0,
-        }}>
-          {centered && audios?.map((src, i) => (
-            <AudioPlayer key={i} src={src} />
-          ))}
-          {groups.map((group, gi) => (
-            <QuestionGroup
-              key={gi}
-              group={group}
-              answers={answers}
-              reviewAnswers={reviewAnswers}
-              isReview={isReview}
-              onChange={onChange}
-              fontSize={fontSize.value}
-              isListening={isListening}
-            />
-          ))}
+      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 0' }}>
+        <div style={{ display: 'flex', width: '100%' }}>
+          {/* Lề trái — tỉ lệ 1 */}
+          {centered && <div style={{ flex: 1 }} />}
+
+          {/* Nội dung — tỉ lệ 10 */}
+          <div style={{
+            flex: centered ? 10 : 1,
+            minWidth: 0,
+            display: 'flex', flexDirection: 'column', gap: '28px',
+            padding: centered ? '0 20px' : '0 24px',
+          }}>
+            {centered && audios?.map((src, i) => (
+              <AudioPlayer key={i} src={src} />
+            ))}
+            {groups.map((group, gi) => (
+              <QuestionGroup
+                key={gi}
+                group={group}
+                answers={answers}
+                reviewAnswers={reviewAnswers}
+                isReview={isReview}
+                onChange={onChange}
+                fontSize={fontSize.value}
+                isListening={isListening}
+              />
+            ))}
+          </div>
+
+          {/* Lề phải — tỉ lệ 1 */}
+          {centered && <div style={{ flex: 1 }} />}
         </div>
       </div>
     </div>

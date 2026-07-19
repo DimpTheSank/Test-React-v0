@@ -457,6 +457,10 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         <MatchingHeadingsQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} />
       )}
+      {type === 'matching_passage' && (
+        <MatchingPassageQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
       {(type === 'tfng' || type === 'ynng') && (
         <TFNGQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} type={type} />
@@ -1167,7 +1171,112 @@ function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview,
     </div>
   )
 }
+// ─── Matching Passage (paragraph letters A-G) ─────────────────────────────────
+//
+// Sheet format — mỗi row = 1 statement cần tìm đoạn văn chứa nó:
+//   Question_Type:  matching_passage
+//   Question_Info:  danh sách statement, mỗi cái 1 dòng (chỉ điền row đầu)
+//   Question_Num:   số câu
+//   Question:       nội dung statement
+//   Correct_Ans:    chữ cái đoạn văn đúng (vd: F, D, G, E...)
 
+function MatchingPassageQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ = questions[0]
+  const statements = (firstQ?.Question_Info || '')
+    .split('\n').map(s => s.trim()).filter(Boolean)
+
+  const renderInput = (q) => {
+    const qIdx      = q.globalIndex
+    const correct   = q.Correct_Ans?.trim().toUpperCase() || ''
+    const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')).toUpperCase()
+    const isCorrect = isAnswerCorrect(userVal, correct)
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    return (
+      <div key={qIdx} style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '10px 14px', borderRadius: '9px',
+        border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+        transition: 'all 0.15s',
+      }}>
+        <QuestionNumber num={q.Question_Num || qIdx + 1} />
+        <span style={{ flex: 1, fontSize: `${fontSize}px`, color: 'var(--c-primary-dark)', fontWeight: '500' }}>
+          {parseInline(q.Question || '')}
+        </span>
+        {isReview ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span style={{
+              padding: '4px 12px', borderRadius: '6px', fontWeight: '700',
+              fontSize: `${fontSize}px`, border: `1.5px solid ${borderColor}`,
+              backgroundColor: bgColor,
+              color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+            }}>
+              {userVal.trim() || '—'}
+            </span>
+            {!isCorrect && correct && (
+              <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            )}
+            <span style={{ fontSize: '16px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+          </div>
+        ) : (
+          <input
+            type="text"
+            value={answers[qIdx] || ''}
+            onChange={e => !isReview && onChange(qIdx, e.target.value.toUpperCase())}
+            placeholder="A/B/C..."
+            maxLength={2}
+            style={{
+              width: '70px', padding: '8px', borderRadius: '8px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: 'var(--c-surface)',
+              fontSize: `${fontSize}px`, fontWeight: '700',
+              outline: 'none', textAlign: 'center',
+              fontFamily: 'inherit', color: 'var(--c-primary-dark)',
+              transition: 'border-color 0.15s', flexShrink: 0,
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+            onBlur={e => e.currentTarget.style.borderColor = borderColor}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Danh sách statement dùng chung */}
+      {statements.length > 0 && (
+        <div style={{
+          padding: '12px 16px', borderRadius: '10px',
+          backgroundColor: 'var(--c-primary-barest)',
+          border: '1px solid var(--c-primary-bg)',
+          display: 'flex', flexDirection: 'column', gap: '6px',
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            Statements
+          </span>
+          {statements.map((s, i) => (
+            <span key={i} style={{ fontSize: `${Math.max(12, fontSize - 1)}px`, color: 'var(--c-primary-dark)', lineHeight: 1.5 }}>
+              {parseInline(s)}
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Các câu hỏi */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {questions.map(q => renderInput(q))}
+      </div>
+    </div>
+  )
+}
 // ─── TRUE/FALSE/NOT GIVEN & YES/NO/NOT GIVEN ──────────────────────────────────
 //
 // Sheet format — mỗi row = 1 phát biểu:
@@ -1445,12 +1554,12 @@ function QuestionNumber({ num }) {
       fontSize: '11px', fontWeight: '700',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       marginTop: '1px',
+      userSelect: 'none', WebkitUserSelect: 'none',   // ← disable text selection
     }}>
       {num}
     </span>
   )
 }
-
 // ─── Navigator bar (top) ──────────────────────────────────────────────────────
 
 function NavigatorBar({ questions, answers, reviewAnswers, isReview, current, onJump }) {

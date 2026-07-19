@@ -703,10 +703,10 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
       <span key={`blank-${num}-${ci}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          minWidth: '18px', height: '18px', borderRadius: '50%',
-          backgroundColor: 'var(--c-primary)', color: '#fff',
-          fontSize: '10px', fontWeight: '700', flexShrink: 0,
-          padding: '0 2px',
+          minWidth: `${Math.max(18, fontSize)}px`, height: `${Math.max(18, fontSize)}px`,
+          borderRadius: '50%', backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: `${Math.max(10, fontSize - 4)}px`, fontWeight: '700',
+          flexShrink: 0, padding: '0 3px', lineHeight: 1,
         }}>{num}</span>
         {isReview ? (
           <>
@@ -890,10 +890,10 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
       <span key={`fc-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 3px' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          minWidth: '18px', height: '18px', borderRadius: '50%',
-          backgroundColor: 'var(--c-primary)', color: '#fff',
-          fontSize: '10px', fontWeight: '700', flexShrink: 0,
-          padding: '0 2px',
+          minWidth: `${Math.max(18, fontSize)}px`, height: `${Math.max(18, fontSize)}px`,
+          borderRadius: '50%', backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: `${Math.max(10, fontSize - 4)}px`, fontWeight: '700',
+          flexShrink: 0, padding: '0 3px', lineHeight: 1,
         }}>{num}</span>
         {isReview ? (
           <>
@@ -1467,9 +1467,9 @@ function FillNoteQuestion({ questions, answers, reviewAnswers, isReview, onChang
       <span key={`fn-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          minWidth: '18px', height: '18px', borderRadius: '50%',
+          minWidth: `${Math.max(18, fontSize)}px`, height: `${Math.max(18, fontSize)}px`, borderRadius: '50%',
           backgroundColor: 'var(--c-primary)', color: '#fff',
-          fontSize: '10px', fontWeight: '700', flexShrink: 0,
+          fontSize: `${Math.max(10, fontSize - 4)}px`, fontWeight: '700', flexShrink: 0,
           padding: '0 2px',
         }}>{num}</span>
         {isReview ? (
@@ -1657,8 +1657,8 @@ export default function BaiTapIELTS({ params }) {
   const [ketQua, setKetQua]           = useState(null)
   const [draftSaved, setDraftSaved]   = useState(false)
 
-  const [fontPassage, setFontPassage] = useState(12)
-  const [fontQuestions, setFontQuestions] = useState(12)
+  const [fontPassage, setFontPassage] = useState(18)
+  const [fontQuestions, setFontQuestions] = useState(18)
 
   const { toolbar, applyHighlight, hideToolbar } = useHighlight(['ielts-passage-panel', 'ielts-questions-panel'])
 

@@ -1429,7 +1429,7 @@ function FillNoteQuestion({ questions, answers, reviewAnswers, isReview, onChang
     const qIdx    = q?.globalIndex
     const correct = q?.Correct_Ans?.trim() || ''
     const userVal = q ? String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || '')) : ''
-    const isCorrect = userVal.trim().toLowerCase() === correct.toLowerCase()
+    const isCorrect = isAnswerCorrect(userVal, correct)
 
     let borderColor = 'var(--c-primary-pale)'
     let bgColor     = 'var(--c-surface)'

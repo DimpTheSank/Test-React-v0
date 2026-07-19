@@ -369,7 +369,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
 
           {/* Nội dung — tỉ lệ 10, full width trên mobile */}
           <div className="ielts-q-content" style={{
-            flex: centered ? 10 : 4,
+            flex: centered ? 10 : 1,
             minWidth: 0,
             display: 'flex', flexDirection: 'column', gap: '28px',
             padding: centered ? '0 20px' : '0 24px',
@@ -701,7 +701,13 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
 
     return (
       <span key={`blank-${num}-${ci}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
-        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          minWidth: '18px', height: '18px', borderRadius: '50%',
+          backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: '10px', fontWeight: '700', flexShrink: 0,
+          padding: '0 2px',
+        }}>{num}</span>
         {isReview ? (
           <>
             <span style={{
@@ -882,7 +888,13 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
 
     return (
       <span key={`fc-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 3px' }}>
-        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          minWidth: '18px', height: '18px', borderRadius: '50%',
+          backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: '10px', fontWeight: '700', flexShrink: 0,
+          padding: '0 2px',
+        }}>{num}</span>
         {isReview ? (
           <>
             <span style={{
@@ -1453,7 +1465,13 @@ function FillNoteQuestion({ questions, answers, reviewAnswers, isReview, onChang
 
     return (
       <span key={`fn-${num}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
-        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--c-primary-mid)' }}>{num}.</span>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          minWidth: '18px', height: '18px', borderRadius: '50%',
+          backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: '10px', fontWeight: '700', flexShrink: 0,
+          padding: '0 2px',
+        }}>{num}</span>
         {isReview ? (
           <>
             <span style={{

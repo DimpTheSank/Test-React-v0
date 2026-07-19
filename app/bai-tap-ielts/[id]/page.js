@@ -723,7 +723,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
             onChange={e => q && onChange(qIdx, e.target.value)}
             placeholder="..."
             style={{
-              width: '90px', padding: '3px 7px', borderRadius: '5px',
+              width: '300px', padding: '3px 7px', borderRadius: '5px',
               border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
               fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
               fontFamily: 'inherit', color: 'var(--c-primary-dark)', textAlign: 'center',
@@ -905,7 +905,7 @@ function FlowchartQuestion({ questions, answers, reviewAnswers, isReview, onChan
             onChange={e => q && !isReview && onChange(qIdx, e.target.value)}
             placeholder="..."
             style={{
-              width: '100px', padding: '3px 8px', borderRadius: '6px',
+              width: '300px', padding: '3px 8px', borderRadius: '6px',
               border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
               fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
               fontFamily: 'inherit', color: 'var(--c-primary-dark)', textAlign: 'center',
@@ -1054,7 +1054,7 @@ function MapQuestion({ questions, answers, reviewAnswers, isReview, onChange, fo
                   placeholder="A/B/C..."
                   maxLength={2}
                   style={{
-                    width: '60px', padding: '8px', borderRadius: '8px',
+                    width: '150px', padding: '8px', borderRadius: '8px',
                     border: `1.5px solid ${borderColor}`,
                     backgroundColor: 'var(--c-surface)',
                     fontSize: `${fontSize}px`, fontWeight: '700',
@@ -1139,7 +1139,7 @@ function MatchingHeadingsQuestion({ questions, answers, reviewAnswers, isReview,
             onChange={e => !isReview && onChange(qIdx, e.target.value)}
             placeholder="i / ii / iii..."
             style={{
-              width: '80px', padding: '8px', borderRadius: '8px',
+              width: '100px', padding: '8px', borderRadius: '8px',
               border: `1.5px solid ${borderColor}`, backgroundColor: 'var(--c-surface)',
               fontSize: `${fontSize}px`, fontWeight: '600',
               outline: 'none', textAlign: 'center',
@@ -1245,7 +1245,7 @@ function MatchingPassageQuestion({ questions, answers, reviewAnswers, isReview, 
             placeholder="A/B/C..."
             maxLength={2}
             style={{
-              width: '70px', padding: '8px', borderRadius: '8px',
+              width: '100px', padding: '8px', borderRadius: '8px',
               border: `1.5px solid ${borderColor}`, backgroundColor: 'var(--c-surface)',
               fontSize: `${fontSize}px`, fontWeight: '700',
               outline: 'none', textAlign: 'center',
@@ -1476,7 +1476,7 @@ function FillNoteQuestion({ questions, answers, reviewAnswers, isReview, onChang
             onChange={e => q && !isReview && onChange(qIdx, e.target.value)}
             placeholder="..."
             style={{
-              width: '110px', padding: '3px 8px', borderRadius: '5px',
+              width: '150px', padding: '3px 8px', borderRadius: '5px',
               border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
               fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
               fontFamily: 'inherit', color: 'var(--c-primary-dark)',

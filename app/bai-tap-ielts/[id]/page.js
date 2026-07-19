@@ -364,12 +364,12 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       {/* Scrollable questions */}
       <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 0' }}>
         <div style={{ display: 'flex', width: '100%' }}>
-          {/* Lề trái — tỉ lệ 1 */}
-          {centered && <div style={{ flex: 1 }} />}
+          {/* Lề trái — tỉ lệ 1, ẩn trên mobile */}
+          {centered && <div className="ielts-q-margin" style={{ flex: 1 }} />}
 
-          {/* Nội dung — tỉ lệ 10 */}
-          <div style={{
-            flex: centered ? 10 : 1,
+          {/* Nội dung — tỉ lệ 10, full width trên mobile */}
+          <div className="ielts-q-content" style={{
+            flex: centered ? 10 : 4,
             minWidth: 0,
             display: 'flex', flexDirection: 'column', gap: '28px',
             padding: centered ? '0 20px' : '0 24px',
@@ -391,8 +391,8 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
             ))}
           </div>
 
-          {/* Lề phải — tỉ lệ 1 */}
-          {centered && <div style={{ flex: 1 }} />}
+          {/* Lề phải — tỉ lệ 1, ẩn trên mobile */}
+          {centered && <div className="ielts-q-margin" style={{ flex: 1 }} />}
         </div>
       </div>
     </div>
@@ -1843,6 +1843,10 @@ export default function BaiTapIELTS({ params }) {
           .ielts-body { flex-direction: column !important; }
           .ielts-passage { border-right: none !important; border-bottom: 1px solid var(--c-primary-pale); max-height: 45vh; }
           .ielts-questions { max-height: 55vh; }
+
+          /* Ẩn lề trái/phải trên mobile, nội dung full width */
+          .ielts-q-margin { display: none !important; }
+          .ielts-q-content { flex: 1 !important; padding: 0 12px !important; }
         }
       `}</style>
 

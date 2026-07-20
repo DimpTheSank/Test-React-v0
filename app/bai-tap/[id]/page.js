@@ -314,8 +314,6 @@ function AudioPlayer({ src }) {
 }
 // ─── Context Panel (trái) ─────────────────────────────────────────────────────
 function ContextPanel({ firstInGroup, fontSize }) {
-  const layout2Col = firstInGroup?.Layout === '2col'
-
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -359,20 +357,25 @@ function ContextPanel({ firstInGroup, fontSize }) {
             )
         )}
 
-        <div className={layout2Col ? 'vung2-2col' : undefined}>
-          {firstInGroup?.Contexts?.map((ctx, i) => (
-            <div key={i} style={{
-              lineHeight: '1.85', color: 'var(--c-primary-dark)',
-              breakInside: 'avoid', marginBottom: '4px',
-              textAlign: 'justify', hyphens: 'auto',
-            }}>
+        {firstInGroup?.Contexts?.map((ctx, i) => {
+          const has2Col = typeof ctx === 'string' && ctx.includes('[COLBREAK]')
+          return (
+            <div
+              key={i}
+              className={has2Col ? 'vung2-2col' : undefined}
+              style={{
+                lineHeight: '1.85', color: 'var(--c-primary-dark)',
+                marginBottom: '4px',
+                textAlign: 'justify', hyphens: 'auto',
+              }}
+            >
               {ctx.startsWith('http')
                 ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
                 : renderContextBlock(ctx, `ctx-${i}`)
               }
             </div>
-          ))}
-        </div>
+          )
+        })}
 
         {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
           <p style={{ color: 'var(--c-primary-pale)', fontStyle: 'italic' }}>

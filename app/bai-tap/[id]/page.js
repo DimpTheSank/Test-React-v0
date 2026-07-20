@@ -1063,7 +1063,7 @@ export default function BaiTap({ params }) {
       <div className="ielts-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
         {/* Panel trái: Context */}
-        <div className="bt-panel-left" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+        <div className="bt-panel-left" style={{ flex: 1.8, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--c-primary-pale)', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           <ContextPanel
             firstInGroup={firstInGroup}
             fontSize={{ value: fontSizeContext, set: setFontSizeContext }}

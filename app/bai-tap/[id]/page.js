@@ -366,7 +366,7 @@ function ContextPanel({ firstInGroup, fontSize }) {
               style={{
                 lineHeight: '1.85', color: 'var(--c-primary-dark)',
                 marginBottom: '4px',
-                textAlign: 'justify', hyphens: 'auto',
+                textAlign: 'justify',
               }}
             >
               {ctx.startsWith('http')

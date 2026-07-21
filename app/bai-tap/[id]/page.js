@@ -267,15 +267,21 @@ function AudioPlayer({ src }) {
         `}</style>
       </div>
 
-      {/* Nút điều khiển: -5 -3 ▶ +3 +5 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-        <button onClick={() => skip(-5)} title="Lùi 5 giây" style={skipBtnStyle('32px')}
+      {/* Hàng nút điều khiển: -10 -5 -3 ▶ +3 +5 +10 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <button onClick={() => skip(-10)} title="Lùi 10 giây" style={skipBtnStyle('34px')}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
-          <span style={{ fontSize: '12px' }}>◀◀</span>5
+          <span style={{ fontSize: '13px' }}>⏮</span>10
         </button>
 
-        <button onClick={() => skip(-3)} title="Lùi 3 giây" style={skipBtnStyle('28px')}
+        <button onClick={() => skip(-5)} title="Lùi 5 giây" style={skipBtnStyle('30px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          <span style={{ fontSize: '12px' }}>◀</span>5
+        </button>
+
+        <button onClick={() => skip(-3)} title="Lùi 3 giây" style={skipBtnStyle('27px')}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
           <span style={{ fontSize: '11px' }}>◀</span>3
@@ -285,8 +291,8 @@ function AudioPlayer({ src }) {
           onClick={togglePlay}
           title={isPlaying ? 'Tạm dừng' : 'Phát'}
           style={{
-            width: '50px', height: '50px', borderRadius: '50%', border: 'none', cursor: 'pointer',
-            backgroundColor: 'var(--c-primary)', color: '#fff', fontSize: '19px',
+            width: '52px', height: '52px', borderRadius: '50%', border: 'none', cursor: 'pointer',
+            backgroundColor: 'var(--c-primary)', color: '#fff', fontSize: '20px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 3px 10px rgba(24,95,165,0.35)', flexShrink: 0,
             transition: 'transform 0.15s, background-color 0.15s',
@@ -297,20 +303,32 @@ function AudioPlayer({ src }) {
           {isPlaying ? '⏸' : '▶'}
         </button>
 
-        <button onClick={() => skip(3)} title="Tiến 3 giây" style={skipBtnStyle('28px')}
+        <button onClick={() => skip(3)} title="Tiến 3 giây" style={skipBtnStyle('27px')}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
           3<span style={{ fontSize: '11px' }}>▶</span>
         </button>
 
-        <button onClick={() => skip(5)} title="Tiến 5 giây" style={skipBtnStyle('32px')}
+        <button onClick={() => skip(5)} title="Tiến 5 giây" style={skipBtnStyle('30px')}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
-          5<span style={{ fontSize: '12px' }}>▶▶</span>
+          5<span style={{ fontSize: '12px' }}>▶</span>
+        </button>
+
+        <button onClick={() => skip(10)} title="Tiến 10 giây" style={skipBtnStyle('34px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          10<span style={{ fontSize: '13px' }}>⏭</span>
         </button>
       </div>
     </div>
   )
+}
+// ─── Render audio: iframe nếu là Drive, AudioPlayer nếu không ────────────────
+function AudioSource({ src }) {
+  return isDriveLink(src)
+    ? <iframe src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px', flexShrink: 0 }} />
+    : <AudioPlayer src={src} />
 }
 // ─── Context Panel (trái) ─────────────────────────────────────────────────────
 function ContextPanel({ firstInGroup, fontSize }) {
@@ -346,36 +364,24 @@ function ContextPanel({ firstInGroup, fontSize }) {
           display: 'flex', flexDirection: 'column', gap: '16px',
         }}
       >
-        {firstInGroup?.Audios?.map((src, i) =>
-          isDriveLink(src)
-            ? (
-              <iframe key={src + i} src={src} width="100%" height="80"
-                style={{ border: 'none', borderRadius: '8px', flexShrink: 0 }} />
-            )
-            : (
-              <AudioPlayer key={src + i} src={src} />
-            )
-        )}
+        {firstInGroup?.Audios?.map((src, i) => (
+          <AudioSource key={src + i} src={src} />
+        ))}
 
-        {firstInGroup?.Contexts?.map((ctx, i) => {
-          const has2Col = typeof ctx === 'string' && ctx.includes('[COLBREAK]')
-          return (
-            <div
-              key={i}
-              className={has2Col ? 'vung2-2col' : undefined}
-              style={{
-                lineHeight: '1.85', color: 'var(--c-primary-dark)',
-                marginBottom: '4px',
-                textAlign: 'justify',
-              }}
-            >
+        <div className={firstInGroup?.Layout === '2col' ? 'vung2-2col' : undefined}>
+          {firstInGroup?.Contexts?.map((ctx, i) => (
+            <div key={i} style={{
+              lineHeight: '1.85', color: 'var(--c-primary-dark)',
+              breakInside: 'avoid', marginBottom: '4px',
+              textAlign: 'justify', hyphens: 'auto',
+            }}>
               {ctx.startsWith('http')
                 ? <img src={ctx} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={`Hình ${i + 1}`} />
                 : renderContextBlock(ctx, `ctx-${i}`)
               }
             </div>
-          )
-        })}
+          ))}
+        </div>
 
         {!firstInGroup?.Audios?.length && !firstInGroup?.Contexts?.length && (
           <p style={{ color: 'var(--c-primary-pale)', fontStyle: 'italic' }}>

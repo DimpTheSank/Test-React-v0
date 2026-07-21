@@ -202,8 +202,8 @@ function AudioPlayer({ src }) {
         `}</style>
       </div>
 
-      {/* Hàng nút điều khiển: -10 -5 ▶ +5 +10 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+      {/* Hàng nút điều khiển: -10 -5 -3 ▶ +3 +5 +10 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <button onClick={() => skip(-10)} title="Lùi 10 giây" style={skipBtnStyle('34px')}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
@@ -214,6 +214,12 @@ function AudioPlayer({ src }) {
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
           <span style={{ fontSize: '12px' }}>◀</span>5
+        </button>
+
+        <button onClick={() => skip(-3)} title="Lùi 3 giây" style={skipBtnStyle('27px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          <span style={{ fontSize: '11px' }}>◀</span>3
         </button>
 
         <button
@@ -230,6 +236,12 @@ function AudioPlayer({ src }) {
           onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = 'var(--c-primary)' }}
         >
           {isPlaying ? '⏸' : '▶'}
+        </button>
+
+        <button onClick={() => skip(3)} title="Tiến 3 giây" style={skipBtnStyle('27px')}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--c-surface)'}>
+          3<span style={{ fontSize: '11px' }}>▶</span>
         </button>
 
         <button onClick={() => skip(5)} title="Tiến 5 giây" style={skipBtnStyle('30px')}

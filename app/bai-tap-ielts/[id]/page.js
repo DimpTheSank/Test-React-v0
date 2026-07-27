@@ -669,15 +669,13 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
   const qByNum = {}
   questions.forEach(q => { qByNum[String(q.Question_Num).trim()] = q })
 
-  // Parse 1 cell: có thể là text thuần, ___ (n) thuần, hoặc text xen lẫn ___ (n)
+  // parseCell: có thể là text thuần, ___ (n) thuần, hoặc text xen lẫn ___ (n)
   const parseCell = (cell) => {
-    // Kiểm tra có ___ (n) không
-    if (!cell.includes('___')) return { type: 'text', value: cell }
-    // Kiểm tra toàn bộ cell là ___ (n)
-    const pureBlank = cell.match(/^___\s*\((\d+)\)$/)
+    const decoded = cell.replace(/\\n/g, '\n')   // ← thêm dòng này: giải mã \\n → newline thật
+    if (!decoded.includes('___')) return { type: 'text', value: decoded }
+    const pureBlank = decoded.match(/^___\s*\((\d+)\)$/)
     if (pureBlank) return { type: 'blank', num: pureBlank[1] }
-    // Mixed: text + ___ (n) xen kẽ
-    return { type: 'mixed', value: cell }
+    return { type: 'mixed', value: decoded }
   }
 
   // Parse mixed cell thành mảng segments [{type:'text',val} | {type:'blank',num}]
@@ -761,7 +759,9 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
     if (parsed.type === 'text') {
       return (
         <td key={ci} style={tdStyle(false)}>
-          <span style={{ fontSize: `${fontSize}px` }}>{parseInline(parsed.value)}</span>
+          <span style={{ fontSize: `${fontSize}px`, whiteSpace: 'pre-wrap' }}>
+            {parseInline(parsed.value)}
+          </span>
         </td>
       )
     }
@@ -781,7 +781,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
     const segments = parseMixed(parsed.value)
     return (
       <td key={ci} style={{ ...tdStyle(false), textAlign: 'left' }}>
-        <span style={{ fontSize: `${fontSize}px`, lineHeight: '2' }}>
+        <span style={{ fontSize: `${fontSize}px`, lineHeight: '2', whiteSpace: 'pre-wrap' }}>
           {segments.map((seg, si) =>
             seg.type === 'text'
               ? <span key={si}>{parseInline(seg.val)}</span>

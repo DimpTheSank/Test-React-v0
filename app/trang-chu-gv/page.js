@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import {
-  collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc
+  collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc, updateDoc
 } from 'firebase/firestore'
 import {
   SkeletonTrangChuGV,
@@ -85,7 +85,7 @@ export default function TrangChuGV() {
         borderBottom: '1px solid var(--c-primary-pale)',
         display: 'flex', paddingLeft: '24px',
       }}>
-        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }].map(t => (
+        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }, { key: 'matKhau', label: '🔑 Mật khẩu' }].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '14px 24px', border: 'none',
             borderBottom: tab === t.key ? '3px solid var(--c-primary)' : '3px solid transparent',
@@ -100,6 +100,7 @@ export default function TrangChuGV() {
       <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
         {tab === 'baiTap' && <TabBaiTap userInfo={userInfo} />}
         {tab === 'tienDo' && <TabTienDo userInfo={userInfo} />}
+        {tab === 'matKhau' && <TabMatKhau />}
       </div>
     </main>
   )
@@ -293,7 +294,164 @@ function TabBaiTap({ userInfo }) {
     </div>
   )
 }
+// ─── TAB MẬT KHẨU ────────────────────────────────────────────────────────────
+function generateRandomPass(length = 6) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return result
+}
 
+function TabMatKhau() {
+  const [exercises, setExercises] = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [creatingId, setCreatingId] = useState(null)
+  const [filterKeyword, setFilterKeyword] = useState('')
+
+  const loadExercises = async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(collection(db, 'exercises'))
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      list.sort((a, b) => {
+        const tA = a.thoiGianTao?.toDate?.() ?? new Date(a.thoiGianTao || 0)
+        const tB = b.thoiGianTao?.toDate?.() ?? new Date(b.thoiGianTao || 0)
+        if (tB - tA !== 0) return tB - tA
+        return (a.tenBaiTap || '').localeCompare(b.tenBaiTap || '', 'vi')
+      })
+      setExercises(list)
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { loadExercises() }, [])
+
+  const handleTaoMoi = async (ex) => {
+    setCreatingId(ex.id)
+    try {
+      const newPass = generateRandomPass(6)
+      await updateDoc(doc(db, 'exercises', ex.id), { pass: newPass })
+      setExercises(prev => prev.map(e => e.id === ex.id ? { ...e, pass: newPass } : e))
+    } catch (err) {
+      console.error('Lỗi khi tạo mật khẩu:', err)
+      alert('Có lỗi khi tạo mật khẩu. Thử lại sau!')
+    } finally {
+      setCreatingId(null)
+    }
+  }
+
+  const filtered = exercises.filter(ex => {
+    const kw = filterKeyword.trim().toLowerCase()
+    if (!kw) return true
+    return ex.tenBaiTap?.toLowerCase().includes(kw)
+      || ex.kyNang?.toLowerCase().includes(kw)
+      || ex.loaiBai?.toLowerCase().includes(kw)
+  })
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '10px', flexWrap: 'wrap' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--c-primary-dark)', lineHeight: 1.2 }}>
+            Mật khẩu bài tập
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--c-text-muted)', lineHeight: 1 }}>
+            {exercises.length} bài · {filtered.length} đang hiển thị
+          </p>
+        </div>
+        <div style={{ marginLeft: 'auto', position: 'relative' }}>
+          <input
+            type="text" placeholder="Tìm tên bài, kỹ năng..."
+            value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)}
+            style={{
+              padding: '8px 28px 8px 14px', borderRadius: '9999px', fontSize: '13px',
+              border: `1.5px solid ${filterKeyword ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+              backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-dark)',
+              outline: 'none', width: '240px',
+            }}
+          />
+          {filterKeyword && (
+            <button onClick={() => setFilterKeyword('')} style={{
+              position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--c-text-muted)', fontSize: '14px', padding: 0, lineHeight: 1,
+            }}>×</button>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <SkeletonGVExerciseList />
+      ) : (
+        <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto',
+            backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px',
+          }}>
+            {['Tên bài', 'Loại · Kỹ năng', 'Mức độ', 'Mật khẩu', ''].map(h => (
+              <span key={h} style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>{h}</span>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--c-text-muted)', fontSize: '14px', backgroundColor: 'var(--c-surface)' }}>
+              Không có bài tập nào phù hợp.
+            </div>
+          ) : filtered.map((ex, i) => {
+            const accent = accentKyNang[ex.kyNang] || 'var(--c-primary-mid)'
+            const mauDo  = mauMucDo[ex.mucDo] || null
+            return (
+              <div key={ex.id} style={{
+                display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto',
+                padding: '12px 16px', gap: '8px', alignItems: 'center',
+                backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+                borderTop: '1px solid var(--c-primary-bg)',
+              }}>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--c-primary-dark)' }}>
+                  {ex.tenBaiTap}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: accent, flexShrink: 0 }} />
+                  <span style={{ fontSize: '13px', color: 'var(--c-text-soft)' }}>{ex.loaiBai} · {ex.kyNang}</span>
+                </span>
+                <span>
+                  {mauDo && (
+                    <span style={{
+                      padding: '2px 9px', borderRadius: '9999px',
+                      fontSize: '11px', fontWeight: '600',
+                      backgroundColor: mauDo.bg, color: mauDo.text,
+                    }}>{ex.mucDo}</span>
+                  )}
+                </span>
+                <span style={{
+                  fontFamily: 'monospace', fontSize: '14px', fontWeight: '700',
+                  letterSpacing: '0.05em',
+                  color: ex.pass ? 'var(--c-primary-dark)' : 'var(--c-text-muted)',
+                }}>
+                  {ex.pass || '—'}
+                </span>
+                <button
+                  onClick={() => handleTaoMoi(ex)}
+                  disabled={creatingId === ex.id}
+                  style={{
+                    padding: '7px 16px', borderRadius: '8px', border: 'none',
+                    backgroundColor: 'var(--c-primary)', color: '#fff',
+                    fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                    opacity: creatingId === ex.id ? 0.6 : 1, whiteSpace: 'nowrap',
+                  }}
+                >
+                  {creatingId === ex.id ? 'Đang tạo...' : 'Tạo mới'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 /* ── FilterGroup ─────────────────────────────────────────────────── */
 function FilterGroup({ label, options, value, onChange }) {
   return (

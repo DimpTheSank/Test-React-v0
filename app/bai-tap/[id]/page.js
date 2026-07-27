@@ -873,6 +873,7 @@ export default function BaiTap({ params }) {
       setTimeout(() => { setTranscriptError(false); setTranscriptDisabled(false) }, 2000)
     }
   }
+  const toggleTranscriptVisible = () => setTranscriptVisible(v => !v)
 
   // ── Auth & load ─────────────────────────────────────────────────────────────
   useEffect(() => {

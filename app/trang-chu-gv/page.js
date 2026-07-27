@@ -309,6 +309,7 @@ function TabMatKhau() {
   const [loading, setLoading]     = useState(true)
   const [creatingId, setCreatingId] = useState(null)
   const [filterKeyword, setFilterKeyword] = useState('')
+  const [visibleIds, setVisibleIds] = useState(new Set())
 
   const loadExercises = async () => {
     setLoading(true)
@@ -334,12 +335,22 @@ function TabMatKhau() {
       const newPass = generateRandomPass(6)
       await updateDoc(doc(db, 'exercises', ex.id), { pass: newPass })
       setExercises(prev => prev.map(e => e.id === ex.id ? { ...e, pass: newPass } : e))
+      // Tự động hiện mật khẩu vừa tạo
+      setVisibleIds(prev => new Set(prev).add(ex.id))
     } catch (err) {
       console.error('Lỗi khi tạo mật khẩu:', err)
       alert('Có lỗi khi tạo mật khẩu. Thử lại sau!')
     } finally {
       setCreatingId(null)
     }
+  }
+
+  const toggleVisible = (id) => {
+    setVisibleIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
   const filtered = exercises.filter(ex => {
@@ -387,11 +398,11 @@ function TabMatKhau() {
       ) : (
         <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
           <div style={{
-            display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto',
-            backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px',
+            display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto auto',
+            backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px', alignItems: 'center',
           }}>
-            {['Tên bài', 'Loại · Kỹ năng', 'Mức độ', 'Mật khẩu', ''].map(h => (
-              <span key={h} style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>{h}</span>
+            {['Tên bài', 'Loại · Kỹ năng', 'Mức độ', 'Mật khẩu', '', ''].map((h, i) => (
+              <span key={i} style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>{h}</span>
             ))}
           </div>
 
@@ -400,11 +411,14 @@ function TabMatKhau() {
               Không có bài tập nào phù hợp.
             </div>
           ) : filtered.map((ex, i) => {
-            const accent = accentKyNang[ex.kyNang] || 'var(--c-primary-mid)'
-            const mauDo  = mauMucDo[ex.mucDo] || null
+            const accent  = accentKyNang[ex.kyNang] || 'var(--c-primary-mid)'
+            const mauDo   = mauMucDo[ex.mucDo] || null
+            const isVisible = visibleIds.has(ex.id)
+            const hasPass   = !!ex.pass
+
             return (
               <div key={ex.id} style={{
-                display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto',
+                display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto auto',
                 padding: '12px 16px', gap: '8px', alignItems: 'center',
                 backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
                 borderTop: '1px solid var(--c-primary-bg)',
@@ -425,13 +439,35 @@ function TabMatKhau() {
                     }}>{ex.mucDo}</span>
                   )}
                 </span>
-                <span style={{
-                  fontFamily: 'monospace', fontSize: '14px', fontWeight: '700',
-                  letterSpacing: '0.05em',
-                  color: ex.pass ? 'var(--c-primary-dark)' : 'var(--c-text-muted)',
-                }}>
-                  {ex.pass || '—'}
-                </span>
+
+                {/* Mật khẩu + nút mắt */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    fontFamily: 'monospace', fontSize: '14px', fontWeight: '700',
+                    letterSpacing: '0.08em', minWidth: '78px',
+                    color: hasPass ? 'var(--c-primary-dark)' : 'var(--c-text-muted)',
+                    userSelect: isVisible ? 'text' : 'none',
+                  }}>
+                    {hasPass ? (isVisible ? ex.pass : '•'.repeat(ex.pass.length)) : '—'}
+                  </span>
+                  {hasPass && (
+                    <button
+                      onClick={() => toggleVisible(ex.id)}
+                      title={isVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      style={{
+                        width: '28px', height: '28px', borderRadius: '6px',
+                        border: '1px solid var(--c-primary-pale)',
+                        backgroundColor: isVisible ? 'var(--c-primary-bg)' : 'var(--c-surface)',
+                        color: 'var(--c-primary)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '14px', flexShrink: 0, transition: 'all 0.15s',
+                      }}
+                    >
+                      {isVisible ? '🙈' : '👁️'}
+                    </button>
+                  )}
+                </div>
+
                 <button
                   onClick={() => handleTaoMoi(ex)}
                   disabled={creatingId === ex.id}

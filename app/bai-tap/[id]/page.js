@@ -331,7 +331,10 @@ function AudioSource({ src }) {
     : <AudioPlayer src={src} />
 }
 // ─── Context Panel (trái) ─────────────────────────────────────────────────────
-function ContextPanel({ firstInGroup, fontSize }) {
+// ─── Context Panel (trái) ─────────────────────────────────────────────────────
+function ContextPanel({ firstInGroup, fontSize, transcript }) {
+  const hasTranscript = !!firstInGroup?.Transcript
+
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -388,7 +391,79 @@ function ContextPanel({ firstInGroup, fontSize }) {
             Không có nội dung chung cho nhóm này.
           </p>
         )}
+
+        {/* ── Transcript ── */}
+        {hasTranscript && (
+          <TranscriptBox
+            transcriptText={firstInGroup.Transcript}
+            transcript={transcript}
+          />
+        )}
       </div>
+    </div>
+  )
+}
+
+// ─── Transcript Box ─────────────────────────────────────────────────────────
+function TranscriptBox({ transcriptText, transcript }) {
+  const { unlocked, input, setInput, error, disabled, onUnlock } = transcript
+
+  return (
+    <div style={{
+      marginTop: '4px', padding: '14px 16px', borderRadius: '10px',
+      border: '1px solid var(--c-primary-bg)',
+      backgroundColor: 'var(--c-primary-barest)',
+      display: 'flex', flexDirection: 'column', gap: '10px',
+    }}>
+      {!unlocked ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <input
+              type="password"
+              placeholder="Nhập pass"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onUnlock()}
+              disabled={disabled}
+              style={{
+                flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px',
+                border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
+                fontSize: '13px', outline: 'none',
+              }}
+            />
+            <button
+              onClick={onUnlock}
+              disabled={disabled}
+              style={{
+                padding: '8px 16px', borderRadius: '8px', border: 'none',
+                backgroundColor: disabled ? 'var(--c-primary-pale)' : 'var(--c-primary-mid)',
+                color: '#fff', fontSize: '13px', fontWeight: '600',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap', transition: 'background-color 0.15s',
+              }}
+            >
+              Hiện Transcript
+            </button>
+          </div>
+          {error && (
+            <span style={{ fontSize: '12px', color: 'var(--c-danger)', fontWeight: '600' }}>
+              {error}
+            </span>
+          )}
+        </>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            📝 Transcript
+          </span>
+          <div style={{
+            fontSize: 'inherit', lineHeight: '1.85', color: 'var(--c-text-soft)',
+            whiteSpace: 'pre-wrap',
+          }}>
+            {transcriptText}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -749,6 +824,33 @@ export default function BaiTap({ params }) {
   const saveDraftTimeout = useRef(null)
   const assignmentIdRef  = useRef(null)
   const isFirstLoad      = useRef(true)
+  const [transcriptUnlocked, setTranscriptUnlocked] = useState(false)
+  const [transcriptInput, setTranscriptInput]       = useState('')
+  const [transcriptError, setTranscriptError]       = useState(false)
+  const [transcriptDisabled, setTranscriptDisabled] = useState(false)
+
+  const handleUnlockTranscript = () => {
+    if (transcriptDisabled) return
+
+    const correctPass = (exercise?.pass || '').toString()
+
+    // Chưa cấu hình pass cho bài này
+    if (!correctPass) {
+      setTranscriptError('Chưa có')
+      setTranscriptDisabled(true)
+      setTimeout(() => { setTranscriptError(false); setTranscriptDisabled(false) }, 2000)
+      return
+    }
+
+    if (transcriptInput === correctPass) {
+      setTranscriptUnlocked(true)
+      setTranscriptError(false)
+    } else {
+      setTranscriptError('Sai pass')
+      setTranscriptDisabled(true)
+      setTimeout(() => { setTranscriptError(false); setTranscriptDisabled(false) }, 2000)
+    }
+  }
 
   // ── Auth & load ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -819,8 +921,9 @@ export default function BaiTap({ params }) {
         (raw || '').split('|').map(s => s.trim()).filter(Boolean).map(s => convertDriveLink(s, type))
       const processedData = data.map((item, index) => ({
         ...item, globalIndex: index,
-        Contexts: splitMedia(item.Context, 'image'),
-        Audios:   splitMedia(item.Audio,   'audio'),
+        Contexts:   splitMedia(item.Context, 'image'),
+        Audios:     splitMedia(item.Audio,   'audio'),
+        Transcript: (item.Transcript || '').trim(),
       }))
       setQuestions(processedData)
 
@@ -1073,6 +1176,14 @@ export default function BaiTap({ params }) {
           <ContextPanel
             firstInGroup={firstInGroup}
             fontSize={{ value: fontSizeContext, set: setFontSizeContext }}
+            transcript={{
+              unlocked: transcriptUnlocked,
+              input: transcriptInput,
+              setInput: setTranscriptInput,
+              error: transcriptError,
+              disabled: transcriptDisabled,
+              onUnlock: handleUnlockTranscript,
+            }}
           />
         </div>
 

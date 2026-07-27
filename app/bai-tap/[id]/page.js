@@ -406,7 +406,7 @@ function ContextPanel({ firstInGroup, fontSize, transcript }) {
 
 // ─── Transcript Box ─────────────────────────────────────────────────────────
 function TranscriptBox({ transcriptText, transcript }) {
-  const { unlocked, input, setInput, error, disabled, onUnlock } = transcript
+  const { unlocked, visible, onToggleVisible, input, setInput, error, disabled, onUnlock } = transcript
 
   return (
     <div style={{
@@ -452,16 +452,37 @@ function TranscriptBox({ transcriptText, transcript }) {
           )}
         </>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            📝 Transcript
-          </span>
-          <div style={{
-            fontSize: 'inherit', lineHeight: '1.85', color: 'var(--c-text-soft)',
-            whiteSpace: 'pre-wrap',
-          }}>
-            {transcriptText}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Toggle header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--c-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              📝 Transcript
+            </span>
+            <button
+              onClick={onToggleVisible}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '4px 10px', borderRadius: '9999px',
+                border: '1px solid var(--c-primary-pale)',
+                backgroundColor: visible ? 'var(--c-primary-mid)' : 'var(--c-surface)',
+                color: visible ? '#fff' : 'var(--c-primary-mid)',
+                fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {visible ? '🙈 Ẩn' : '👁 Hiện'}
+            </button>
           </div>
+
+          {/* Nội dung — chỉ render khi visible */}
+          {visible && (
+            <div style={{
+              fontSize: 'inherit', lineHeight: '1.85', color: 'var(--c-text-soft)',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {transcriptText}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -825,6 +846,7 @@ export default function BaiTap({ params }) {
   const assignmentIdRef  = useRef(null)
   const isFirstLoad      = useRef(true)
   const [transcriptUnlocked, setTranscriptUnlocked] = useState(false)
+  const [transcriptVisible, setTranscriptVisible]   = useState(false)  
   const [transcriptInput, setTranscriptInput]       = useState('')
   const [transcriptError, setTranscriptError]       = useState(false)
   const [transcriptDisabled, setTranscriptDisabled] = useState(false)
@@ -1178,6 +1200,8 @@ export default function BaiTap({ params }) {
             fontSize={{ value: fontSizeContext, set: setFontSizeContext }}
             transcript={{
               unlocked: transcriptUnlocked,
+              visible: transcriptVisible,
+              onToggleVisible: toggleTranscriptVisible,
               input: transcriptInput,
               setInput: setTranscriptInput,
               error: transcriptError,

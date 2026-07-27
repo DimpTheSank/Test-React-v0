@@ -42,12 +42,17 @@ const mauMucDo = {
 const cacMucDo     = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
 const cacTrangThai = ['Tất cả', 'Chưa làm', 'Đang làm', 'Đã làm']
 
+// Số bài hiện mỗi lần (mặc định 10 — trên khung 1040px với card min 180px, lưới thường
+// ra 5 cột => 10 bài = đúng 2 dòng. Chỉnh số này nếu muốn khít hơn với layout thực tế.)
+const SO_LUONG_MOI_LAN = 10
+
 export default function TrangChu() {
   const router = useRouter()
   const [baiTapList, setBaiTapList]           = useState([])
   const [loading, setLoading]                 = useState(true)
   const [filterMucDo, setFilterMucDo]         = useState('Tất cả')
   const [filterTrangThai, setFilterTrangThai] = useState('Tất cả')
+  const [visibleCount, setVisibleCount]       = useState(SO_LUONG_MOI_LAN)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
@@ -118,6 +123,26 @@ export default function TrangChu() {
     const okTrangThai = filterTrangThai === 'Tất cả' || b.trangThai === filterTrangThai
     return okMucDo && okTrangThai
   })
+
+  // Reset về số lượng mặc định mỗi khi đổi filter
+  useEffect(() => {
+    setVisibleCount(SO_LUONG_MOI_LAN)
+  }, [filterMucDo, filterTrangThai])
+
+  // Tự động hiện thêm khi cuộn gần chạm đáy trang
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollBottom = window.innerHeight + window.scrollY
+      const pageHeight = document.documentElement.scrollHeight
+      if (scrollBottom >= pageHeight - 300) {
+        setVisibleCount(prev => Math.min(prev + SO_LUONG_MOI_LAN, filtered.length))
+      }
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [filtered.length])
+
+  const visibleList = filtered.slice(0, visibleCount)
 
   if (loading) return <SkeletonTrangChu />
 
@@ -205,13 +230,38 @@ export default function TrangChu() {
           Không có bài tập nào phù hợp.
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-          gap: '16px',
-        }}>
-          {filtered.map(bai => <CardBaiTap key={bai.id} bai={bai} />)}
-        </div>
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+            gap: '16px',
+          }}>
+            {visibleList.map(bai => <CardBaiTap key={bai.id} bai={bai} />)}
+          </div>
+
+          {/* ── Load more ── */}
+          {visibleCount < filtered.length && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
+                Đang hiện {visibleCount} / {filtered.length} bài
+              </p>
+              <button
+                onClick={() => setVisibleCount(v => Math.min(v + SO_LUONG_MOI_LAN, filtered.length))}
+                style={{
+                  padding: '9px 24px', borderRadius: '9999px',
+                  border: '1.5px solid var(--c-primary-pale)',
+                  backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)',
+                  fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'; e.currentTarget.style.borderColor = 'var(--c-primary-mid)' }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--c-surface)'; e.currentTarget.style.borderColor = 'var(--c-primary-pale)' }}
+              >
+                Xem thêm ↓
+              </button>
+            </div>
+          )}
+        </>
       )}
     </main>
   )

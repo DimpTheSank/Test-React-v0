@@ -739,7 +739,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
             onChange={e => q && onChange(qIdx, e.target.value)}
             placeholder="..."
             style={{
-              width: '300px', padding: '3px 7px', borderRadius: '5px',
+              width: '140px', padding: '3px 7px', borderRadius: '5px',
               border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
               fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
               fontFamily: 'inherit', color: 'var(--c-primary-dark)', textAlign: 'center',

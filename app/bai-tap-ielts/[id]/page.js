@@ -804,9 +804,9 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
                 fontSize: `${Math.max(11, fontSize - 1)}px`,
                 fontWeight: '700', color: '#fff',
                 borderRight: i < headerRow.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                whiteSpace: 'nowrap',
+                whiteSpace: 'pre-wrap',              // ← đổi từ 'nowrap'
               }}>
-                {h}
+                {h.replace(/\\n/g, '\n')}            {/* ← thêm decode */}
               </th>
             ))}
           </tr>

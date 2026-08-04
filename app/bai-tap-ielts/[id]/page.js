@@ -759,7 +759,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
     if (parsed.type === 'text') {
       return (
         <td key={ci} style={tdStyle(false)}>
-          <span style={{ fontSize: `${fontSize}px`, whiteSpace: 'pre-wrap' }}>
+          <span style={{ fontSize: `${fontSize}px`, whiteSpace: 'pre-wrap', display: 'block' }}>
             {parseInline(parsed.value)}
           </span>
         </td>
@@ -804,9 +804,10 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
                 fontSize: `${Math.max(11, fontSize - 1)}px`,
                 fontWeight: '700', color: '#fff',
                 borderRight: i < headerRow.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                whiteSpace: 'pre-wrap',              // ← đổi từ 'nowrap'
               }}>
-                {h.replace(/\\n/g, '\n')}            {/* ← thêm decode */}
+                <div style={{ whiteSpace: 'pre-wrap', textAlign: 'center' }}>
+                  {h.replace(/\\n/g, '\n')}
+                </div>
               </th>
             ))}
           </tr>

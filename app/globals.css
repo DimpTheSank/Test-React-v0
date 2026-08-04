@@ -172,6 +172,10 @@ html.dark {
   --shadow-card-hover:0 4px 12px rgba(0,0,0,0.28), 0 12px 32px rgba(0,0,0,0.32);
   --shadow-card-done: 0 1px 3px rgba(15,158,123,0.10), 0 4px 16px rgba(0,0,0,0.22);
 }
+html.dark ::selection {
+  background: var(--c-primary-light);  /* nhạt hơn nền tối, đủ tương phản */
+  color: var(--c-bg-page);
+}
 
 /* ─── Base ──────────────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -236,6 +240,6 @@ p {
 
 /* ─── Selection ─────────────────────────────────────────────────── */
 ::selection {
-  background: var(--c-primary-bg);
-  color: var(--c-primary-dark);
+  background: var(--c-primary-dark);   /* đổi từ --c-primary-bg (quá nhạt, trùng tông) */
+  color: #ffffff;
 }

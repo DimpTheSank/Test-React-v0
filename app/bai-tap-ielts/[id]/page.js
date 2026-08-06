@@ -1350,62 +1350,59 @@ function TFNGQuestion({ questions, answers, reviewAnswers, isReview, onChange, f
           </p>
         </div>
 
-        {/* Input + gợi ý options */}
+        {/* 3 nút chọn đáp án */}
         <div style={{ paddingLeft: '34px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {isReview ? (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '8px 14px', borderRadius: '8px',
-              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
-            }}>
-              <span style={{
-                fontSize: `${fontSize}px`, fontWeight: '700',
-                color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
-              }}>
-                {userVal.trim() || '(trống)'}
-              </span>
-              {!isCorrect && correct && (
-                <span style={{ fontSize: '13px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {options.map(opt => {
+                const isUserOpt    = opt === userVal
+                const isCorrectOpt = opt === correct
+                let obg = 'var(--c-surface)', obd = 'var(--c-primary-pale)', oc = 'var(--c-text-muted)'
+                if (isCorrectOpt)                    { obg = 'var(--c-success-bg)'; obd = 'var(--c-success)'; oc = 'var(--c-success-text)' }
+                else if (isUserOpt && !isCorrectOpt) { obg = 'var(--c-danger-bg)';  obd = 'var(--c-danger)';  oc = 'var(--c-danger-text)'  }
+                return (
+                  <span key={opt} style={{
+                    padding: '7px 16px', borderRadius: '8px',
+                    border: `1.5px solid ${obd}`, backgroundColor: obg, color: oc,
+                    fontSize: `${Math.max(12, fontSize - 2)}px`, fontWeight: '700',
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  }}>
+                    {opt}
+                    {isCorrectOpt && <span style={{ fontSize: '13px' }}>✅</span>}
+                    {isUserOpt && !isCorrectOpt && <span style={{ fontSize: '13px' }}>❌</span>}
+                  </span>
+                )
+              })}
+              {!userVal.trim() && (
+                <span style={{ fontSize: '12px', color: 'var(--c-warn-text)', fontStyle: 'italic', alignSelf: 'center' }}>
+                  ⚠️ Chưa trả lời
+                </span>
               )}
-              <span style={{ fontSize: '16px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
             </div>
           ) : (
-            <>
-              <input
-                type="text"
-                value={answers[qIdx] || ''}
-                onChange={e => !isReview && onChange(qIdx, e.target.value.toUpperCase())}
-                placeholder={options[0]}
-                style={{
-                  width: '130px', padding: '8px 12px', borderRadius: '8px',
-                  border: `1.5px solid ${borderColor}`, backgroundColor: 'var(--c-surface)',
-                  fontSize: `${fontSize}px`, fontWeight: '600',
-                  outline: 'none', fontFamily: 'inherit', color: 'var(--c-primary-dark)',
-                  transition: 'border-color 0.15s',
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
-                onBlur={e => e.currentTarget.style.borderColor = borderColor}
-              />
-              {/* Hint chips */}
-              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                {options.map(opt => (
-                  <span
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {options.map(opt => {
+                const isSelected = (answers[qIdx] || '').toUpperCase() === opt
+                return (
+                  <button
                     key={opt}
-                    onClick={() => !isReview && onChange(qIdx, opt)}
+                    onClick={() => onChange(qIdx, opt)}
                     style={{
-                      padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-                      fontSize: '11px', fontWeight: '600', userSelect: 'none',
-                      border: `1px solid ${(answers[qIdx] || '').toUpperCase() === opt ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
-                      backgroundColor: (answers[qIdx] || '').toUpperCase() === opt ? 'var(--c-primary)' : 'transparent',
-                      color: (answers[qIdx] || '').toUpperCase() === opt ? '#fff' : 'var(--c-text-muted)',
+                      padding: '8px 18px', borderRadius: '8px', cursor: 'pointer',
+                      fontSize: `${Math.max(12, fontSize - 2)}px`, fontWeight: '700', userSelect: 'none',
+                      border: `1.5px solid ${isSelected ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+                      backgroundColor: isSelected ? 'var(--c-primary)' : 'var(--c-surface)',
+                      color: isSelected ? '#fff' : 'var(--c-text-soft)',
                       transition: 'all 0.15s',
                     }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--c-primary-barest)' }}
+                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--c-surface)' }}
                   >
                     {opt}
-                  </span>
-                ))}
-              </div>
-            </>
+                  </button>
+                )
+              })}
+            </div>
           )}
         </div>
       </div>

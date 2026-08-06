@@ -12,7 +12,7 @@ import { convertDriveLink } from '@/lib/driveUtils'
 import { useHighlight } from '@/lib/useHighlight'
 import HighlightToolbar from '@/app/components/HighlightToolbar'
 import { renderContextBlock } from '@/lib/parseContext'
-import { isAnswerCorrect } from '@/lib/answerUtils'
+import { isAnswerCorrect, normalizeAns } from '@/lib/answerUtils'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -487,6 +487,10 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         <TFNGQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} type={type} />
       )}
+      {type === 'mc2' && (
+        <Mc2Question questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
       {(type === 'fill_note') && (
         <FillNoteQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
           isReview={isReview} onChange={onChange} fontSize={fontSize} />
@@ -499,7 +503,7 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           if (type === 'fill') return <FillQuestion key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
         })
       )}
-      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill','fill_note'].includes(type) && type && (
+      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill','fill_note','mc2'].includes(type) && type && (
         <div style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
           [{type}] — dạng này sẽ được thêm sau.
         </div>
@@ -572,7 +576,112 @@ function McQuestion({ q, userAns, isReview, onChange, fontSize }) {
     </div>
   )
 }
+// ─── Choose N of M (mc2) ──────────────────────────────────────────────────────
+//
+// Sheet format — mỗi row = 1 đáp án đúng cần tìm:
+//   Question_Type: mc2
+//   Question:      đề bài (chỉ row đầu, VD "Which TWO are mentioned as...?")
+//   Opt_A..Opt_H:  danh sách lựa chọn (chỉ row đầu)
+//   Num_Answers:   số lượng cần chọn (chỉ row đầu, mặc định = số row trong group)
+//   Correct_Ans:   1 chữ cái đúng cho row đó
 
+function Mc2Question({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const firstQ    = questions[0]
+  const groupKey  = firstQ.globalIndex
+  const numPicks  = parseInt(firstQ.Num_Answers) || questions.length
+  const options   = ['A','B','C','D','E','F','G','H']
+    .map(k => ({ key: k, value: firstQ[`Opt_${k}`] }))
+    .filter(o => o.value?.trim())
+
+  const correctSet = questions
+    .map(q => q.Correct_Ans?.trim().toUpperCase())
+    .filter(Boolean)
+
+  const rawSelected = isReview ? reviewAnswers[groupKey] : answers[groupKey]
+  const selected    = Array.isArray(rawSelected) ? rawSelected : []
+
+  const toggle = (key) => {
+    if (isReview) return
+    let next
+    if (selected.includes(key)) {
+      next = selected.filter(k => k !== key)
+    } else if (selected.length < numPicks) {
+      next = [...selected, key]
+    } else {
+      return // đã chọn đủ, bỏ qua click thêm
+    }
+    // Ghi cùng 1 mảng vào tất cả các câu trong group để đồng bộ chấm điểm + navigator
+    questions.forEach(q => onChange(q.globalIndex, next))
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Đề bài */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+        <QuestionNumber num={`${questions[0].Question_Num}-${questions[questions.length-1].Question_Num}`} />
+        <p style={{ margin: 0, fontSize: `${fontSize}px`, fontWeight: '500', color: 'var(--c-primary-dark)', lineHeight: 1.5, flex: 1 }}>
+          {parseInline(firstQ.Question || '')}
+          <span style={{ marginLeft: '8px', fontSize: `${Math.max(11, fontSize - 3)}px`, fontWeight: '700', color: 'var(--c-primary-mid)' }}>
+            (Chọn {numPicks} đáp án)
+          </span>
+        </p>
+      </div>
+
+      {/* Danh sách lựa chọn */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingLeft: '32px' }}>
+        {options.map(opt => {
+          const isSelected = selected.includes(opt.key)
+          const isCorrectOpt = correctSet.includes(opt.key)
+
+          let bg = 'var(--c-surface)', border = 'var(--c-primary-pale)', color = 'var(--c-text-soft)'
+          if (isReview) {
+            if (isCorrectOpt)                     { bg = 'var(--c-success-bg)'; border = 'var(--c-success)'; color = 'var(--c-success-text)' }
+            else if (isSelected && !isCorrectOpt) { bg = 'var(--c-danger-bg)';  border = 'var(--c-danger)';  color = 'var(--c-danger-text)'  }
+          } else if (isSelected) {
+            bg = 'var(--c-primary-bg)'; border = 'var(--c-primary-mid)'; color = 'var(--c-primary-dark)'
+          }
+
+          return (
+            <div key={opt.key}
+              onClick={() => toggle(opt.key)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                padding: '9px 14px', borderRadius: '8px',
+                border: `1.5px solid ${border}`, backgroundColor: bg, color,
+                fontSize: `${fontSize}px`, cursor: isReview ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (!isReview && !isSelected) e.currentTarget.style.backgroundColor = 'var(--c-primary-barest)' }}
+              onMouseLeave={e => { if (!isReview && !isSelected) e.currentTarget.style.backgroundColor = bg }}
+            >
+              {/* Checkbox vuông */}
+              <span style={{
+                width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0, marginTop: '1px',
+                border: `2px solid ${isSelected || isCorrectOpt ? border : 'var(--c-primary-pale)'}`,
+                backgroundColor: isSelected || (isReview && isCorrectOpt) ? border : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {(isSelected || (isReview && isCorrectOpt)) && (
+                  <span style={{ color: '#fff', fontSize: '11px', fontWeight: '700', lineHeight: 1 }}>✓</span>
+                )}
+              </span>
+              <span style={{ fontWeight: '700', flexShrink: 0, minWidth: '18px' }}>{opt.key}.</span>
+              <span style={{ flex: 1, lineHeight: 1.5 }}>{parseInline(opt.value)}</span>
+              {isReview && isCorrectOpt && <span style={{ flexShrink: 0, fontSize: '14px' }}>✅</span>}
+              {isReview && isSelected && !isCorrectOpt && <span style={{ flexShrink: 0, fontSize: '14px' }}>❌</span>}
+            </div>
+          )
+        })}
+      </div>
+
+      {isReview && selected.length === 0 && (
+        <p style={{ margin: '2px 0 0 32px', fontSize: '12px', color: 'var(--c-warn-text)', fontStyle: 'italic' }}>
+          ⚠️ Chưa trả lời — đáp án đúng: <strong>{correctSet.join(', ')}</strong>
+        </p>
+      )}
+    </div>
+  )
+}
 // ─── Fill Question ────────────────────────────────────────────────────────────
 
 function FillQuestion({ q, userAns, isReview, onChange, fontSize }) {
@@ -1621,10 +1730,15 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, current, on
         if (isCurrent) {
           bg = 'var(--c-primary)'; color = '#fff'; border = 'var(--c-primary)'
         } else if (isReview) {
-          if (!userAns)              { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-text)';    border = 'var(--c-warn)'          }
-          else if (isAnswerCorrect(userAns, correct)) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)' }
-          else                       { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';  border = 'var(--c-danger-border)'  }
-        } else if (userAns) {
+          const isMc2 = q.Question_Type === 'mc2'
+          const answered = isMc2 ? Array.isArray(userAns) && userAns.length > 0 : !!userAns
+          const correctHit = isMc2
+            ? Array.isArray(userAns) && userAns.some(v => v?.trim().toUpperCase() === correct?.toUpperCase())
+            : isAnswerCorrect(userAns, correct)
+          if (!answered)      { bg = 'var(--c-warn-bg)';    color = 'var(--c-warn-text)';    border = 'var(--c-warn)'          }
+          else if (correctHit) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)' }
+          else                { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';  border = 'var(--c-danger-border)'  }
+        } else if (q.Question_Type === 'mc2' ? Array.isArray(userAns) && userAns.length > 0 : userAns) {
           bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)'
         }
 
@@ -1796,6 +1910,13 @@ export default function BaiTapIELTS({ params }) {
       questions.forEach(q => {
         const correct = q.Correct_Ans?.trim()
         if (!correct) return
+
+        if (q.Question_Type === 'mc2') {
+          const selected = Array.isArray(answers[q.globalIndex]) ? answers[q.globalIndex] : []
+          if (selected.some(v => normalizeAns(v) === normalizeAns(correct))) soCauDung++
+          return
+        }
+
         const userAns = String(answers[q.globalIndex] || '').trim()
         if (isAnswerCorrect(userAns, correct)) soCauDung++
       })

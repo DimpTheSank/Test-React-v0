@@ -503,7 +503,7 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           if (type === 'fill') return <FillQuestion key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
         })
       )}
-      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill','fill_note','mc2'].includes(type) && type && (
+      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill','fill_note','mc2','matching_passage'].includes(type) && type && (
         <div style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
           [{type}] — dạng này sẽ được thêm sau.
         </div>

@@ -330,7 +330,97 @@ function AudioSource({ src }) {
     ? <iframe src={src} width="100%" height="80" style={{ border: 'none', borderRadius: '8px', flexShrink: 0 }} />
     : <AudioPlayer src={src} />
 }
-// ─── Context Panel (trái) ─────────────────────────────────────────────────────
+const MAX_NOTE_LENGTH = 300
+
+// ─── Note Button (icon sổ ghi chú cạnh mỗi câu) ───────────────────────────────
+function NoteButton({ hasNote, isActive, onClick }) {
+  return (
+    <button
+      data-note-btn
+      onClick={onClick}
+      title="Ghi chú"
+      style={{
+        width: '26px', height: '26px', borderRadius: '6px', flexShrink: 0,
+        border: `1px solid ${isActive ? 'var(--c-primary)' : hasNote ? 'var(--c-warn)' : 'var(--c-primary-pale)'}`,
+        backgroundColor: isActive ? 'var(--c-primary)' : hasNote ? 'var(--c-warn-bgsoft)' : 'var(--c-surface)',
+        color: isActive ? '#fff' : hasNote ? 'var(--c-warn-text)' : 'var(--c-text-muted)',
+        fontSize: '13px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.15s', position: 'relative',
+      }}
+    >
+      📓
+      {hasNote && !isActive && (
+        <span style={{
+          position: 'absolute', top: '-3px', right: '-3px',
+          width: '8px', height: '8px', borderRadius: '50%',
+          backgroundColor: 'var(--c-warn)', border: '1.5px solid var(--c-surface)',
+        }} />
+      )}
+    </button>
+  )
+}
+
+// ─── Note Panel (bong bóng nổi góc dưới trái) ─────────────────────────────────
+function NotePanel({ activeIdx, note, onChange, onClose, isReview }) {
+  if (activeIdx === null) return null
+  const len = (note || '').length
+
+  return (
+    <div
+      id="note-panel"
+      style={{
+        position: 'fixed', bottom: '20px', left: '20px', zIndex: 3000,
+        width: '320px', maxWidth: 'calc(100vw - 40px)',
+        backgroundColor: 'var(--c-surface)', borderRadius: '16px',
+        boxShadow: 'var(--shadow-modal)', border: '1px solid var(--c-primary-pale)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}
+    >
+      {/* Header giống bong bóng chat */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 14px', backgroundColor: 'var(--c-primary)',
+      }}>
+        <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>
+          📓 Ghi chú câu {activeIdx + 1}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', border: 'none', color: '#fff',
+            fontSize: '18px', cursor: 'pointer', lineHeight: 1, padding: 0,
+          }}
+        >×</button>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <textarea
+          autoFocus
+          readOnly={isReview}
+          value={note || ''}
+          onChange={e => onChange(e.target.value.slice(0, MAX_NOTE_LENGTH))}
+          maxLength={MAX_NOTE_LENGTH}
+          placeholder="Nhập ghi chú cho câu này..."
+          style={{
+            width: '100%', minHeight: '90px', padding: '10px 12px',
+            borderRadius: '8px', border: '1px solid var(--c-primary-pale)',
+            outline: 'none', resize: 'vertical', fontSize: '13px',
+            fontFamily: 'inherit',
+            backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)',
+            color: 'var(--c-text)', boxSizing: 'border-box',
+          }}
+        />
+        {!isReview && (
+          <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', textAlign: 'right' }}>
+            {len}/{MAX_NOTE_LENGTH}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 // ─── Context Panel (trái) ─────────────────────────────────────────────────────
 function ContextPanel({ firstInGroup, fontSize, transcript }) {
   const hasTranscript = !!firstInGroup?.Transcript
@@ -495,6 +585,7 @@ function QuestionsPanel({
   isReview, fontSize, onAnswer,
   isFirstGroup, isLastGroup, goToPrevGroup, goToNextGroup,
   onNopBai, getOptions, getReviewBorderColor,
+  notes, activeNoteIdx, onOpenNote,          // ← THÊM
 }) {
   return (
     <div style={{
@@ -516,14 +607,7 @@ function QuestionsPanel({
       </div>
 
       {/* Scrollable questions */}
-      <div
-        id="question-panel"
-        style={{
-          flex: 1, minHeight: 0, overflowY: 'auto',
-          padding: '20px 24px',
-          display: 'flex', flexDirection: 'column', gap: '28px',
-        }}
-      >
+      <div id="question-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         {questionsInGroup.map((q) => (
           <QuestionItem
             key={q.globalIndex}
@@ -536,6 +620,9 @@ function QuestionsPanel({
             onAnswer={onAnswer}
             getOptions={getOptions}
             getReviewBorderColor={getReviewBorderColor}
+            notes={notes}                         /* ← THÊM */
+            activeNoteIdx={activeNoteIdx}          /* ← THÊM */
+            onOpenNote={onOpenNote}                /* ← THÊM */
           />
         ))}
 
@@ -581,18 +668,30 @@ function QuestionsPanel({
 }
 
 // ─── Single Question Item ─────────────────────────────────────────────────────
-function QuestionItem({ q, isCurrent, isReview, answers, reviewAnswers, fontSize, onAnswer, getOptions, getReviewBorderColor }) {
+function QuestionItem({ q, isCurrent, isReview, answers, reviewAnswers, fontSize, onAnswer, getOptions, getReviewBorderColor, notes, activeNoteIdx, onOpenNote }) {
+  const hasNote = !!(notes?.[q.globalIndex] && notes[q.globalIndex].trim())
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: '12px',
       backgroundColor: isCurrent ? 'var(--c-primary-barest)' : 'transparent',
       padding: '10px', borderRadius: '8px',
     }}>
-      {q.Question_Type !== 'fill_blank' && (
-        <p style={{ margin: 0, fontSize: `${fontSize}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
-          {q.Question}
-        </p>
-      )}
+      {/* Header: câu hỏi + nút ghi chú */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+        {q.Question_Type !== 'fill_blank' && (
+          <p style={{ margin: 0, flex: 1, fontSize: `${fontSize}px`, fontWeight: '600', color: 'var(--c-primary)' }}>
+            {q.Question}
+          </p>
+        )}
+        <div style={{ marginLeft: q.Question_Type === 'fill_blank' ? 'auto' : 0 }}>
+          <NoteButton
+            hasNote={hasNote}
+            isActive={activeNoteIdx === q.globalIndex}
+            onClick={() => onOpenNote(q.globalIndex)}
+          />
+        </div>
+      </div>
 
       {/* MCQ */}
       {(q.Question_Type === 'mcq' || q.Question_Type === 'mcq_blank') && (
@@ -837,6 +936,9 @@ export default function BaiTap({ params }) {
   const [draftSaved, setDraftSaved]     = useState(false)
   const [reviewAnswers, setReviewAnswers] = useState({})
 
+  const [notes, setNotes]             = useState({})
+  const [activeNoteIdx, setActiveNoteIdx] = useState(null)
+
   const [fontSizeContext, setFontSizeContext]     = useState(16)
   const [fontSizeQuestions, setFontSizeQuestions] = useState(16)
 
@@ -885,7 +987,7 @@ export default function BaiTap({ params }) {
   useEffect(() => {
     if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
-    if (Object.keys(answers).length === 0) return
+    if (Object.keys(answers).length === 0 && Object.keys(notes).length === 0) return
 
     clearTimeout(saveDraftTimeout.current)
     saveDraftTimeout.current = setTimeout(async () => {
@@ -904,7 +1006,7 @@ export default function BaiTap({ params }) {
         }
         if (assignId) {
           await updateDoc(doc(db, 'assignments', assignId), {
-            trangThai: 'Đang làm', answers,
+            trangThai: 'Đang làm', answers, notes,        // ← thêm notes
             tongCauDraft: questions.length,
             thoiGianLuuNhap: new Date().toISOString(),
           })
@@ -915,7 +1017,7 @@ export default function BaiTap({ params }) {
     }, 1500)
 
     return () => clearTimeout(saveDraftTimeout.current)
-  }, [answers])
+  }, [answers, notes])   // ← thêm notes vào dependency
 
   function getUserInfo() {
     try {
@@ -964,6 +1066,16 @@ export default function BaiTap({ params }) {
             .reduce((a, b) => (a.diem ?? -1) >= (b.diem ?? -1) ? a : b)
           setReviewAnswers(best.answers || {})
         }
+
+        // Notes lưu ở assignments, không ở submissions → query riêng để hiển thị (read-only)
+        const assignSnapRv = await getDocs(query(
+          collection(db, 'assignments'),
+          where('userId', '==', userInfo.taiKhoan),
+          where('exerciseId', '==', id)
+        ))
+        const assignNoteDoc = assignSnapRv.docs[0]
+        if (assignNoteDoc?.data()?.notes) setNotes(assignNoteDoc.data().notes)
+
       } else {
         const assignSnap = await getDocs(query(
           collection(db, 'assignments'),
@@ -977,6 +1089,7 @@ export default function BaiTap({ params }) {
           if (assignData.trangThai === 'Đang làm' && assignData.answers) {
             setAnswers(assignData.answers)
           }
+          if (assignData.notes) setNotes(assignData.notes)   // ← notes load bất kể trạng thái
         }
       }
     } catch (error) { console.error("Lỗi khi tải bài tập:", error) }
@@ -1043,6 +1156,25 @@ export default function BaiTap({ params }) {
     if (isReview) return
     setAnswers(prev => ({ ...prev, [globalIndex]: val }))
   }
+
+  const handleOpenNote = (globalIndex) => {
+    setActiveNoteIdx(prev => (prev === globalIndex ? null : globalIndex))
+  }
+
+  const handleChangeNote = (val) => {
+    if (isReview || activeNoteIdx === null) return
+    setNotes(prev => ({ ...prev, [activeNoteIdx]: val }))
+  }
+
+  useEffect(() => {
+    const handleClickOutsideNote = (e) => {
+      if (activeNoteIdx === null) return
+      if (e.target.closest('#note-panel') || e.target.closest('[data-note-btn]')) return
+      setActiveNoteIdx(null)
+    }
+    document.addEventListener('mousedown', handleClickOutsideNote)
+    return () => document.removeEventListener('mousedown', handleClickOutsideNote)
+  }, [activeNoteIdx])
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   const handleNopBai = async () => {
@@ -1229,12 +1361,23 @@ export default function BaiTap({ params }) {
             onNopBai={() => setShowConfirm(true)}
             getOptions={getOptions}
             getReviewBorderColor={getReviewBorderColor}
+            notes={notes}                    
+            activeNoteIdx={activeNoteIdx}    
+            onOpenNote={handleOpenNote}      
           />
         </div>
 
       </div>
 
       <HighlightToolbar toolbar={toolbar} onHighlight={applyHighlight} onClose={hideToolbar} />
+
+      <NotePanel
+        activeIdx={activeNoteIdx}
+        note={activeNoteIdx !== null ? notes[activeNoteIdx] : ''}
+        onChange={handleChangeNote}
+        onClose={() => setActiveNoteIdx(null)}
+        isReview={isReview}
+      />
     </main>
   )
 }

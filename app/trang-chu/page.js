@@ -671,7 +671,7 @@ function CardBaiTap({ bai }) {
 /* ── TabGhiChu ───────────────────────────────────────────────────── */
 function TabGhiChu() {
   const [loading, setLoading]       = useState(true)
-  const [items, setItems]           = useState([])   // [{ id, notes, exercise }]
+  const [items, setItems]           = useState([])   // [{ id, type: 'toeic'|'ielts', notes?, ghiChuBai?, exercise }]
   const [selectedId, setSelectedId] = useState(null)
 
   useEffect(() => { loadNotes() }, [])
@@ -684,14 +684,25 @@ function TabGhiChu() {
       const taiKhoan = userInfo.taiKhoan
 
       const assignSnap = await getDocs(query(collection(db, 'assignments'), where('userId', '==', taiKhoan)))
+
       const withNotes = assignSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(a => a.notes && Object.values(a.notes).some(n => n && n.trim()))
+        .filter(a =>
+          (a.notes && Object.values(a.notes).some(n => n && n.trim())) ||   // TOEIC
+          (a.ghiChuBai && a.ghiChuBai.trim())                              // IELTS
+        )
 
       const enriched = await Promise.all(withNotes.map(async (a) => {
         const exSnap = await getDoc(doc(db, 'exercises', a.exerciseId))
         if (!exSnap.exists()) return null
-        return { ...a, exercise: exSnap.data() }
+        const isIELTS = !!(a.ghiChuBai && a.ghiChuBai.trim())
+        return {
+          id: a.id,
+          type: isIELTS ? 'ielts' : 'toeic',
+          notes: a.notes || null,
+          ghiChuBai: a.ghiChuBai || '',
+          exercise: exSnap.data(),
+        }
       }))
 
       const list = enriched.filter(Boolean)
@@ -703,7 +714,7 @@ function TabGhiChu() {
 
   const selected = items.find(i => i.id === selectedId)
 
-  const noteEntries = selected
+  const noteEntries = selected?.type === 'toeic'
     ? Object.entries(selected.notes)
         .filter(([, v]) => v && v.trim())
         .sort((a, b) => Number(a[0]) - Number(b[0]))
@@ -729,7 +740,10 @@ function TabGhiChu() {
         {items.map((it, i) => {
           const accent = accentKyNang[it.exercise.kyNang] || 'var(--c-primary-mid)'
           const isSel  = it.id === selectedId
-          const count  = Object.values(it.notes).filter(n => n && n.trim()).length
+          const count  = it.type === 'toeic'
+            ? Object.values(it.notes).filter(n => n && n.trim()).length
+            : null
+
           return (
             <div key={it.id} onClick={() => setSelectedId(it.id)} style={{
               padding: '12px 14px', cursor: 'pointer',
@@ -746,8 +760,12 @@ function TabGhiChu() {
               </p>
               <span style={{
                 display: 'inline-block', marginTop: '6px', padding: '2px 8px', borderRadius: '9999px',
-                fontSize: '11px', fontWeight: '600', backgroundColor: 'var(--c-warn-bg)', color: 'var(--c-warn-text)',
-              }}>{count} ghi chú</span>
+                fontSize: '11px', fontWeight: '600',
+                backgroundColor: it.type === 'ielts' ? 'var(--c-primary-bg)' : 'var(--c-warn-bg)',
+                color: it.type === 'ielts' ? 'var(--c-primary)' : 'var(--c-warn-text)',
+              }}>
+                {it.type === 'ielts' ? '📓 Ghi chú cả bài' : `${count} ghi chú`}
+              </span>
             </div>
           )
         })}
@@ -763,25 +781,37 @@ function TabGhiChu() {
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', color: 'var(--c-primary-dark)' }}>
               {selected.exercise.tenBaiTap}
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {noteEntries.map(([idx, text]) => (
-                <div key={idx} style={{
-                  padding: '12px 16px', borderRadius: '10px',
-                  border: '1px solid var(--c-warn-border)', backgroundColor: 'var(--c-warn-bgsoft)',
-                  display: 'flex', gap: '12px', alignItems: 'flex-start',
-                }}>
-                  <span style={{
-                    minWidth: '26px', height: '26px', borderRadius: '6px', flexShrink: 0,
-                    backgroundColor: 'var(--c-warn)', color: '#fff',
-                    fontSize: '11px', fontWeight: '700',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{Number(idx) + 1}</span>
-                  <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--c-warn-textsoft)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                    {text}
-                  </p>
-                </div>
-              ))}
-            </div>
+
+            {selected.type === 'ielts' ? (
+              <div style={{
+                padding: '16px 18px', borderRadius: '10px',
+                border: '1px solid var(--c-primary-bg)', backgroundColor: 'var(--c-primary-barest)',
+                fontSize: '13.5px', color: 'var(--c-primary-dark)', lineHeight: 1.7,
+                whiteSpace: 'pre-wrap',
+              }}>
+                {selected.ghiChuBai}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {noteEntries.map(([idx, text]) => (
+                  <div key={idx} style={{
+                    padding: '12px 16px', borderRadius: '10px',
+                    border: '1px solid var(--c-warn-border)', backgroundColor: 'var(--c-warn-bgsoft)',
+                    display: 'flex', gap: '12px', alignItems: 'flex-start',
+                  }}>
+                    <span style={{
+                      minWidth: '26px', height: '26px', borderRadius: '6px', flexShrink: 0,
+                      backgroundColor: 'var(--c-warn)', color: '#fff',
+                      fontSize: '11px', fontWeight: '700',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{Number(idx) + 1}</span>
+                    <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--c-warn-textsoft)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>

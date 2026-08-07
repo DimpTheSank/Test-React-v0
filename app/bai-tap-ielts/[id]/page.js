@@ -260,8 +260,102 @@ function AudioPlayer({ src }) {
   )
 }
 
-// ─── Passage renderer (Vùng trái) ────────────────────────────────────────────
+const MAX_NOTE_LENGTH_IELTS = 2000
 
+// ─── Nút toggle ghi chú cố định (góc dưới trái) ───────────────────────────────
+function NoteToggleButton({ isOpen, hasNote, onClick }) {
+  if (isOpen) return null
+  return (
+    <button
+      onClick={onClick}
+      title="Ghi chú"
+      style={{
+        position: 'fixed', bottom: '20px', left: '20px', zIndex: 3000,
+        width: '52px', height: '52px', borderRadius: '50%', border: 'none',
+        backgroundColor: 'var(--c-primary)', color: '#fff',
+        fontSize: '22px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 14px rgba(24,95,165,0.35)',
+        transition: 'transform 0.15s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      📓
+      {hasNote && (
+        <span style={{
+          position: 'absolute', top: '2px', right: '2px',
+          width: '11px', height: '11px', borderRadius: '50%',
+          backgroundColor: 'var(--c-warn)', border: '2px solid var(--c-surface)',
+        }} />
+      )}
+    </button>
+  )
+}
+
+// ─── Panel ghi chú mở rộng (cố định, cao & rộng hơn TOEIC) ────────────────────
+function NotePanelIELTS({ isOpen, note, onChange, onClose, isReview }) {
+  if (!isOpen) return null
+  const len = (note || '').length
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '20px', left: '20px', zIndex: 3000,
+      width: '420px', maxWidth: 'calc(100vw - 40px)',
+      height: '380px', maxHeight: 'calc(100vh - 100px)',
+      backgroundColor: 'var(--c-surface)', borderRadius: '16px',
+      boxShadow: 'var(--shadow-modal)', border: '1px solid var(--c-primary-pale)',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px', backgroundColor: 'var(--c-primary)', flexShrink: 0,
+      }}>
+        <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
+          📓 Ghi chú bài làm
+        </span>
+        <button
+          onClick={onClose}
+          title="Thu nhỏ"
+          style={{
+            background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '6px',
+            color: '#fff', fontSize: '13px', fontWeight: '600',
+            cursor: 'pointer', padding: '5px 10px', lineHeight: 1,
+          }}
+        >
+          Thu nhỏ ▾
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
+        <textarea
+          autoFocus
+          readOnly={isReview}
+          value={note || ''}
+          onChange={e => onChange(e.target.value.slice(0, MAX_NOTE_LENGTH_IELTS))}
+          maxLength={MAX_NOTE_LENGTH_IELTS}
+          placeholder="Ghi chú tự do cho cả bài — từ vựng, ý chính, chiến lược làm bài..."
+          style={{
+            flex: 1, width: '100%', padding: '12px 14px',
+            borderRadius: '10px', border: '1px solid var(--c-primary-pale)',
+            outline: 'none', resize: 'none', fontSize: '13.5px', lineHeight: '1.6',
+            fontFamily: 'inherit',
+            backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)',
+            color: 'var(--c-text)', boxSizing: 'border-box',
+          }}
+        />
+        {!isReview && (
+          <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', textAlign: 'right', flexShrink: 0 }}>
+            {len}/{MAX_NOTE_LENGTH_IELTS}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+// ─── Passage renderer (Vùng trái) ────────────────────────────────────────────
 function PassagePanel({ passage, audios, fontSize }) {
   return (
     <div style={{
@@ -1767,6 +1861,9 @@ export default function BaiTapIELTS({ params }) {
   const searchParams = useSearchParams()
   const isReview     = searchParams.get('review') === 'true'
 
+  const [ghiChuBai, setGhiChuBai] = useState('')
+  const [noteOpen, setNoteOpen]   = useState(false)
+
   const [exercise, setExercise]       = useState(null)
   const [questions, setQuestions]     = useState([])
   const [passage, setPassage]         = useState('')
@@ -1800,7 +1897,7 @@ export default function BaiTapIELTS({ params }) {
   useEffect(() => {
     if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
-    if (Object.keys(answers).length === 0) return
+    if (Object.keys(answers).length === 0 && !ghiChuBai) return
 
     clearTimeout(saveDraftTimeout.current)
     saveDraftTimeout.current = setTimeout(async () => {
@@ -1819,7 +1916,7 @@ export default function BaiTapIELTS({ params }) {
         }
         if (assignId) {
           await updateDoc(doc(db, 'assignments', assignId), {
-            trangThai: 'Đang làm', answers,
+            trangThai: 'Đang làm', answers, ghiChuBai,   // ← thêm ghiChuBai
             tongCauDraft: questions.length,
             thoiGianLuuNhap: new Date().toISOString(),
           })
@@ -1830,7 +1927,7 @@ export default function BaiTapIELTS({ params }) {
     }, 1500)
 
     return () => clearTimeout(saveDraftTimeout.current)
-  }, [answers])
+  }, [answers, ghiChuBai]) 
 
   async function loadInfo() {
     try {
@@ -1884,6 +1981,16 @@ export default function BaiTapIELTS({ params }) {
             .reduce((a, b) => (a.diem ?? -1) >= (b.diem ?? -1) ? a : b)
           setReviewAnswers(best.answers || {})
         }
+
+        // Ghi chú lưu ở assignments, cần query riêng để hiển thị (read-only)
+        const assignSnapRv = await getDocs(query(
+          collection(db, 'assignments'),
+          where('userId', '==', userInfo.taiKhoan),
+          where('exerciseId', '==', id)
+        ))
+        const assignRvDoc = assignSnapRv.docs[0]
+        if (assignRvDoc?.data()?.ghiChuBai) setGhiChuBai(assignRvDoc.data().ghiChuBai)
+
       } else {
         const assignSnap = await getDocs(query(
           collection(db, 'assignments'),
@@ -1895,6 +2002,7 @@ export default function BaiTapIELTS({ params }) {
           assignmentIdRef.current = assignDoc.id
           const d = assignDoc.data()
           if (d.trangThai === 'Đang làm' && d.answers) setAnswers(d.answers)
+          if (d.ghiChuBai) setGhiChuBai(d.ghiChuBai)   // ← notes load bất kể trạng thái
         }
       }
     } catch (err) { console.error('Lỗi tải bài IELTS:', err) }
@@ -2115,6 +2223,18 @@ export default function BaiTapIELTS({ params }) {
       </div>
 
       <HighlightToolbar toolbar={toolbar} onHighlight={applyHighlight} onClose={hideToolbar} />
+      <NoteToggleButton
+        isOpen={noteOpen}
+        hasNote={!!ghiChuBai?.trim()}
+        onClick={() => setNoteOpen(true)}
+      />
+      <NotePanelIELTS
+        isOpen={noteOpen}
+        note={ghiChuBai}
+        onChange={setGhiChuBai}
+        onClose={() => setNoteOpen(false)}
+        isReview={isReview}
+      />
     </main>
   )
 }

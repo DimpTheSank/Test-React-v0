@@ -66,7 +66,7 @@ function FontSizeControl({ label, value, onChange, min = 11, max = 36 }) {
 }
 
 // ─── Navigator Bar (ngang, giống IELTS) ──────────────────────────────────────
-function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGroup, onJump }) {
+function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGroup, onJump, notes }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '5px',
@@ -84,6 +84,7 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGrou
         const userAns   = isReview ? reviewAnswers[q.globalIndex] : answers[q.globalIndex]
         const correct   = q.Correct_Ans?.trim()
         const inCurrent = q.Group === currentGroup
+        const hasNote   = !!(notes?.[q.globalIndex] && notes[q.globalIndex].trim())   // ← THÊM
 
         let bg = 'var(--c-surface)', color = 'var(--c-primary-mid)', border = 'var(--c-primary-pale)'
 
@@ -103,11 +104,9 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGrou
             else if (isAnswerCorrect(userAns, correct)) { bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)';   border = 'var(--c-success-border)' }
             else                                        { bg = 'var(--c-danger-bg)';  color = 'var(--c-danger-text)';    border = 'var(--c-danger-border)'  }
           }
-          // Highlight nhẹ câu đang xem (review mode)
           if (inCurrent) { border = 'var(--c-primary)'; }
         } else if (userAns) {
           bg = 'var(--c-success-bg)'; color = 'var(--c-success-text)'; border = 'var(--c-success-border)'
-          // Cùng group đang xem nhưng đã làm
           if (inCurrent) { border = 'var(--c-primary-mid)' }
         } else if (inCurrent) {
           bg = 'var(--c-primary-bg)'; color = 'var(--c-primary)'; border = 'var(--c-primary-light)'
@@ -118,6 +117,7 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGrou
             key={i}
             onClick={() => onJump(i)}
             style={{
+              position: 'relative',                          /* ← THÊM để đặt dot absolute */
               width: '30px', height: '30px', borderRadius: '6px', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '12px', fontWeight: '600', cursor: 'pointer',
@@ -126,6 +126,14 @@ function NavigatorBar({ questions, answers, reviewAnswers, isReview, currentGrou
             }}
           >
             {i + 1}
+            {hasNote && (                                     /* ← THÊM dot vàng */
+              <span style={{
+                position: 'absolute', top: '-3px', right: '-3px',
+                width: '7px', height: '7px', borderRadius: '50%',
+                backgroundColor: 'var(--c-warn)',
+                border: '1.5px solid var(--c-sidebar-bg)',
+              }} />
+            )}
           </div>
         )
       })}
@@ -1321,6 +1329,7 @@ export default function BaiTap({ params }) {
         isReview={isReview}
         currentGroup={currentGroup}
         onJump={handleJump}
+        notes={notes}
       />
 
       {/* ── Body: 2 panel ── */}

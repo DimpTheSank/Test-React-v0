@@ -48,6 +48,7 @@ const SO_LUONG_MOI_LAN = 10
 
 export default function TrangChu() {
   const router = useRouter()
+  const [view, setView]                       = useState('baiTap')
   const [baiTapList, setBaiTapList]           = useState([])
   const [loading, setLoading]                 = useState(true)
   const [filterMucDo, setFilterMucDo]         = useState('Tất cả')
@@ -147,124 +148,306 @@ export default function TrangChu() {
   if (loading) return <SkeletonTrangChu />
 
   return (
-    <main style={{
-      padding: '28px 20px',
-      maxWidth: '1040px',
-      margin: '0 auto',
-      backgroundColor: 'var(--c-bg-page)',
-      minHeight: 'calc(100vh - 56px)',
-    }}>
-
-      {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--c-primary-dark)', lineHeight: 1.2 }}>
-            Bài tập của tôi
-          </h2>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--c-text-muted)', lineHeight: 1 }}>
-            {baiTapList.length} bài được giao
-          </p>
-        </div>
-
-        {/* Stats pills */}
-        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '6px 14px', borderRadius: '9999px',
-            backgroundColor: 'var(--c-success-bg)', color: 'var(--c-success-text)',
-            fontSize: '13px', fontWeight: '600',
-          }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--c-success)', display: 'inline-block' }} />
-            Đã làm: {daLam}
-          </span>
-          {dangLam > 0 && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              padding: '6px 14px', borderRadius: '9999px',
-              backgroundColor: 'var(--c-warn-bg)', color: 'var(--c-warn-text)',
-              fontSize: '13px', fontWeight: '600',
-            }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--c-warn)', display: 'inline-block' }} />
-              Đang làm: {dangLam}
-            </span>
-          )}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '6px 14px', borderRadius: '9999px',
-            backgroundColor: 'var(--c-danger-bg)', color: 'var(--c-danger-text)',
-            fontSize: '13px', fontWeight: '600',
-          }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--c-danger)', display: 'inline-block' }} />
-            Chưa làm: {chuaLam}
-          </span>
-        </div>
+    <main
+      style={{
+        padding: '28px 20px',
+        maxWidth: '1040px',
+        margin: '0 auto',
+        backgroundColor: 'var(--c-bg-page)',
+        minHeight: 'calc(100vh - 56px)',
+      }}
+    >
+      {/* ── Tab switcher ── */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '4px',
+          marginBottom: '20px',
+          borderBottom: '1px solid var(--c-primary-pale)',
+        }}
+      >
+        {[
+          { key: 'baiTap', label: '📚 Bài tập' },
+          { key: 'ghiChu', label: '📓 Ghi chú' },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setView(t.key)}
+            style={{
+              padding: '10px 20px',
+              border: 'none',
+              borderBottom:
+                view === t.key
+                  ? '3px solid var(--c-primary)'
+                  : '3px solid transparent',
+              backgroundColor: 'transparent',
+              color:
+                view === t.key
+                  ? 'var(--c-primary)'
+                  : 'var(--c-text-muted)',
+              fontWeight: view === t.key ? '600' : '400',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* ── Filter bar ── */}
-      <div style={{
-        display: 'flex', gap: '20px', marginBottom: '24px',
-        padding: '14px 18px',
-        backgroundColor: 'var(--c-primary-barest)',
-        borderRadius: '12px',
-        border: '1px solid var(--c-primary-bg)',
-        flexWrap: 'wrap', alignItems: 'center',
-      }}>
-        <FilterGroup
-          label="Mức độ"
-          options={cacMucDo}
-          value={filterMucDo}
-          onChange={setFilterMucDo}
-        />
-        <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)', alignSelf: 'center' }} />
-        <FilterGroup
-          label="Trạng thái"
-          options={cacTrangThai}
-          value={filterTrangThai}
-          onChange={setFilterTrangThai}
-        />
-      </div>
-
-      {/* ── Card grid ── */}
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--c-text-muted)', fontSize: '14px' }}>
-          Không có bài tập nào phù hợp.
-        </div>
-      ) : (
+      {view === 'baiTap' ? (
         <>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-            gap: '16px',
-          }}>
-            {visibleList.map(bai => <CardBaiTap key={bai.id} bai={bai} />)}
+          {/* ── Page header ── */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              marginBottom: '24px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: '22px',
+                  fontWeight: '700',
+                  color: 'var(--c-primary-dark)',
+                  lineHeight: 1.2,
+                }}
+              >
+                Bài tập của tôi
+              </h2>
+              <p
+                style={{
+                  margin: '4px 0 0',
+                  fontSize: '13px',
+                  color: 'var(--c-text-muted)',
+                  lineHeight: 1,
+                }}
+              >
+                {baiTapList.length} bài được giao
+              </p>
+            </div>
+
+            {/* Stats pills */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginLeft: 'auto',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'var(--c-success-bg)',
+                  color: 'var(--c-success-text)',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                }}
+              >
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--c-success)',
+                    display: 'inline-block',
+                  }}
+                />
+                Đã làm: {daLam}
+              </span>
+
+              {dangLam > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--c-warn-bg)',
+                    color: 'var(--c-warn-text)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--c-warn)',
+                      display: 'inline-block',
+                    }}
+                  />
+                  Đang làm: {dangLam}
+                </span>
+              )}
+
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'var(--c-danger-bg)',
+                  color: 'var(--c-danger-text)',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                }}
+              >
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--c-danger)',
+                    display: 'inline-block',
+                  }}
+                />
+                Chưa làm: {chuaLam}
+              </span>
+            </div>
           </div>
 
-          {/* ── Load more ── */}
-          {visibleCount < filtered.length && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
-                Đang hiện {visibleCount} / {filtered.length} bài
-              </p>
-              <button
-                onClick={() => setVisibleCount(v => Math.min(v + SO_LUONG_MOI_LAN, filtered.length))}
-                style={{
-                  padding: '9px 24px', borderRadius: '9999px',
-                  border: '1.5px solid var(--c-primary-pale)',
-                  backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-mid)',
-                  fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--c-primary-bg)'; e.currentTarget.style.borderColor = 'var(--c-primary-mid)' }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--c-surface)'; e.currentTarget.style.borderColor = 'var(--c-primary-pale)' }}
-              >
-                Xem thêm ↓
-              </button>
+          {/* ── Filter bar ── */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '20px',
+              marginBottom: '24px',
+              padding: '14px 18px',
+              backgroundColor: 'var(--c-primary-barest)',
+              borderRadius: '12px',
+              border: '1px solid var(--c-primary-bg)',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            <FilterGroup
+              label="Mức độ"
+              options={cacMucDo}
+              value={filterMucDo}
+              onChange={setFilterMucDo}
+            />
+
+            <div
+              style={{
+                width: '1px',
+                height: '22px',
+                backgroundColor: 'var(--c-primary-pale)',
+                alignSelf: 'center',
+              }}
+            />
+
+            <FilterGroup
+              label="Trạng thái"
+              options={cacTrangThai}
+              value={filterTrangThai}
+              onChange={setFilterTrangThai}
+            />
+          </div>
+
+          {/* Phần Card grid + Load more giữ nguyên 100% như code hiện tại */}
+
+          {filtered.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '60px 20px',
+                color: 'var(--c-text-muted)',
+                fontSize: '14px',
+              }}
+            >
+              Không có bài tập nào phù hợp.
             </div>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    'repeat(auto-fill, minmax(180px, 1fr))',
+                  gap: '16px',
+                }}
+              >
+                {visibleList.map((bai) => (
+                  <CardBaiTap key={bai.id} bai={bai} />
+                ))}
+              </div>
+
+              {visibleCount < filtered.length && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginTop: '24px',
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '13px',
+                      color: 'var(--c-text-muted)',
+                    }}
+                  >
+                    Đang hiện {visibleCount} / {filtered.length} bài
+                  </p>
+
+                  <button
+                    onClick={() =>
+                      setVisibleCount((v) =>
+                        Math.min(v + SO_LUONG_MOI_LAN, filtered.length)
+                      )
+                    }
+                    style={{
+                      padding: '9px 24px',
+                      borderRadius: '9999px',
+                      border: '1.5px solid var(--c-primary-pale)',
+                      backgroundColor: 'var(--c-surface)',
+                      color: 'var(--c-primary-mid)',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        'var(--c-primary-bg)';
+                      e.currentTarget.style.borderColor =
+                        'var(--c-primary-mid)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        'var(--c-surface)';
+                      e.currentTarget.style.borderColor =
+                        'var(--c-primary-pale)';
+                    }}
+                  >
+                    Xem thêm ↓
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
+      ) : (
+        <TabGhiChu />
       )}
     </main>
-  )
+  );
 }
 
 /* ── FilterGroup ─────────────────────────────────────────────────── */
@@ -481,6 +664,126 @@ function CardBaiTap({ bai }) {
             {daLam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+/* ── TabGhiChu ───────────────────────────────────────────────────── */
+function TabGhiChu() {
+  const [loading, setLoading]       = useState(true)
+  const [items, setItems]           = useState([])   // [{ id, notes, exercise }]
+  const [selectedId, setSelectedId] = useState(null)
+
+  useEffect(() => { loadNotes() }, [])
+
+  const loadNotes = async () => {
+    setLoading(true)
+    try {
+      const raw = document.cookie.split('; ').find(r => r.startsWith('userInfo='))?.split('=')[1]
+      const userInfo = JSON.parse(decodeURIComponent(raw))
+      const taiKhoan = userInfo.taiKhoan
+
+      const assignSnap = await getDocs(query(collection(db, 'assignments'), where('userId', '==', taiKhoan)))
+      const withNotes = assignSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(a => a.notes && Object.values(a.notes).some(n => n && n.trim()))
+
+      const enriched = await Promise.all(withNotes.map(async (a) => {
+        const exSnap = await getDoc(doc(db, 'exercises', a.exerciseId))
+        if (!exSnap.exists()) return null
+        return { ...a, exercise: exSnap.data() }
+      }))
+
+      const list = enriched.filter(Boolean)
+      setItems(list)
+      if (list.length > 0) setSelectedId(list[0].id)
+    } catch (err) { console.error('Lỗi khi tải ghi chú:', err) }
+    finally { setLoading(false) }
+  }
+
+  const selected = items.find(i => i.id === selectedId)
+
+  const noteEntries = selected
+    ? Object.entries(selected.notes)
+        .filter(([, v]) => v && v.trim())
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+    : []
+
+  if (loading) {
+    return <p style={{ color: 'var(--c-primary)', fontSize: '14px', textAlign: 'center', padding: '60px 0' }}>Đang tải ghi chú...</p>
+  }
+
+  if (items.length === 0) {
+    return <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', textAlign: 'center', padding: '60px 0' }}>Bạn chưa có ghi chú nào.</p>
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+
+      {/* Mục lục bên trái */}
+      <div style={{
+        width: '260px', flexShrink: 0,
+        borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
+        backgroundColor: 'var(--c-surface)', overflow: 'hidden',
+      }}>
+        {items.map((it, i) => {
+          const accent = accentKyNang[it.exercise.kyNang] || 'var(--c-primary-mid)'
+          const isSel  = it.id === selectedId
+          const count  = Object.values(it.notes).filter(n => n && n.trim()).length
+          return (
+            <div key={it.id} onClick={() => setSelectedId(it.id)} style={{
+              padding: '12px 14px', cursor: 'pointer',
+              borderLeft: `3px solid ${isSel ? accent : 'transparent'}`,
+              backgroundColor: isSel ? 'var(--c-primary-barest)' : 'transparent',
+              borderBottom: i < items.length - 1 ? '1px solid var(--c-primary-bg)' : 'none',
+              transition: 'background-color 0.15s',
+            }}>
+              <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: 'var(--c-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {it.exercise.loaiBai} · {it.exercise.kyNang}
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: '13.5px', fontWeight: '600', color: 'var(--c-primary-dark)', lineHeight: 1.4 }}>
+                {it.exercise.tenBaiTap}
+              </p>
+              <span style={{
+                display: 'inline-block', marginTop: '6px', padding: '2px 8px', borderRadius: '9999px',
+                fontSize: '11px', fontWeight: '600', backgroundColor: 'var(--c-warn-bg)', color: 'var(--c-warn-text)',
+              }}>{count} ghi chú</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Vùng hiện note bên phải */}
+      <div style={{
+        flex: 1, borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
+        backgroundColor: 'var(--c-surface)', padding: '20px 24px', minHeight: '300px',
+      }}>
+        {selected && (
+          <>
+            <h3 style={{ margin: '0 0 16px', fontSize: '16px', color: 'var(--c-primary-dark)' }}>
+              {selected.exercise.tenBaiTap}
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {noteEntries.map(([idx, text]) => (
+                <div key={idx} style={{
+                  padding: '12px 16px', borderRadius: '10px',
+                  border: '1px solid var(--c-warn-border)', backgroundColor: 'var(--c-warn-bgsoft)',
+                  display: 'flex', gap: '12px', alignItems: 'flex-start',
+                }}>
+                  <span style={{
+                    minWidth: '26px', height: '26px', borderRadius: '6px', flexShrink: 0,
+                    backgroundColor: 'var(--c-warn)', color: '#fff',
+                    fontSize: '11px', fontWeight: '700',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{Number(idx) + 1}</span>
+                  <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--c-warn-textsoft)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                    {text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -476,7 +476,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
             flex: centered ? 10 : 1,
             minWidth: 0, // bắt buộc để overflowX auto trong bảng hoạt động
             display: 'flex', flexDirection: 'column', gap: '28px',
-            padding: centered ? '0 24px' : '0 32px', // Reading: padding rộng hơn (32px)
+            padding: centered ? '0 24px 48px' : '0 32px 48px', // Reading: padding rộng hơn (32px)
           }}>
             {centered && audios?.map((src, i) => (
               <AudioPlayer key={i} src={src} />

@@ -597,7 +597,11 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
           if (type === 'fill') return <FillQuestion key={q.globalIndex} q={q} userAns={userAns} isReview={isReview} onChange={onChangeFn} fontSize={fontSize} />
         })
       )}
-      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill','fill_note','mc2','matching_passage'].includes(type) && type && (
+      {type === 'fill_inline' && (
+        <FillInlineQuestion questions={group.questions} answers={answers} reviewAnswers={reviewAnswers}
+          isReview={isReview} onChange={onChange} fontSize={fontSize} />
+      )}
+      {!['table','flowchart','map','matching_headings','tfng','ynng','mc','fill','fill_note','mc2','matching_passage','fill_inline'].includes(type) && type && (
         <div style={{ color: 'var(--c-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
           [{type}] — dạng này sẽ được thêm sau.
         </div>
@@ -777,7 +781,6 @@ function Mc2Question({ questions, answers, reviewAnswers, isReview, onChange, fo
   )
 }
 // ─── Fill Question ────────────────────────────────────────────────────────────
-
 function FillQuestion({ q, userAns, isReview, onChange, fontSize }) {
   const correct   = q.Correct_Ans?.trim() || ''
   const val       = userAns || ''
@@ -839,7 +842,117 @@ function FillQuestion({ q, userAns, isReview, onChange, fontSize }) {
     </div>
   )
 }
+// ─── Fill Inline Question (mỗi câu 1 dòng, blank nằm trong chính câu đó) ─────
+//
+// Sheet format — mỗi row = 1 câu độc lập:
+//   Question_Type: fill_inline
+//   Question_Num:  số câu (dùng để hiển thị số thứ tự trong ___ (n))
+//   Question:      câu có chứa ___ (n), ví dụ:
+//                  "Kira says that lecturers are easier to ___ (12) than those in her home country."
+//   Correct_Ans:   đáp án đúng cho câu đó
 
+function FillInlineQuestion({ questions, answers, reviewAnswers, isReview, onChange, fontSize }) {
+  const parseSegments = (text) => {
+    const segments = []
+    const regex = /___\s*\((\d+)\)/g
+    let last = 0, m
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) segments.push({ type: 'text', val: text.slice(last, m.index) })
+      segments.push({ type: 'blank', num: m[1] })
+      last = regex.lastIndex
+    }
+    if (last < text.length) segments.push({ type: 'text', val: text.slice(last) })
+    return segments
+  }
+
+  const renderQuestion = (q) => {
+    const qIdx      = q.globalIndex
+    const correct   = q.Correct_Ans?.trim() || ''
+    const userVal   = String(isReview ? (reviewAnswers[qIdx] || '') : (answers[qIdx] || ''))
+    const isCorrect = isAnswerCorrect(userVal, correct)
+    const raw       = q.Question || ''
+    const num       = q.Question_Num || (qIdx + 1)
+
+    let borderColor = 'var(--c-primary-pale)'
+    let bgColor     = 'var(--c-surface)'
+    if (isReview) {
+      if (!userVal.trim())  { borderColor = 'var(--c-warn)';    bgColor = 'var(--c-warn-bgsoft)'  }
+      else if (isCorrect)   { borderColor = 'var(--c-success)'; bgColor = 'var(--c-success-bg)'   }
+      else                  { borderColor = 'var(--c-danger)';  bgColor = 'var(--c-danger-bg)'    }
+    } else if (userVal.trim()) {
+      borderColor = 'var(--c-primary-mid)'; bgColor = 'var(--c-primary-bg)'
+    }
+
+    // Nếu câu không có ___ (n) thì tự thêm blank vào cuối, để tránh sheet quên nhập
+    const hasBlank = /___\s*\(\d+\)/.test(raw)
+    const text     = hasBlank ? raw : `${raw} ___ (${num})`
+    const segments = parseSegments(text)
+
+    const inputBlank = (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle', margin: '0 2px' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          minWidth: `${Math.max(18, fontSize)}px`, height: `${Math.max(18, fontSize)}px`,
+          borderRadius: '50%', backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: `${Math.max(10, fontSize - 4)}px`, fontWeight: '700',
+          flexShrink: 0, padding: '0 3px', lineHeight: 1,
+        }}>{num}</span>
+        {isReview ? (
+          <>
+            <span style={{
+              padding: '2px 10px', borderRadius: '5px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, fontWeight: '600',
+              color: !userVal.trim() ? 'var(--c-warn-text)' : isCorrect ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+            }}>
+              {userVal.trim() || '—'}
+            </span>
+            {!isCorrect && correct && (
+              <span style={{ fontSize: '11px', color: 'var(--c-success)', fontWeight: '700' }}>→ {correct}</span>
+            )}
+            <span style={{ fontSize: '12px' }}>{!userVal.trim() ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+          </>
+        ) : (
+          <input
+            type="text"
+            value={userVal}
+            onChange={e => !isReview && onChange(qIdx, e.target.value)}
+            placeholder="..."
+            style={{
+              width: '160px', padding: '3px 8px', borderRadius: '6px',
+              border: `1.5px solid ${borderColor}`, backgroundColor: bgColor,
+              fontSize: `${Math.max(11, fontSize - 1)}px`, outline: 'none',
+              fontFamily: 'inherit', color: 'var(--c-primary-dark)',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--c-primary)'}
+            onBlur={e => e.currentTarget.style.borderColor = borderColor}
+          />
+        )}
+      </span>
+    )
+
+    return (
+      <div key={qIdx} style={{
+        padding: '10px 14px', borderRadius: '9px',
+        border: '1px solid var(--c-primary-pale)',
+        backgroundColor: 'var(--c-surface)',
+      }}>
+        <p style={{ margin: 0, fontSize: `${fontSize}px`, lineHeight: '2', color: 'var(--c-primary-dark)' }}>
+          {segments.map((seg, si) =>
+            seg.type === 'text' ? <span key={si}>{parseInline(seg.val)}</span> : <span key={si}>{inputBlank}</span>
+          )}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {questions.map(q => renderQuestion(q))}
+    </div>
+  )
+}
 // ─── Table Question ───────────────────────────────────────────────────────────
 //
 // Sheet format (cột Question, chỉ điền ở row đầu tiên của group):

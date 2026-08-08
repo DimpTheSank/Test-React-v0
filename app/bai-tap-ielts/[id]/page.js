@@ -453,7 +453,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       flex: 1, display: 'flex', flexDirection: 'column',
       minWidth: 0, minHeight: 0, overflow: 'hidden',
     }}>
-      {/* Toolbar */}
+      {/* Toolbar giữ nguyên */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '8px 16px',
@@ -467,18 +467,16 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
         <FontSizeControl label="Cỡ chữ" value={fontSize.value} onChange={fontSize.set} />
       </div>
 
-      {/* Scrollable questions */}
-      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 0' }}>
-        <div style={{ display: 'flex', width: '100%' }}>
-          {/* Lề trái — tỉ lệ 1, ẩn trên mobile */}
+      {/* Scrollable questions — thêm overflowX hidden để chặn tràn ngang toàn panel */}
+      <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '20px 0' }}>
+        <div style={{ display: 'flex', width: '100%', minWidth: 0 }}>
           {centered && <div className="ielts-q-margin" style={{ flex: 1 }} />}
 
-          {/* Nội dung — tỉ lệ 10, full width trên mobile */}
           <div className="ielts-q-content" style={{
             flex: centered ? 10 : 1,
-            minWidth: 0,
+            minWidth: 0, // bắt buộc để overflowX auto trong bảng hoạt động
             display: 'flex', flexDirection: 'column', gap: '28px',
-            padding: centered ? '0 20px' : '0 24px',
+            padding: centered ? '0 24px' : '0 32px', // Reading: padding rộng hơn (32px)
           }}>
             {centered && audios?.map((src, i) => (
               <AudioPlayer key={i} src={src} />
@@ -497,14 +495,12 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
             ))}
           </div>
 
-          {/* Lề phải — tỉ lệ 1, ẩn trên mobile */}
           {centered && <div className="ielts-q-margin" style={{ flex: 1 }} />}
         </div>
       </div>
     </div>
   )
 }
-
 // ─── Question Group ───────────────────────────────────────────────────────────
 
 function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, fontSize, isListening }) {
@@ -1109,7 +1105,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
   }
 
   return (
-    <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--c-primary-pale)' }}>
+    <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--c-primary-pale)', padding: '2px' }}>
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px' }}>
         {/* Header */}
         <thead>
@@ -2330,6 +2326,8 @@ export default function BaiTapIELTS({ params }) {
             onChange={(idx, val) => setAnswers(a => ({ ...a, [idx]: val }))}
             fontSize={{ value: fontQuestions, set: setFontQuestions }}
             isListening={exercise.kyNang === 'Listening'}
+            centered={exercise.kyNang === 'Listening'}   // ← THÊM: bật lề 2 bên khi Listening
+            audios={exercise.kyNang === 'Listening' ? audios : undefined}  // ← THÊM 
           />
         </div>
 

@@ -406,7 +406,6 @@ function NotePanel({ activeIdx, note, onChange, onClose, isReview }) {
       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <textarea
           autoFocus
-          readOnly={isReview}
           value={note || ''}
           onChange={e => onChange(e.target.value.slice(0, MAX_NOTE_LENGTH))}
           maxLength={MAX_NOTE_LENGTH}
@@ -416,15 +415,15 @@ function NotePanel({ activeIdx, note, onChange, onClose, isReview }) {
             borderRadius: '8px', border: '1px solid var(--c-primary-pale)',
             outline: 'none', resize: 'vertical', fontSize: '13px',
             fontFamily: 'inherit',
-            backgroundColor: isReview ? 'var(--c-primary-barest)' : 'var(--c-surface)',
+            backgroundColor: 'var(--c-surface)',
             color: 'var(--c-text)', boxSizing: 'border-box',
           }}
         />
-        {!isReview && (
-          <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', textAlign: 'right' }}>
-            {len}/{MAX_NOTE_LENGTH}
-          </span>
-        )}
+
+        <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', textAlign: 'right' }}>
+          {len}/{MAX_NOTE_LENGTH}
+        </span>
+
       </div>
     </div>
   )
@@ -993,7 +992,6 @@ export default function BaiTap({ params }) {
 
   // ── Auto-save draft ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
     if (Object.keys(answers).length === 0 && Object.keys(notes).length === 0) return
 
@@ -1082,6 +1080,7 @@ export default function BaiTap({ params }) {
           where('exerciseId', '==', id)
         ))
         const assignNoteDoc = assignSnapRv.docs[0]
+        if (assignNoteDoc) assignmentIdRef.current = assignNoteDoc.id
         if (assignNoteDoc?.data()?.notes) setNotes(assignNoteDoc.data().notes)
 
       } else {
@@ -1170,7 +1169,7 @@ export default function BaiTap({ params }) {
   }
 
   const handleChangeNote = (val) => {
-    if (isReview || activeNoteIdx === null) return
+    if (activeNoteIdx === null) return
     setNotes(prev => ({ ...prev, [activeNoteIdx]: val }))
   }
 

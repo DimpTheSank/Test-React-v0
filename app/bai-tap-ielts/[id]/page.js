@@ -1126,13 +1126,34 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
 
         {/* Data rows */}
         <tbody>
-          {dataRows.map((row, ri) => (
-            <tr key={ri} style={{
-              backgroundColor: ri % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
-            }}>
-              {row.map((cell, ci) => renderCell(cell, ci, ri))}
-            </tr>
-          ))}
+          {dataRows.map((row, ri) => {
+            // Hàng chỉ có 1 phần tử (không chứa ;;) → tiêu đề gộp full-width
+            if (row.length === 1) {
+              return (
+                <tr key={ri}>
+                  <td colSpan={headerRow.length} style={{
+                    padding: '10px 14px',
+                    borderTop: '1px solid var(--c-primary-bg)',
+                    textAlign: 'center',
+                    backgroundColor: 'var(--c-primary-bg)',
+                    fontWeight: '700',
+                    color: 'var(--c-primary-dark)',
+                  }}>
+                    <span style={{ fontSize: `${Math.max(12, fontSize)}px` }}>
+                      {parseInline(row[0].replace(/\\n/g, '\n'))}
+                    </span>
+                  </td>
+                </tr>
+              )
+            }
+            return (
+              <tr key={ri} style={{
+                backgroundColor: ri % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+              }}>
+                {row.map((cell, ci) => renderCell(cell, ci, ri))}
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

@@ -716,6 +716,17 @@ function TabGhiChu() {
 
   const selected = items.find(i => i.id === selectedId)
 
+  const scheduleSave = (assignId, data) => {
+    clearTimeout(saveTimeout.current)
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        await updateDoc(doc(db, 'assignments', assignId), data)
+        setSaved(true)
+        setTimeout(() => setSaved(false), 1500)
+      } catch (err) { console.error('Lỗi lưu ghi chú:', err) }
+    }, 800)
+  }
+  
   const handleChangeIELTS = (val) => {
     setItems(prev => prev.map(it => it.id === selectedId ? { ...it, ghiChuBai: val } : it))
     scheduleSave(selectedId, { ghiChuBai: val })

@@ -58,6 +58,19 @@ export function SkeletonTrangChu() {
       margin: '0 auto', minHeight: 'calc(100vh - 56px)',
       backgroundColor: 'var(--c-bg-page)',
     }}>
+      {/* Tab switcher (Bài tập / Ghi chú) */}
+      <div style={{
+        display: 'flex', gap: '4px', marginBottom: '20px',
+        borderBottom: '1px solid var(--c-primary-pale)',
+      }}>
+        <div style={{ padding: '10px 20px 14px' }}>
+          <SkeletonPulse width="76px" height="16px" radius="4px" />
+        </div>
+        <div style={{ padding: '10px 20px 14px' }}>
+          <SkeletonPulse width="76px" height="16px" radius="4px" />
+        </div>
+      </div>
+
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

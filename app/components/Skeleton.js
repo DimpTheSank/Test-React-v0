@@ -2,17 +2,6 @@
 
 /**
  * Skeleton loading components — updated to match new row-list design.
- *
- * Export:
- *  - SkeletonPulse
- *  - SkeletonTrangChu
- *  - SkeletonTrangChuGV
- *  - SkeletonGVExerciseList
- *  - SkeletonGVClassButtons
- *  - SkeletonGVExerciseDropdown
- *  - SkeletonGVProgressTable
- *  - SkeletonBaiTap
- *  - SkeletonVocab
  */
 
 const KEYFRAMES = `
@@ -85,24 +74,32 @@ export function SkeletonTrangChu() {
 
       {/* Filter bar */}
       <div style={{
-        display: 'flex', gap: '10px', marginBottom: '24px',
+        display: 'flex', gap: '20px', marginBottom: '24px',
         padding: '14px 18px', backgroundColor: 'var(--c-primary-barest)',
         borderRadius: '12px', border: '1px solid var(--c-primary-bg)',
         flexWrap: 'wrap', alignItems: 'center',
       }}>
-        <SkeletonPulse width="56px" height="16px" radius="4px" />
-        {[70, 68, 82, 72].map((w, i) => (
-          <SkeletonPulse key={i} width={`${w}px`} height="28px" radius="9999px" />
-        ))}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <SkeletonPulse width="56px" height="16px" radius="4px" />
+          {[70, 68, 82, 72].map((w, i) => (
+            <SkeletonPulse key={i} width={`${w}px`} height="28px" radius="9999px" />
+          ))}
+        </div>
         <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--c-primary-pale)' }} />
-        <SkeletonPulse width="72px" height="16px" radius="4px" />
-        {[66, 80, 66].map((w, i) => (
-          <SkeletonPulse key={i} width={`${w}px`} height="28px" radius="9999px" />
-        ))}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <SkeletonPulse width="72px" height="16px" radius="4px" />
+          {[66, 80, 66].map((w, i) => (
+            <SkeletonPulse key={i} width={`${w}px`} height="28px" radius="9999px" />
+          ))}
+        </div>
       </div>
 
-      {/* Row list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Grid 2 cột — khớp gridTemplateColumns: repeat(auto-fit, minmax(420px, 1fr)) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+        gap: '10px',
+      }}>
         {rows.map((_, i) => <SkeletonRow key={i} />)}
       </div>
     </main>
@@ -112,21 +109,29 @@ export function SkeletonTrangChu() {
 function SkeletonRow() {
   return (
     <div style={{
+      position: 'relative',
       display: 'flex', alignItems: 'center', gap: '14px',
       padding: '12px 16px', borderRadius: '12px',
       backgroundColor: 'var(--c-surface)',
       boxShadow: 'var(--shadow-card)',
       border: '1px solid var(--c-border-soft)',
       flexWrap: 'wrap',
+      overflow: 'hidden',
     }}>
-      {/* 1. Trạng thái */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        <SkeletonPulse width="4px" height="36px" radius="4px" />
-        <SkeletonPulse width="18px" height="18px" radius="9999px" />
-      </div>
+      {/* Corner status badge (góc trên-trái, giống StatusCornerRow) */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0,
+        width: '46px', height: '18px',
+        backgroundColor: 'var(--c-primary-pale)',
+        borderBottomRightRadius: '8px', borderTopLeftRadius: '11px',
+        animation: 'sk-pulse 1.6s ease-in-out infinite',
+      }} />
 
       {/* 2. Icon + tên bài */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '2 1 220px', minWidth: 0 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        flex: '2 1 220px', minWidth: 0, paddingLeft: '6px',
+      }}>
         <SkeletonPulse width="20px" height="20px" radius="4px" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
           <SkeletonPulse width="70%" height="14px" radius="4px" />
@@ -137,12 +142,12 @@ function SkeletonRow() {
         </div>
       </div>
 
-      {/* 3. Tiến độ / điểm số */}
+      {/* 3. Tiến độ / điểm số — width cố định 150px */}
       <div style={{ width: '150px', flexShrink: 0 }}>
         <SkeletonPulse height="24px" radius="7px" />
       </div>
 
-      {/* 4. Thời gian */}
+      {/* 4. Thời gian — width cố định 100px */}
       <div style={{ width: '100px', flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
         <SkeletonPulse width="80px" height="11px" radius="4px" />
       </div>

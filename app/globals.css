@@ -56,7 +56,7 @@
   --c-text-muted:     #888888;
   --c-text-pale:      #B5D4F4;
   --c-bg:             #F0F7FF;
-  --c-bg-page:        #ffffff;
+  --c-bg-page:        #F3F7FC;
 
   /* Header */
   --c-header-bg:      #185FA5;
@@ -73,7 +73,7 @@
   --shadow-modal:     0 8px 32px rgba(12,68,124,0.2);
 
   /* ── NEW: Shadow system ────────────────────────────── */
-  --shadow-card:      0 1px 3px rgba(24,95,165,0.06), 0 4px 16px rgba(24,95,165,0.07);
+  --shadow-card: 0 1px 3px rgba(24,95,165,0.10), 0 4px 16px rgba(24,95,165,0.10);
   --shadow-card-hover:0 4px 12px rgba(24,95,165,0.10), 0 12px 32px rgba(24,95,165,0.11);
   --shadow-card-done: 0 1px 3px rgba(15,158,123,0.07), 0 4px 16px rgba(15,158,123,0.09);
 

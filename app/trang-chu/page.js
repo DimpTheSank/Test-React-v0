@@ -662,7 +662,6 @@ function StatusCornerRow({ trangThai }) {
     'Chưa làm': { content: '❗', bg: 'var(--c-danger)', pill: false },
   }
   const cfg = config[trangThai] || config['Chưa làm']
-  if (!cfg.pill && trangThai === 'Đã làm') return null // ✅ đã làm không cần badge nữa, dư thừa với ô điểm số
 
   return (
     <div style={{

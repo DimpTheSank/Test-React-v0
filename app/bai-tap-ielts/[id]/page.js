@@ -452,7 +452,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
       flex: 1, display: 'flex', flexDirection: 'column',
       minWidth: 0, minHeight: 0, overflow: 'hidden',
     }}>
-      {/* Toolbar giữ nguyên */}
+      {/* Toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '8px 16px',
@@ -466,16 +466,31 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
         <FontSizeControl label="Cỡ chữ" value={fontSize.value} onChange={fontSize.set} />
       </div>
 
-      {/* Scrollable questions — thêm overflowX hidden để chặn tràn ngang toàn panel */}
+      {/* ── Audio cố định (không cuộn theo câu hỏi) ── */}
+      {centered && audios?.length > 0 && (
+        <div style={{
+          flexShrink: 0,
+          padding: '12px 24px',
+          borderBottom: '1px solid var(--c-primary-pale)',
+          backgroundColor: 'var(--c-sidebar-bg)',
+          display: 'flex', flexDirection: 'column', gap: '10px',
+        }}>
+          {audios.map((src, i) => (
+            <AudioPlayer key={src + i} src={src} />
+          ))}
+        </div>
+      )}
+
+      {/* Scrollable questions */}
       <div id="ielts-questions-panel" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '20px 0' }}>
         <div style={{ display: 'flex', width: '100%', minWidth: 0 }}>
           {centered && <div className="ielts-q-margin" style={{ flex: 1 }} />}
 
           <div className="ielts-q-content" style={{
             flex: centered ? 10 : 1,
-            minWidth: 0, // bắt buộc để overflowX auto trong bảng hoạt động
+            minWidth: 0,
             display: 'flex', flexDirection: 'column', gap: '28px',
-            padding: centered ? '0 24px 48px' : '0 32px 48px', // Reading: padding rộng hơn (32px)
+            padding: centered ? '0 24px 48px' : '0 32px 48px',
           }}>
             {groups.map((group, gi) => (
               <QuestionGroup
@@ -486,7 +501,7 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
                 isReview={isReview}
                 onChange={onChange}
                 fontSize={fontSize.value}
-                isListening={isListening}
+                isListening={false}   // ← quan trọng, xem giải thích bên dưới
               />
             ))}
           </div>

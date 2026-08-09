@@ -657,9 +657,9 @@ function CardBaiTapRow({ bai }) {
 }
 function StatusCornerRow({ trangThai }) {
   const config = {
-    'Đã làm':   { content: '✅', bg: 'var(--c-success)', pill: false },
+    'Đã làm':   { content: 'Đã làm ✅', bg: 'var(--c-success)', pill: false },
     'Đang làm': { content: 'Đang làm…', bg: 'var(--c-warn)', pill: true },
-    'Chưa làm': { content: '❗', bg: 'var(--c-danger)', pill: false },
+    'Chưa làm': { content: 'Chưa làm ❗', bg: 'var(--c-danger)', pill: false },
   }
   const cfg = config[trangThai] || config['Chưa làm']
 

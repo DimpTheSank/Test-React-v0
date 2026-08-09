@@ -477,9 +477,6 @@ function QuestionsPanel({ groups, answers, reviewAnswers, isReview, onChange, fo
             display: 'flex', flexDirection: 'column', gap: '28px',
             padding: centered ? '0 24px 48px' : '0 32px 48px', // Reading: padding rộng hơn (32px)
           }}>
-            {centered && audios?.map((src, i) => (
-              <AudioPlayer key={i} src={src} />
-            ))}
             {groups.map((group, gi) => (
               <QuestionGroup
                 key={gi}

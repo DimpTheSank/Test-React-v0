@@ -519,7 +519,9 @@ function CardBaiTapRow({ bai }) {
         padding: '12px 16px',
         borderRadius: '12px',
         backgroundColor: hovered ? 'var(--c-primary-barest)' : 'var(--c-surface)',
-        border: daLam ? '1px solid var(--c-success-border)' : '1px solid var(--c-border-soft)',
+        border: daLam
+          ? '1px solid var(--c-success-border)'
+          : '1px solid var(--c-primary-pale)',
         boxShadow: hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
         transition: 'background-color 0.15s, box-shadow 0.2s',
         flexWrap: 'wrap',

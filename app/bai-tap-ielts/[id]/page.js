@@ -332,7 +332,6 @@ function NotePanelIELTS({ isOpen, note, onChange, onClose, isReview }) {
       <div style={{ flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
         <textarea
           autoFocus
-          readOnly={isReview}
           value={note || ''}
           onChange={e => onChange(e.target.value.slice(0, MAX_NOTE_LENGTH_IELTS))}
           maxLength={MAX_NOTE_LENGTH_IELTS}
@@ -2004,7 +2003,6 @@ export default function BaiTapIELTS({ params }) {
 
   // ── Auto-save draft ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isReview) return
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
     if (Object.keys(answers).length === 0 && !ghiChuBai) return
 
@@ -2024,11 +2022,14 @@ export default function BaiTapIELTS({ params }) {
           assignmentIdRef.current = assignId
         }
         if (assignId) {
-          await updateDoc(doc(db, 'assignments', assignId), {
-            trangThai: 'Đang làm', answers, ghiChuBai,   // ← thêm ghiChuBai
-            tongCauDraft: questions.length,
-            thoiGianLuuNhap: new Date().toISOString(),
-          })
+          const updateData = isReview
+            ? { ghiChuBai }
+            : {
+                trangThai: 'Đang làm', answers, ghiChuBai,
+                tongCauDraft: questions.length,
+                thoiGianLuuNhap: new Date().toISOString(),
+              }
+          await updateDoc(doc(db, 'assignments', assignId), updateData)
           setDraftSaved(true)
           setTimeout(() => setDraftSaved(false), 2000)
         }
@@ -2036,7 +2037,7 @@ export default function BaiTapIELTS({ params }) {
     }, 1500)
 
     return () => clearTimeout(saveDraftTimeout.current)
-  }, [answers, ghiChuBai]) 
+  }, [answers, ghiChuBai])
 
   async function loadInfo() {
     try {
@@ -2098,6 +2099,7 @@ export default function BaiTapIELTS({ params }) {
           where('exerciseId', '==', id)
         ))
         const assignRvDoc = assignSnapRv.docs[0]
+        if (assignRvDoc) assignmentIdRef.current = assignRvDoc.id
         if (assignRvDoc?.data()?.ghiChuBai) setGhiChuBai(assignRvDoc.data().ghiChuBai)
 
       } else {

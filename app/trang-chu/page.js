@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, getDoc,updateDoc } from 'firebase/firestore'
 import { getExerciseRoute } from '@/lib/exerciseRoute'
 import { SkeletonTrangChu } from '@/app/components/Skeleton'
 
@@ -714,6 +714,17 @@ function TabGhiChu() {
 
   const selected = items.find(i => i.id === selectedId)
 
+  const handleChangeIELTS = (val) => {
+    setItems(prev => prev.map(it => it.id === selectedId ? { ...it, ghiChuBai: val } : it))
+    scheduleSave(selectedId, { ghiChuBai: val })
+  }
+
+  const handleChangeTOEIC = (idx, val) => {
+    const newNotes = { ...selected.notes, [idx]: val }
+    setItems(prev => prev.map(it => it.id === selectedId ? { ...it, notes: newNotes } : it))
+    scheduleSave(selectedId, { notes: newNotes })
+  }
+
   const noteEntries = selected?.type === 'toeic'
     ? Object.entries(selected.notes)
         .filter(([, v]) => v && v.trim())
@@ -772,25 +783,29 @@ function TabGhiChu() {
       </div>
 
       {/* Vùng hiện note bên phải */}
-      <div style={{
-        flex: 1, borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
-        backgroundColor: 'var(--c-surface)', padding: '20px 24px', minHeight: '300px',
-      }}>
+      <div style={{ flex: 1, borderRadius: '12px', border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)', padding: '20px 24px', minHeight: '300px' }}>
         {selected && (
           <>
-            <h3 style={{ margin: '0 0 16px', fontSize: '16px', color: 'var(--c-primary-dark)' }}>
-              {selected.exercise.tenBaiTap}
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--c-primary-dark)' }}>
+                {selected.exercise.tenBaiTap}
+              </h3>
+              {saved && (
+                <span style={{ fontSize: '12px', color: 'var(--c-success)', fontWeight: '600' }}>✓ Đã lưu</span>
+              )}
+            </div>
 
             {selected.type === 'ielts' ? (
-              <div style={{
-                padding: '16px 18px', borderRadius: '10px',
-                border: '1px solid var(--c-primary-bg)', backgroundColor: 'var(--c-primary-barest)',
-                fontSize: '13.5px', color: 'var(--c-primary-dark)', lineHeight: 1.7,
-                whiteSpace: 'pre-wrap',
-              }}>
-                {selected.ghiChuBai}
-              </div>
+              <textarea
+                value={selected.ghiChuBai}
+                onChange={e => handleChangeIELTS(e.target.value)}
+                style={{
+                  width: '100%', minHeight: '240px', padding: '16px 18px', borderRadius: '10px',
+                  border: '1px solid var(--c-primary-bg)', backgroundColor: 'var(--c-primary-barest)',
+                  fontSize: '13.5px', color: 'var(--c-primary-dark)', lineHeight: 1.7,
+                  outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {noteEntries.map(([idx, text]) => (
@@ -803,11 +818,18 @@ function TabGhiChu() {
                       minWidth: '26px', height: '26px', borderRadius: '6px', flexShrink: 0,
                       backgroundColor: 'var(--c-warn)', color: '#fff',
                       fontSize: '11px', fontWeight: '700',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px',
                     }}>{Number(idx) + 1}</span>
-                    <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--c-warn-textsoft)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                      {text}
-                    </p>
+                    <textarea
+                      value={text}
+                      onChange={e => handleChangeTOEIC(idx, e.target.value)}
+                      style={{
+                        flex: 1, border: 'none', background: 'transparent', outline: 'none',
+                        resize: 'vertical', minHeight: '44px',
+                        fontSize: '13.5px', color: 'var(--c-warn-textsoft)', lineHeight: 1.6,
+                        fontFamily: 'inherit',
+                      }}
+                    />
                   </div>
                 ))}
               </div>

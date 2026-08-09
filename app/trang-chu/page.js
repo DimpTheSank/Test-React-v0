@@ -375,8 +375,8 @@ export default function TrangChu() {
             <>
               <div
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
                   gap: '10px',
                 }}
               >

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Skeleton loading components — updated to match new card design.
+ * Skeleton loading components — updated to match new row-list design.
  *
  * Export:
  *  - SkeletonPulse
@@ -50,7 +50,7 @@ export function SkeletonPulse({ width = '100%', height = '16px', radius = '6px',
 /* ─── Trang chủ học viên ─────────────────────────────────────────── */
 export function SkeletonTrangChu() {
   if (typeof window !== 'undefined') injectKeyframes()
-  const cards = Array.from({ length: 8 })
+  const rows = Array.from({ length: 8 })
 
   return (
     <main style={{
@@ -88,43 +88,55 @@ export function SkeletonTrangChu() {
         ))}
       </div>
 
-      {/* Card grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
-        {cards.map((_, i) => <SkeletonCard key={i} />)}
+      {/* Row list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {rows.map((_, i) => <SkeletonRow key={i} />)}
       </div>
     </main>
   )
 }
 
-function SkeletonCard() {
+function SkeletonRow() {
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column',
-      backgroundColor: 'var(--c-surface)', borderRadius: '14px',
-      overflow: 'hidden',
+      display: 'flex', alignItems: 'center', gap: '14px',
+      padding: '12px 16px', borderRadius: '12px',
+      backgroundColor: 'var(--c-surface)',
       boxShadow: 'var(--shadow-card)',
       border: '1px solid var(--c-border-soft)',
+      flexWrap: 'wrap',
     }}>
-      {/* Accent bar */}
-      <SkeletonPulse height="4px" radius="0" />
+      {/* 1. Trạng thái */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <SkeletonPulse width="4px" height="36px" radius="4px" />
+        <SkeletonPulse width="18px" height="18px" radius="9999px" />
+      </div>
 
-      {/* Body */}
-      <div style={{ padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {/* Icon + skill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <SkeletonPulse width="20px" height="20px" radius="4px" />
-          <SkeletonPulse width="90px" height="12px" radius="4px" />
+      {/* 2. Icon + tên bài */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '2 1 220px', minWidth: 0 }}>
+        <SkeletonPulse width="20px" height="20px" radius="4px" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+          <SkeletonPulse width="70%" height="14px" radius="4px" />
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <SkeletonPulse width="90px" height="11px" radius="4px" />
+            <SkeletonPulse width="50px" height="16px" radius="9999px" />
+          </div>
         </div>
-        {/* Title */}
-        <SkeletonPulse height="14px" radius="4px" />
-        <SkeletonPulse width="75%" height="14px" radius="4px" />
-        {/* Badges */}
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <SkeletonPulse width="56px" height="20px" radius="9999px" />
-          <SkeletonPulse width="70px" height="20px" radius="9999px" />
-        </div>
-        {/* CTA */}
-        <SkeletonPulse height="34px" radius="9px" style={{ marginTop: '6px' }} />
+      </div>
+
+      {/* 3. Tiến độ / điểm số */}
+      <div style={{ width: '150px', flexShrink: 0 }}>
+        <SkeletonPulse height="24px" radius="7px" />
+      </div>
+
+      {/* 4. Thời gian */}
+      <div style={{ width: '100px', flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+        <SkeletonPulse width="80px" height="11px" radius="4px" />
+      </div>
+
+      {/* 5. Hành động */}
+      <div style={{ display: 'flex', gap: '6px', flexShrink: 0, marginLeft: 'auto' }}>
+        <SkeletonPulse width="90px" height="34px" radius="8px" />
       </div>
     </div>
   )

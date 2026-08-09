@@ -517,7 +517,7 @@ function CardBaiTapRow({ bai }) {
         display: 'flex',
         alignItems: 'center',
         gap: '14px',
-        padding: '12px 16px',
+        padding: dangLam ? '18px 16px 12px 16px' : '12px 16px',
         borderRadius: '12px',
         backgroundColor: hovered ? 'var(--c-primary-barest)' : 'var(--c-surface)',
         border: daLam
@@ -657,11 +657,12 @@ function CardBaiTapRow({ bai }) {
 }
 function StatusCornerRow({ trangThai }) {
   const config = {
-    'Đã làm':   { content: 'Đã làm ✅', bg: 'var(--c-success)', pill: false },
+    'Đã làm':   { content: '✅', bg: 'var(--c-success)', pill: false },
     'Đang làm': { content: 'Đang làm…', bg: 'var(--c-warn)', pill: true },
-    'Chưa làm': { content: 'Chưa làm ❗', bg: 'var(--c-danger)', pill: false },
+    'Chưa làm': { content: '❗', bg: 'var(--c-danger)', pill: false },
   }
   const cfg = config[trangThai] || config['Chưa làm']
+  if (!cfg.pill && trangThai === 'Đã làm') return null // ✅ đã làm không cần badge nữa, dư thừa với ô điểm số
 
   return (
     <div style={{
@@ -672,16 +673,16 @@ function StatusCornerRow({ trangThai }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: cfg.pill ? '3px 10px 3px 10px' : '3px 7px',
-      height: '20px',
+      padding: cfg.pill ? '3px 10px' : '3px 7px',
+      height: '18px',
       backgroundColor: cfg.bg,
       color: '#fff',
-      fontSize: cfg.pill ? '10px' : '11px',
+      fontSize: cfg.pill ? '9.5px' : '10px',
       fontWeight: '700',
       lineHeight: 1,
       whiteSpace: 'nowrap',
-      borderBottomRightRadius: '9px',
-      borderTopLeftRadius: '11px',   // khớp borderRadius: 12px của row
+      borderBottomRightRadius: '8px',
+      borderTopLeftRadius: '11px',
       boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
     }}>
       {cfg.content}

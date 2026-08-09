@@ -375,14 +375,13 @@ export default function TrangChu() {
             <>
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    'repeat(auto-fill, minmax(180px, 1fr))',
-                  gap: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
                 }}
               >
                 {visibleList.map((bai) => (
-                  <CardBaiTap key={bai.id} bai={bai} />
+                  <CardBaiTapRow key={bai.id} bai={bai} />
                 ))}
               </div>
 
@@ -481,19 +480,20 @@ function FilterGroup({ label, options, value, onChange }) {
   )
 }
 
-/* ── CardBaiTap ──────────────────────────────────────────────────── */
-function CardBaiTap({ bai }) {
+/* ── CardBaiTapRow ───────────────────────────────────────────────── */
+function CardBaiTapRow({ bai }) {
   const [hovered, setHovered] = useState(false)
   const router = useRouter()
 
   const daLam  = bai.trangThai === 'Đã làm'
+  const dangLam = bai.trangThai === 'Đang làm'
   const mau    = mauTrangThai[bai.trangThai] || mauTrangThai['Chưa làm']
   const mauDo  = mauMucDo[bai.mucDo] || null
   const accent = accentKyNang[bai.kyNang] || 'var(--c-primary-mid)'
   const icon   = iconKyNang[bai.kyNang]   || '📝'
 
   const pctStr = bai.diem !== null && bai.tongCau
-    ? `${Math.round(bai.diem / bai.tongCau * 100)}%`
+    ? Math.round(bai.diem / bai.tongCau * 100)
     : null
 
   const draftPct = bai.draftTongCau
@@ -503,8 +503,10 @@ function CardBaiTap({ bai }) {
   const formatNgay = (iso) => {
     if (!iso) return null
     const d = new Date(iso)
-    return `${d.getDate()}/${d.getMonth() + 1} lúc ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+    return `${d.getDate()}/${d.getMonth() + 1} · ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
   }
+
+  const statusIcon = daLam ? '✅' : dangLam ? '✏️' : '⭕'
 
   return (
     <div
@@ -512,158 +514,147 @@ function CardBaiTap({ bai }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'var(--c-surface)',
-        borderRadius: '14px',
-        overflow: 'hidden',
-        boxShadow: daLam
-          ? (hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card-done)')
-          : (hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)'),
-        border: daLam
-          ? '1px solid var(--c-success-border)'
-          : '1px solid var(--c-border-soft)',
-        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        cursor: 'default',
+        alignItems: 'center',
+        gap: '14px',
+        padding: '12px 16px',
+        borderRadius: '12px',
+        backgroundColor: hovered ? 'var(--c-primary-barest)' : 'var(--c-surface)',
+        border: daLam ? '1px solid var(--c-success-border)' : '1px solid var(--c-border-soft)',
+        boxShadow: hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
+        transition: 'background-color 0.15s, box-shadow 0.2s',
+        flexWrap: 'wrap',
       }}
     >
-      {/* Accent bar */}
-      <div style={{ height: '4px', backgroundColor: accent, flexShrink: 0 }} />
+      {/* 1. Trạng thái — dải màu dọc + icon */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: '4px', height: '36px', borderRadius: '4px',
+          backgroundColor: mau.text,
+        }} />
+        <span style={{ fontSize: '18px', lineHeight: 1 }}>{statusIcon}</span>
+      </div>
 
-      {/* Body */}
-      <div style={{ padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-
-        {/* Icon + skill label */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <span style={{ fontSize: '18px', lineHeight: 1 }}>{icon}</span>
-          <span style={{
-            fontSize: '11px', fontWeight: '700', letterSpacing: '0.04em',
-            color: 'var(--c-text-muted)', textTransform: 'uppercase',
+      {/* 2. Icon kỹ năng + tên bài */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        flex: '2 1 220px', minWidth: 0,
+      }}>
+        <span style={{ fontSize: '20px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+        <div style={{ minWidth: 0 }}>
+          <p style={{
+            margin: 0, fontSize: '14px', fontWeight: '600',
+            color: 'var(--c-primary-dark)',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
-            {bai.loaiBai} · {bai.kyNang}
-          </span>
-        </div>
-
-        {/* Title */}
-        <p style={{
-          margin: 0,
-          fontSize: '14px',
-          fontWeight: '600',
-          color: 'var(--c-primary-dark)',
-          lineHeight: 1.4,
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          {bai.tenBaiTap}
-        </p>
-
-        {/* Badges row */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {mauDo && (
+            {bai.tenBaiTap}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
             <span style={{
-              padding: '2px 8px', borderRadius: '9999px',
-              fontSize: '11px', fontWeight: '600',
-              backgroundColor: mauDo.bg, color: mauDo.text,
+              fontSize: '11px', fontWeight: '600', color: 'var(--c-text-muted)',
+              textTransform: 'uppercase', letterSpacing: '0.03em',
             }}>
-              {bai.mucDo}
+              {bai.loaiBai} · {bai.kyNang}
             </span>
-          )}
-          <span style={{
-            padding: '2px 8px', borderRadius: '9999px',
-            fontSize: '11px', fontWeight: '600',
-            backgroundColor: mau.bg, color: mau.text,
-          }}>
-            {bai.trangThai}
-          </span>
-        </div>
-
-        {/* Draft progress bar — chỉ hiện khi chưa/đang làm và có dữ liệu nháp */}
-        {!daLam && bai.draftAnswerCount > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--c-warn-text)', fontWeight: '600' }}>
-                ✏️ Đang làm
+            {mauDo && (
+              <span style={{
+                padding: '1px 8px', borderRadius: '9999px',
+                fontSize: '10.5px', fontWeight: '600',
+                backgroundColor: mauDo.bg, color: mauDo.text,
+              }}>
+                {bai.mucDo}
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--c-warn-text)', fontWeight: '700' }}>
-                {bai.draftAnswerCount}{bai.draftTongCau ? `/${bai.draftTongCau}` : ''} câu
-                {draftPct !== null ? ` · ${draftPct}%` : ''}
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Tiến độ / điểm số — width cố định để thẳng cột */}
+      <div style={{
+        width: '150px', flexShrink: 0,
+        display: 'flex', flexDirection: 'column', gap: '4px',
+      }}>
+        {daLam && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '5px 10px', borderRadius: '7px',
+            backgroundColor: 'var(--c-success-bg)',
+          }}>
+            <span style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--c-success-text)' }}>
+              {bai.diem}/{bai.tongCau}
+            </span>
+            {pctStr !== null && (
+              <span style={{
+                fontSize: '11.5px', fontWeight: '700',
+                color: pctStr >= 50 ? 'var(--c-success)' : 'var(--c-danger)',
+              }}>
+                {pctStr}%
+              </span>
+            )}
+          </div>
+        )}
+
+        {!daLam && bai.draftAnswerCount > 0 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '10.5px', color: 'var(--c-warn-text)', fontWeight: '600' }}>Đang làm</span>
+              <span style={{ fontSize: '10.5px', color: 'var(--c-warn-text)', fontWeight: '700' }}>
+                {bai.draftAnswerCount}{bai.draftTongCau ? `/${bai.draftTongCau}` : ''}
               </span>
             </div>
             {draftPct !== null && (
               <div style={{ height: '5px', borderRadius: '99px', backgroundColor: 'var(--c-warn-bg)', overflow: 'hidden' }}>
                 <div style={{
-                  height: '100%',
-                  width: `${draftPct}%`,
-                  borderRadius: '99px',
-                  backgroundColor: 'var(--c-warn)',
-                  transition: 'width 0.3s ease',
+                  height: '100%', width: `${draftPct}%`, borderRadius: '99px',
+                  backgroundColor: 'var(--c-warn)', transition: 'width 0.3s ease',
                 }} />
               </div>
             )}
-          </div>
+          </>
         )}
 
-        {/* Score + date — chỉ hiện khi đã làm */}
-        {daLam && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '8px 10px',
-            borderRadius: '8px',
-            backgroundColor: 'var(--c-success-bg)',
-          }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--c-success-text)' }}>
-              {bai.diem} / {bai.tongCau}
-            </span>
-            {pctStr && (
-              <span style={{
-                fontSize: '12px', fontWeight: '700',
-                color: parseInt(pctStr) >= 50 ? 'var(--c-success)' : 'var(--c-danger)',
-              }}>
-                {pctStr}
-              </span>
-            )}
-          </div>
+        {!daLam && bai.draftAnswerCount === 0 && (
+          <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>—</span>
         )}
+      </div>
 
-        {bai.thoiGianNop && (
-          <p style={{ margin: 0, fontSize: '11px', color: 'var(--c-text-muted)', lineHeight: 1.3 }}>
-            🕐 {formatNgay(bai.thoiGianNop)}
-          </p>
-        )}
+      {/* 4. Thời gian */}
+      <div style={{ width: '100px', flexShrink: 0, textAlign: 'right' }}>
+        <span style={{ fontSize: '11px', color: 'var(--c-text-muted)' }}>
+          {bai.thoiGianNop ? `🕐 ${formatNgay(bai.thoiGianNop)}` : bai.thoiGianGiao ? `Giao: ${formatNgay(bai.thoiGianGiao)}` : ''}
+        </span>
+      </div>
 
-        {/* CTA buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: 'auto', paddingTop: '4px' }}>
-          {bai.duocXemLai && (
-            <button
-              onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, bai.loaiBai, '?review=true'))}
-              style={{
-                padding: '8px 0', borderRadius: '9px',
-                border: '1.5px solid var(--c-success-border)',
-                backgroundColor: hovered ? 'var(--c-success-bg)' : 'transparent',
-                color: 'var(--c-success)', fontSize: '13px', fontWeight: '600',
-                cursor: 'pointer', transition: 'background-color 0.15s',
-                width: '100%', letterSpacing: '0.01em',
-              }}
-            >
-              Xem lại ✓
-            </button>
-          )}
-
+      {/* 5. Hành động */}
+      <div style={{ display: 'flex', gap: '6px', flexShrink: 0, marginLeft: 'auto' }}>
+        {bai.duocXemLai && (
           <button
-            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, bai.loaiBai))}
+            onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, bai.loaiBai, '?review=true'))}
+            title="Xem lại"
             style={{
-              padding: '9px 0', borderRadius: '9px', border: 'none',
-              backgroundColor: hovered ? 'var(--c-primary-dark)' : 'var(--c-primary-mid)',
-              color: '#fff', fontSize: '13px', fontWeight: '600',
-              cursor: 'pointer', transition: 'background-color 0.15s',
-              width: '100%', letterSpacing: '0.01em',
+              padding: '8px 12px', borderRadius: '8px',
+              border: '1.5px solid var(--c-success-border)',
+              backgroundColor: 'transparent',
+              color: 'var(--c-success)', fontSize: '13px', fontWeight: '600',
+              cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
-            {daLam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
+            👁 Xem lại
           </button>
-        </div>
+        )}
+        <button
+          onClick={() => router.push(getExerciseRoute(bai.kyNang, bai.exerciseId, bai.loaiBai))}
+          style={{
+            padding: '8px 16px', borderRadius: '8px', border: 'none',
+            backgroundColor: 'var(--c-primary-mid)',
+            color: '#fff', fontSize: '13px', fontWeight: '600',
+            cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          {daLam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
+        </button>
       </div>
     </div>
   )

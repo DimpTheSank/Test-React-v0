@@ -513,6 +513,7 @@ function CardBaiTapRow({ bai }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         gap: '14px',
@@ -525,24 +526,17 @@ function CardBaiTapRow({ bai }) {
         boxShadow: hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
         transition: 'background-color 0.15s, box-shadow 0.2s',
         flexWrap: 'wrap',
+        overflow: 'hidden',
       }}
     >
-      {/* 1. Trạng thái — dải màu dọc + icon */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        flexShrink: 0,
-      }}>
-        <div style={{
-          width: '4px', height: '36px', borderRadius: '4px',
-          backgroundColor: mau.text,
-        }} />
-        <span style={{ fontSize: '18px', lineHeight: 1 }}>{statusIcon}</span>
-      </div>
+
+      <StatusCornerRow trangThai={bai.trangThai} />
 
       {/* 2. Icon kỹ năng + tên bài */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
         flex: '2 1 220px', minWidth: 0,
+        paddingLeft: '6px',
       }}>
         <span style={{ fontSize: '20px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
         <div style={{ minWidth: 0 }}>
@@ -658,6 +652,39 @@ function CardBaiTapRow({ bai }) {
           {daLam ? 'Làm lại' : bai.draftAnswerCount > 0 ? 'Làm tiếp' : 'Làm bài'}
         </button>
       </div>
+    </div>
+  )
+}
+function StatusCornerRow({ trangThai }) {
+  const config = {
+    'Đã làm':   { content: '✅', bg: 'var(--c-success)', pill: false },
+    'Đang làm': { content: 'Đang làm…', bg: 'var(--c-warn)', pill: true },
+    'Chưa làm': { content: '❗', bg: 'var(--c-danger)', pill: false },
+  }
+  const cfg = config[trangThai] || config['Chưa làm']
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      zIndex: 2,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: cfg.pill ? '3px 10px 3px 10px' : '3px 7px',
+      height: '20px',
+      backgroundColor: cfg.bg,
+      color: '#fff',
+      fontSize: cfg.pill ? '10px' : '11px',
+      fontWeight: '700',
+      lineHeight: 1,
+      whiteSpace: 'nowrap',
+      borderBottomRightRadius: '9px',
+      borderTopLeftRadius: '11px',   // khớp borderRadius: 12px của row
+      boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+    }}>
+      {cfg.content}
     </div>
   )
 }

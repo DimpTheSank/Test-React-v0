@@ -673,6 +673,8 @@ function TabGhiChu() {
   const [loading, setLoading]       = useState(true)
   const [items, setItems]           = useState([])   // [{ id, type: 'toeic'|'ielts', notes?, ghiChuBai?, exercise }]
   const [selectedId, setSelectedId] = useState(null)
+  const [saved, setSaved]           = useState(false)   
+  const saveTimeout = useRef(null)                      
 
   useEffect(() => { loadNotes() }, [])
 
@@ -726,8 +728,8 @@ function TabGhiChu() {
   }
 
   const noteEntries = selected?.type === 'toeic'
-    ? Object.entries(selected.notes)
-        .filter(([, v]) => v && v.trim())
+    ? Object.entries(selected.notes || {})
+        .filter(([, v]) => v !== undefined && v !== null)
         .sort((a, b) => Number(a[0]) - Number(b[0]))
     : []
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { db } from '@/lib/firebase'
 import {
-  collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc, updateDoc
+  collection, query, where, getDocs, getDoc, addDoc, doc, deleteDoc, updateDoc, setDoc
 } from 'firebase/firestore'
 import {
   SkeletonTrangChuGV,
@@ -85,7 +85,7 @@ export default function TrangChuGV() {
         borderBottom: '1px solid var(--c-primary-pale)',
         display: 'flex', paddingLeft: '24px',
       }}>
-        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }, { key: 'matKhau', label: '🔑 Mật khẩu' }].map(t => (
+        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }, { key: 'taiKhoan', label: '👤 Tài khoản' }, { key: 'matKhau', label: '🔑 Mật khẩu' }].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '14px 24px', border: 'none',
             borderBottom: tab === t.key ? '3px solid var(--c-primary)' : '3px solid transparent',
@@ -100,6 +100,7 @@ export default function TrangChuGV() {
       <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
         {tab === 'baiTap' && <TabBaiTap userInfo={userInfo} />}
         {tab === 'tienDo' && <TabTienDo userInfo={userInfo} />}
+        {tab === 'taiKhoan' && <TabTaiKhoan userInfo={userInfo} />} 
         {tab === 'matKhau' && <TabMatKhau />}
       </div>
     </main>
@@ -120,6 +121,8 @@ function TabBaiTap({ userInfo }) {
   const [isDeleting, setIsDeleting]       = useState(false)
   const [filterKeyword, setFilterKeyword] = useState('')
   const [filterLoaiBai, setFilterLoaiBai] = useState('Tất cả')
+  const [editingEx, setEditingEx] = useState(null)
+  const [showEdit, setShowEdit]   = useState(false)
 
   const loadExercises = async () => {
     setLoading(true)
@@ -258,12 +261,19 @@ function TabBaiTap({ userInfo }) {
               isSelected={selected.has(ex.id)}
               onToggle={() => toggleSelect(ex.id)}
               onGiaoNhanh={() => { setSelected(new Set([ex.id])); setShowAssign(true) }}
+              onSua={() => { setEditingEx(ex); setShowEdit(true) }}
               onXoa={() => { setDeletingEx(ex); setShowDelete(true) }}
             />
           ))}
         </div>
       )}
-
+      {showEdit && editingEx && (
+        <ModalSuaBai
+          exercise={editingEx}
+          onClose={() => { setShowEdit(false); setEditingEx(null) }}
+          onSaved={() => { setShowEdit(false); setEditingEx(null); loadExercises() }}
+        />
+      )}
       {showCreate && (
         <ModalTaoBai onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); loadExercises() }} />
       )}
@@ -294,6 +304,310 @@ function TabBaiTap({ userInfo }) {
     </div>
   )
 }
+// ─── TAB TÀI KHOẢN ───────────────────────────────────────────────────────────
+function TabTaiKhoan({ userInfo }) {
+  const [users, setUsers]           = useState([])
+  const [classes, setClasses]       = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [filterKeyword, setFilterKeyword] = useState('')
+  const [filterLop, setFilterLop]   = useState('Tất cả')
+  const [showModal, setShowModal]   = useState(false)
+  const [editingUser, setEditingUser] = useState(null) // null = tạo mới
+  const [showDelete, setShowDelete] = useState(false)
+  const [deletingUser, setDeletingUser] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const loadAll = async () => {
+    setLoading(true)
+    try {
+      const [userSnap, classSnap] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(query(collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan))),
+      ])
+      const list = userSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(u => u.vaiTro !== 'Giáo viên')
+      list.sort((a, b) => (a.ho + a.ten).localeCompare(b.ho + b.ten, 'vi'))
+      setUsers(list)
+      setClasses(classSnap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { loadAll() }, [])
+
+  const handleXoaUser = async () => {
+    if (!deletingUser) return
+    setIsDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'users', deletingUser.id))
+      setShowDelete(false); setDeletingUser(null)
+      loadAll()
+    } catch (err) {
+      console.error(err)
+      alert('Có lỗi khi xoá tài khoản.')
+    } finally { setIsDeleting(false) }
+  }
+
+  const danhSachLop = ['Tất cả', ...new Set(classes.map(c => c.lop))]
+
+  const filtered = users.filter(u => {
+    const okLop = filterLop === 'Tất cả' || u.lop === filterLop
+    const kw = filterKeyword.trim().toLowerCase()
+    const okKw = !kw
+      || `${u.ho} ${u.ten}`.toLowerCase().includes(kw)
+      || u.taiKhoan?.toLowerCase().includes(kw)
+    return okLop && okKw
+  })
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '10px', flexWrap: 'wrap' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--c-primary-dark)', lineHeight: 1.2 }}>
+            Tài khoản học viên
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--c-text-muted)', lineHeight: 1 }}>
+            {users.length} tài khoản · {filtered.length} đang hiển thị
+          </p>
+        </div>
+        <button onClick={() => { setEditingUser(null); setShowModal(true) }} style={{
+          marginLeft: 'auto', padding: '10px 20px', borderRadius: '9px', border: 'none',
+          backgroundColor: 'var(--c-primary)', color: '#fff',
+          fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+        }}>
+          + Tạo tài khoản
+        </button>
+      </div>
+
+      {/* Filter bar */}
+      <div style={{
+        display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center',
+        padding: '14px 18px', backgroundColor: 'var(--c-surface)',
+        borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
+      }}>
+        <span style={{
+          fontSize: '12px', color: 'var(--c-primary)', fontWeight: '600',
+          textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '48px',
+        }}>Lớp</span>
+        {danhSachLop.map(lop => (
+          <button key={lop} onClick={() => setFilterLop(lop)} style={{
+            padding: '5px 13px', borderRadius: '9999px', fontSize: '13px',
+            border: `1.5px solid ${filterLop === lop ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+            backgroundColor: filterLop === lop ? 'var(--c-primary)' : 'transparent',
+            color: filterLop === lop ? '#fff' : 'var(--c-text-soft)',
+            fontWeight: filterLop === lop ? '600' : '400',
+            cursor: 'pointer', transition: 'all 0.15s',
+          }}>{lop}</button>
+        ))}
+        <div style={{ marginLeft: 'auto', position: 'relative' }}>
+          <input
+            type="text" placeholder="Tìm tên, tài khoản..."
+            value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)}
+            style={{
+              padding: '6px 28px 6px 14px', borderRadius: '9999px', fontSize: '13px',
+              border: `1.5px solid ${filterKeyword ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+              backgroundColor: 'var(--c-surface)', color: 'var(--c-primary-dark)',
+              outline: 'none', width: '220px',
+            }}
+          />
+          {filterKeyword && (
+            <button onClick={() => setFilterKeyword('')} style={{
+              position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--c-text-muted)', fontSize: '14px', padding: 0, lineHeight: 1,
+            }}>×</button>
+          )}
+        </div>
+      </div>
+
+      {loading ? <SkeletonGVExerciseList /> : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
+          {filtered.length === 0 ? (
+            <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', gridColumn: '1 / -1', textAlign: 'center', padding: '30px 0' }}>
+              Không có tài khoản nào phù hợp.
+            </p>
+          ) : filtered.map(u => (
+            <div key={u.id} style={{
+              padding: '16px', borderRadius: '14px', backgroundColor: 'var(--c-surface)',
+              border: '1px solid var(--c-border-soft)', boxShadow: 'var(--shadow-card)',
+              display: 'flex', flexDirection: 'column', gap: '10px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+                  backgroundColor: 'var(--c-primary-bg)', color: 'var(--c-primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: '700', fontSize: '15px',
+                }}>{(u.ten || '?')[0]?.toUpperCase()}</div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--c-primary-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {u.ho} {u.ten}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--c-text-muted)' }}>@{u.taiKhoan}</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {u.lop && (
+                  <span style={{ padding: '2px 9px', borderRadius: '9999px', fontSize: '11px', fontWeight: '600', backgroundColor: 'var(--c-primary-bg)', color: 'var(--c-primary)' }}>
+                    {u.lop}
+                  </span>
+                )}
+                {u.mucTieu && (
+                  <span style={{ padding: '2px 9px', borderRadius: '9999px', fontSize: '11px', fontWeight: '600', backgroundColor: 'var(--c-warn-bg)', color: 'var(--c-warn-text)' }}>
+                    🎯 {u.mucTieu}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: 'auto' }}>
+                <button onClick={() => { setEditingUser(u); setShowModal(true) }} style={{
+                  flex: 1, padding: '7px 0', borderRadius: '8px', border: 'none',
+                  backgroundColor: 'var(--c-primary-mid)', color: '#fff',
+                  fontSize: '12.5px', fontWeight: '600', cursor: 'pointer',
+                }}>Sửa</button>
+                <button onClick={() => { setDeletingUser(u); setShowDelete(true) }} style={{
+                  padding: '7px 12px', borderRadius: '8px',
+                  border: '1.5px solid var(--c-danger-border)', backgroundColor: 'transparent',
+                  color: 'var(--c-danger)', fontSize: '12.5px', fontWeight: '500', cursor: 'pointer',
+                }}>Xoá</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <ModalTaiKhoan
+          user={editingUser}
+          classes={classes}
+          onClose={() => setShowModal(false)}
+          onSaved={() => { setShowModal(false); loadAll() }}
+        />
+      )}
+
+      {showDelete && deletingUser && (
+        <Overlay onClose={() => { setShowDelete(false); setDeletingUser(null) }}>
+          <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Xác nhận xoá tài khoản</h3>
+          <div style={{ backgroundColor: 'var(--c-danger-bg)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
+            <span style={{ color: 'var(--c-danger-text)', fontSize: '14px', fontWeight: '500' }}>
+              ⚠️ Xoá tài khoản <strong>{deletingUser.ho} {deletingUser.ten}</strong>?<br />
+              (Assignments/submissions liên quan sẽ không bị xoá theo)
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => { setShowDelete(false); setDeletingUser(null) }} style={btnSecondary}>Huỷ</button>
+            <button onClick={handleXoaUser} disabled={isDeleting}
+              style={{ ...btnPrimary, backgroundColor: 'var(--c-danger)', opacity: isDeleting ? 0.7 : 1 }}>
+              {isDeleting ? 'Đang xoá...' : 'Xoá'}
+            </button>
+          </div>
+        </Overlay>
+      )}
+    </div>
+  )
+}
+
+// ─── MODAL TẠO/SỬA TÀI KHOẢN ─────────────────────────────────────────────────
+function ModalTaiKhoan({ user, classes, onClose, onSaved }) {
+  const isEdit = !!user
+  const [form, setForm] = useState({
+    taiKhoan: user?.taiKhoan || '',
+    matKhau:  user?.matKhau  || '',
+    ho:       user?.ho       || '',
+    ten:      user?.ten      || '',
+    lop:      user?.lop      || (classes[0]?.lop || ''),
+    mucTieu:  user?.mucTieu  || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [loi, setLoi]       = useState('')
+
+  const inputStyle = {
+    padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)',
+    fontSize: '14px', backgroundColor: 'var(--c-surface)', outline: 'none', width: '100%', boxSizing: 'border-box',
+  }
+  const labelStyle = { color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }
+
+  const handleSave = async () => {
+    if (!form.taiKhoan.trim() || !form.matKhau.trim() || !form.ten.trim()) {
+      setLoi('Vui lòng điền tài khoản, mật khẩu và tên'); return
+    }
+    setSaving(true)
+    try {
+      const userRef = doc(db, 'users', form.taiKhoan.trim())
+
+      // Khi tạo mới: kiểm tra trùng tài khoản
+      if (!isEdit) {
+        const existing = await getDoc(userRef)
+        if (existing.exists()) { setLoi('Tài khoản đã tồn tại'); setSaving(false); return }
+      }
+
+      await setDoc(userRef, {
+        taiKhoan: form.taiKhoan.trim(),
+        matKhau:  form.matKhau,
+        ho:       form.ho.trim(),
+        ten:      form.ten.trim(),
+        lop:      form.lop,
+        mucTieu:  form.mucTieu.trim(),
+        vaiTro:   'Học viên',
+        ...(isEdit ? {} : { thoiGianTao: new Date().toISOString() }),
+      }, { merge: true })
+
+      onSaved()
+    } catch (err) { console.error(err); setLoi('Lỗi khi lưu, thử lại sau') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <Overlay onClose={onClose}>
+      <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>
+        {isEdit ? 'Sửa tài khoản' : 'Tạo tài khoản học viên'}
+      </h3>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Tài khoản (username)</label>
+          <input style={inputStyle} disabled={isEdit} placeholder="vd: hocvien01"
+            value={form.taiKhoan} onChange={e => setForm(f => ({ ...f, taiKhoan: e.target.value }))} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Mật khẩu</label>
+          <input style={inputStyle} placeholder="Mật khẩu"
+            value={form.matKhau} onChange={e => setForm(f => ({ ...f, matKhau: e.target.value }))} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Họ</label>
+          <input style={inputStyle} value={form.ho} onChange={e => setForm(f => ({ ...f, ho: e.target.value }))} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Tên</label>
+          <input style={inputStyle} value={form.ten} onChange={e => setForm(f => ({ ...f, ten: e.target.value }))} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Lớp</label>
+          <select style={inputStyle} value={form.lop} onChange={e => setForm(f => ({ ...f, lop: e.target.value }))}>
+            <option value="">— Chưa xếp lớp —</option>
+            {classes.map(c => <option key={c.id} value={c.lop}>{c.lop}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Mục tiêu</label>
+          <input style={inputStyle} placeholder="vd: IELTS 6.5" value={form.mucTieu} onChange={e => setForm(f => ({ ...f, mucTieu: e.target.value }))} />
+        </div>
+      </div>
+      {loi && <p style={{ margin: 0, color: 'var(--c-danger)', fontSize: '13px' }}>{loi}</p>}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={onClose} style={btnSecondary}>Huỷ</button>
+        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
+          {saving ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Tạo tài khoản'}
+        </button>
+      </div>
+    </Overlay>
+  )
+}
+
 // ─── TAB MẬT KHẨU ────────────────────────────────────────────────────────────
 function generateRandomPass(length = 6) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -512,7 +826,7 @@ function FilterGroup({ label, options, value, onChange }) {
 }
 
 /* ── CardBaiTapGV ─────────────────────────────────────────────────── */
-function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
+function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onSua, onXoa }) {
   const [hovered,   setHovered]   = useState(false)
   const [hoverGiao, setHoverGiao] = useState(false)
   const [hoverXoa,  setHoverXoa]  = useState(false)
@@ -573,6 +887,12 @@ function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
               color: '#fff', fontSize: '13px', fontWeight: '600',
               cursor: 'pointer', transition: 'background-color 0.15s', width: '100%',
             }}>Giao bài</button>
+          <button onClick={e => { e.stopPropagation(); onSua() }}
+            style={{
+              padding: '8px 0', borderRadius: '9px', border: '1.5px solid var(--c-primary-pale)',
+              backgroundColor: 'transparent', color: 'var(--c-primary-mid)',
+              fontSize: '13px', fontWeight: '500', cursor: 'pointer', width: '100%',
+            }}>Sửa thông tin</button>
           <button onClick={e => { e.stopPropagation(); onXoa() }}
             onMouseEnter={() => setHoverXoa(true)} onMouseLeave={() => setHoverXoa(false)}
             style={{
@@ -587,7 +907,86 @@ function CardBaiTapGV({ ex, isSelected, onToggle, onGiaoNhanh, onXoa }) {
     </div>
   )
 }
+function ModalSuaBai({ exercise, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    tenBaiTap: exercise.tenBaiTap || '',
+    kyNang: exercise.kyNang || 'Reading',
+    loaiBai: exercise.loaiBai || 'TOEIC',
+    mucDo: exercise.mucDo || 'Cơ bản',
+    linkDrive: exercise.linkDrive || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [loi, setLoi] = useState('')
 
+  const handleSave = async () => {
+    if (!form.tenBaiTap.trim() || !form.linkDrive.trim()) { setLoi('Vui lòng điền đầy đủ thông tin'); return }
+    setSaving(true)
+    try {
+      await updateDoc(doc(db, 'exercises', exercise.id), {
+        tenBaiTap: form.tenBaiTap.trim(), kyNang: form.kyNang, loaiBai: form.loaiBai,
+        mucDo: form.mucDo, linkDrive: form.linkDrive.trim(),
+      })
+      onSaved()
+    } catch (err) { setLoi('Lỗi khi lưu, thử lại sau'); console.error(err) }
+    finally { setSaving(false) }
+  }
+
+  const inputStyle = {
+    padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--c-primary-pale)',
+    fontSize: '14px', backgroundColor: 'var(--c-surface)', outline: 'none', width: '100%', boxSizing: 'border-box',
+  }
+  const labelStyle = { color: 'var(--c-primary)', fontSize: '13px', fontWeight: '500' }
+
+  return (
+    <Overlay onClose={onClose}>
+      <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Sửa bài tập</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={labelStyle}>Tên bài tập</label>
+        <input style={inputStyle} value={form.tenBaiTap} onChange={e => setForm(f => ({ ...f, tenBaiTap: e.target.value }))} />
+      </div>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Loại bài</label>
+          <select style={inputStyle} value={form.loaiBai} onChange={e => setForm(f => ({ ...f, loaiBai: e.target.value }))}>
+            {['TOEIC', 'IELTS', 'Khác'].map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <label style={labelStyle}>Kỹ năng</label>
+          <select style={inputStyle} value={form.kyNang} onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
+            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp'].map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={labelStyle}>Mức độ</label>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {['Cơ bản', 'Trung bình', 'Nâng cao'].map(m => {
+            const isSelected = form.mucDo === m
+            return (
+              <button key={m} onClick={() => setForm(f => ({ ...f, mucDo: m }))} style={{
+                flex: 1, padding: '8px', borderRadius: '8px',
+                border: `1.5px solid ${isSelected ? 'var(--c-primary)' : 'var(--c-primary-pale)'}`,
+                backgroundColor: isSelected ? 'var(--c-primary-bg)' : 'var(--c-surface)',
+                color: isSelected ? 'var(--c-primary)' : 'var(--c-text-muted)',
+                fontSize: '13px', fontWeight: isSelected ? '600' : '400', cursor: 'pointer',
+              }}>{m}</button>
+            )
+          })}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={labelStyle}>Link Google Drive (Excel)</label>
+        <input style={inputStyle} value={form.linkDrive} onChange={e => setForm(f => ({ ...f, linkDrive: e.target.value }))} />
+      </div>
+      {loi && <p style={{ margin: 0, color: 'var(--c-danger)', fontSize: '13px' }}>{loi}</p>}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={onClose} style={btnSecondary}>Huỷ</button>
+        <button onClick={handleSave} disabled={saving} style={btnPrimary}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+      </div>
+    </Overlay>
+  )
+}
 // ─── MODAL TẠO BÀI ───────────────────────────────────────────────────────────
 function ModalTaoBai({ onClose, onCreated }) {
   const [form, setForm] = useState({ tenBaiTap: '', kyNang: 'Reading', loaiBai: 'TOEIC', mucDo: 'Cơ bản', linkDrive: '' })

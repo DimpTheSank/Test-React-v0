@@ -24,6 +24,8 @@ const accentKyNang = {
   'Vocab Reading':    'var(--c-vocab-reading)',
   'Vocab Listening':  'var(--c-vocab-listening)',
   'Tổng hợp':         'var(--c-tonghop)',
+  'Luyện tập':        'var(--c-primary-mid)',
+  'Thi thử':          'var(--c-danger)',
 }
 
 const iconKyNang = {
@@ -34,6 +36,8 @@ const iconKyNang = {
   'Vocab Reading':   '🔤',
   'Vocab Listening': '🔊',
   'Tổng hợp':        '🧩',
+  'Luyện tập':       '🏋️',
+  'Thi thử':         '🎯',
 }
 
 const mauKyNang = {
@@ -44,6 +48,8 @@ const mauKyNang = {
   'Vocab Reading':    { bg: 'var(--c-vocab-reading)',    text: 'var(--c-surface)' },
   'Vocab Listening':  { bg: 'var(--c-vocab-listening)',  text: 'var(--c-surface)' },
   'Tổng hợp':         { bg: 'var(--c-tonghop)',          text: 'var(--c-surface)' },
+  'Luyện tập':        { bg: 'var(--c-primary-mid)',      text: 'var(--c-surface)' },
+  'Thi thử':          { bg: 'var(--c-danger)',           text: 'var(--c-surface)' },
 }
 
 const mauMucDo = {
@@ -54,7 +60,8 @@ const mauMucDo = {
 
 const cacLoaiBai = ['Tất cả', 'TOEIC', 'IELTS', 'Khác']
 const cacMucDo   = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
-const cacKyNang  = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp']
+const cacKyNang  = ['Tất cả', 'Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp', 'Luyện tập', 'Thi thử']
+const cacKyNangTao = ['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp', 'Luyện tập', 'Thi thử']
 
 const getUserInfo = () => {
   try {
@@ -954,7 +961,7 @@ function ModalSuaBai({ exercise, onClose, onSaved }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           <label style={labelStyle}>Kỹ năng</label>
           <select style={inputStyle} value={form.kyNang} onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
-            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp'].map(v => <option key={v}>{v}</option>)}
+            {cacKyNangTao.map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
       </div>
@@ -1030,7 +1037,7 @@ function ModalTaoBai({ onClose, onCreated }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           <label style={labelStyle}>Kỹ năng</label>
           <select style={inputStyle} value={form.kyNang} onChange={e => setForm(f => ({ ...f, kyNang: e.target.value }))}>
-            {['Reading', 'Listening', 'Writing', 'Speaking', 'Vocab Reading', 'Vocab Listening', 'Tổng hợp'].map(v => <option key={v}>{v}</option>)}
+            {cacKyNangTao.map(v => <option key={v}>{v}</option>)}
           </select>
         </div>
       </div>

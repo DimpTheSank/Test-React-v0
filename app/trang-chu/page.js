@@ -113,6 +113,15 @@ export default function TrangChu() {
   const luyenTapOnly = baiTapList.filter(b => b.kyNang === 'Luyện tập')
   const thiThuOnly   = baiTapList.filter(b => b.kyNang === 'Thi thử')
 
+  const demChuaXong = (list) =>
+    list.filter(b => b.trangThai === 'Chưa làm' || b.trangThai === 'Đang làm').length
+
+  const badgeCounts = {
+    baiTap:   demChuaXong(baiTapOnly),
+    luyenTap: demChuaXong(luyenTapOnly),
+    thiThu:   demChuaXong(thiThuOnly),
+  }
+
   return (
     <main
       style={{
@@ -138,32 +147,62 @@ export default function TrangChu() {
           { key: 'luyenTap', label: '🏋️ Luyện Tập' },
           { key: 'ghiChu',   label: '📓 Ghi chú' },
           { key: 'thiThu',   label: '🎯 Thi thử' },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setView(t.key)}
-            style={{
-              padding: '10px 20px',
-              border: 'none',
-              borderBottom:
-                view === t.key
-                  ? '3px solid var(--c-primary)'
-                  : '3px solid transparent',
-              backgroundColor: 'transparent',
-              color:
-                view === t.key
-                  ? 'var(--c-primary)'
-                  : 'var(--c-text-muted)',
-              fontWeight: view === t.key ? '600' : '400',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+        ].map((t) => {
+          const count = badgeCounts[t.key] || 0
+          return (
+            <div key={t.key} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setView(t.key)}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderBottom:
+                    view === t.key
+                      ? '3px solid var(--c-primary)'
+                      : '3px solid transparent',
+                  backgroundColor: 'transparent',
+                  color:
+                    view === t.key
+                      ? 'var(--c-primary)'
+                      : 'var(--c-text-muted)',
+                  fontWeight: view === t.key ? '600' : '400',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t.label}
+              </button>
+
+              {count > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '2px',
+                    right: '4px',
+                    minWidth: '17px',
+                    height: '17px',
+                    padding: '0 4px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--c-danger)',
+                    color: '#fff',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                    boxShadow: '0 0 0 2px var(--c-bg-page)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {count > 99 ? '99+' : count}
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {view === 'baiTap'   && <TabDanhSachBai items={baiTapOnly}   sortDesc={true}  tieuDe="Bài tập của tôi" />}

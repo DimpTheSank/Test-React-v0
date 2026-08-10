@@ -21,6 +21,8 @@ const accentKyNang = {
   'Vocab Reading':    'var(--c-vocab-reading)',
   'Vocab Listening':  'var(--c-vocab-listening)',
   'Tổng hợp':         'var(--c-tonghop)',
+  'Luyện tập':        'var(--c-primary-mid)',
+  'Thi thử':          'var(--c-danger)',
 }
 
 const iconKyNang = {
@@ -31,6 +33,8 @@ const iconKyNang = {
   'Vocab Reading':   '🔤',
   'Vocab Listening': '🔊',
   'Tổng hợp':        '🧩',
+  'Luyện tập':       '🏋️',
+  'Thi thử':         '🎯',
 }
 
 const mauMucDo = {
@@ -42,18 +46,14 @@ const mauMucDo = {
 const cacMucDo     = ['Tất cả', 'Cơ bản', 'Trung bình', 'Nâng cao']
 const cacTrangThai = ['Tất cả', 'Chưa làm', 'Đang làm', 'Đã làm']
 
-// Số bài hiện mỗi lần (mặc định 10 — trên khung 1040px với card min 180px, lưới thường
-// ra 5 cột => 10 bài = đúng 2 dòng. Chỉnh số này nếu muốn khít hơn với layout thực tế.)
+// Số bài hiện mỗi lần
 const SO_LUONG_MOI_LAN = 10
 
 export default function TrangChu() {
   const router = useRouter()
-  const [view, setView]                       = useState('baiTap')
-  const [baiTapList, setBaiTapList]           = useState([])
-  const [loading, setLoading]                 = useState(true)
-  const [filterMucDo, setFilterMucDo]         = useState('Tất cả')
-  const [filterTrangThai, setFilterTrangThai] = useState('Tất cả')
-  const [visibleCount, setVisibleCount]       = useState(SO_LUONG_MOI_LAN)
+  const [view, setView]             = useState('baiTap')
+  const [baiTapList, setBaiTapList] = useState([])
+  const [loading, setLoading]       = useState(true)
 
   useEffect(() => {
     if (!Cookies.get('isLoggedIn')) { router.push('/'); return }
@@ -82,7 +82,6 @@ export default function TrangChu() {
         if (!exSnap.exists()) return null
         const bestSub = subMap[assign.exerciseId]
 
-        // Đếm số câu đã làm trong nháp (bỏ qua nếu đã nộp)
         const draftAnswerCount = !bestSub && assign.answers
           ? Object.keys(assign.answers).filter(k => {
               const v = assign.answers[k]
@@ -103,49 +102,16 @@ export default function TrangChu() {
         }
       }))
 
-      const sorted = baiTapData
-        .filter(Boolean)
-        .sort((a, b) => {
-          const timeDiff = new Date(b.thoiGianGiao) - new Date(a.thoiGianGiao)
-          if (timeDiff !== 0) return timeDiff
-          return (a.tenBaiTap ?? '').localeCompare(b.tenBaiTap ?? '', 'vi')
-        })
-      setBaiTapList(sorted)
+      setBaiTapList(baiTapData.filter(Boolean))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
 
-  const daLam   = baiTapList.filter(b => b.trangThai === 'Đã làm').length
-  const dangLam = baiTapList.filter(b => b.trangThai === 'Đang làm').length
-  const chuaLam = baiTapList.filter(b => b.trangThai === 'Chưa làm').length
-
-  const filtered = baiTapList.filter(b => {
-    const okMucDo     = filterMucDo     === 'Tất cả' || b.mucDo     === filterMucDo
-    const okTrangThai = filterTrangThai === 'Tất cả' || b.trangThai === filterTrangThai
-    return okMucDo && okTrangThai
-  })
-
-  // Reset về số lượng mặc định mỗi khi đổi filter
-  useEffect(() => {
-    setVisibleCount(SO_LUONG_MOI_LAN)
-  }, [filterMucDo, filterTrangThai])
-
-  // Tự động hiện thêm khi cuộn gần chạm đáy trang
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollBottom = window.innerHeight + window.scrollY
-      const pageHeight = document.documentElement.scrollHeight
-      if (scrollBottom >= pageHeight - 300) {
-        setVisibleCount(prev => Math.min(prev + SO_LUONG_MOI_LAN, filtered.length))
-      }
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [filtered.length])
-
-  const visibleList = filtered.slice(0, visibleCount)
-
   if (loading) return <SkeletonTrangChu />
+
+  const baiTapOnly   = baiTapList.filter(b => b.kyNang !== 'Luyện tập' && b.kyNang !== 'Thi thử')
+  const luyenTapOnly = baiTapList.filter(b => b.kyNang === 'Luyện tập')
+  const thiThuOnly   = baiTapList.filter(b => b.kyNang === 'Thi thử')
 
   return (
     <main
@@ -164,11 +130,14 @@ export default function TrangChu() {
           gap: '4px',
           marginBottom: '20px',
           borderBottom: '1px solid var(--c-primary-pale)',
+          flexWrap: 'wrap',
         }}
       >
         {[
-          { key: 'baiTap', label: '📚 Bài tập' },
-          { key: 'ghiChu', label: '📓 Ghi chú' },
+          { key: 'baiTap',   label: '📚 Bài tập' },
+          { key: 'luyenTap', label: '🏋️ Luyện Tập' },
+          { key: 'ghiChu',   label: '📓 Ghi chú' },
+          { key: 'thiThu',   label: '🎯 Thi thử' },
         ].map((t) => (
           <button
             key={t.key}
@@ -189,6 +158,7 @@ export default function TrangChu() {
               fontSize: '14px',
               cursor: 'pointer',
               transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
             }}
           >
             {t.label}
@@ -196,257 +166,300 @@ export default function TrangChu() {
         ))}
       </div>
 
-      {view === 'baiTap' ? (
-        <>
-          {/* ── Page header ── */}
-          <div
+      {view === 'baiTap'   && <TabDanhSachBai items={baiTapOnly}   sortDesc={true}  tieuDe="Bài tập của tôi" />}
+      {view === 'luyenTap' && <TabDanhSachBai items={luyenTapOnly} sortDesc={false} tieuDe="Luyện tập" />}
+      {view === 'thiThu'   && <TabDanhSachBai items={thiThuOnly}   sortDesc={false} tieuDe="Thi thử" />}
+      {view === 'ghiChu'   && <TabGhiChu />}
+    </main>
+  );
+}
+
+/* ── TabDanhSachBai: dùng chung cho Bài tập / Luyện Tập / Thi thử ──── */
+function TabDanhSachBai({ items, sortDesc, tieuDe }) {
+  const [filterMucDo, setFilterMucDo]         = useState('Tất cả')
+  const [filterTrangThai, setFilterTrangThai] = useState('Tất cả')
+  const [visibleCount, setVisibleCount]       = useState(SO_LUONG_MOI_LAN)
+
+  const daLam   = items.filter(b => b.trangThai === 'Đã làm').length
+  const dangLam = items.filter(b => b.trangThai === 'Đang làm').length
+  const chuaLam = items.filter(b => b.trangThai === 'Chưa làm').length
+
+  // Sắp xếp theo tên bài: Z-A (sortDesc=true) hoặc A-Z (sortDesc=false)
+  const sorted = [...items].sort((a, b) => {
+    const ten1 = a.tenBaiTap ?? ''
+    const ten2 = b.tenBaiTap ?? ''
+    return sortDesc ? ten2.localeCompare(ten1, 'vi') : ten1.localeCompare(ten2, 'vi')
+  })
+
+  const filtered = sorted.filter(b => {
+    const okMucDo     = filterMucDo     === 'Tất cả' || b.mucDo     === filterMucDo
+    const okTrangThai = filterTrangThai === 'Tất cả' || b.trangThai === filterTrangThai
+    return okMucDo && okTrangThai
+  })
+
+  useEffect(() => {
+    setVisibleCount(SO_LUONG_MOI_LAN)
+  }, [filterMucDo, filterTrangThai])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollBottom = window.innerHeight + window.scrollY
+      const pageHeight = document.documentElement.scrollHeight
+      if (scrollBottom >= pageHeight - 300) {
+        setVisibleCount(prev => Math.min(prev + SO_LUONG_MOI_LAN, filtered.length))
+      }
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [filtered.length])
+
+  const visibleList = filtered.slice(0, visibleCount)
+
+  return (
+    <>
+      {/* ── Page header ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <h2
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              marginBottom: '24px',
-              flexWrap: 'wrap',
+              margin: 0,
+              fontSize: '22px',
+              fontWeight: '700',
+              color: 'var(--c-primary-dark)',
+              lineHeight: 1.2,
             }}
           >
-            <div>
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: '22px',
-                  fontWeight: '700',
-                  color: 'var(--c-primary-dark)',
-                  lineHeight: 1.2,
-                }}
-              >
-                Bài tập của tôi
-              </h2>
-              <p
-                style={{
-                  margin: '4px 0 0',
-                  fontSize: '13px',
-                  color: 'var(--c-text-muted)',
-                  lineHeight: 1,
-                }}
-              >
-                {baiTapList.length} bài được giao
-              </p>
-            </div>
+            {tieuDe}
+          </h2>
+          <p
+            style={{
+              margin: '4px 0 0',
+              fontSize: '13px',
+              color: 'var(--c-text-muted)',
+              lineHeight: 1,
+            }}
+          >
+            {items.length} bài được giao · sắp xếp {sortDesc ? 'Z-A' : 'A-Z'}
+          </p>
+        </div>
 
-            {/* Stats pills */}
+        {/* Stats pills */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            marginLeft: 'auto',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--c-success-bg)',
+              color: 'var(--c-success-text)',
+              fontSize: '13px',
+              fontWeight: '600',
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--c-success)',
+                display: 'inline-block',
+              }}
+            />
+            Đã làm: {daLam}
+          </span>
+
+          {dangLam > 0 && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: '9999px',
+                backgroundColor: 'var(--c-warn-bg)',
+                color: 'var(--c-warn-text)',
+                fontSize: '13px',
+                fontWeight: '600',
+              }}
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--c-warn)',
+                  display: 'inline-block',
+                }}
+              />
+              Đang làm: {dangLam}
+            </span>
+          )}
+
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--c-danger-bg)',
+              color: 'var(--c-danger-text)',
+              fontSize: '13px',
+              fontWeight: '600',
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--c-danger)',
+                display: 'inline-block',
+              }}
+            />
+            Chưa làm: {chuaLam}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '20px',
+          marginBottom: '24px',
+          padding: '14px 18px',
+          backgroundColor: 'var(--c-primary-barest)',
+          borderRadius: '12px',
+          border: '1px solid var(--c-primary-bg)',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
+        <FilterGroup
+          label="Mức độ"
+          options={cacMucDo}
+          value={filterMucDo}
+          onChange={setFilterMucDo}
+        />
+
+        <div
+          style={{
+            width: '1px',
+            height: '22px',
+            backgroundColor: 'var(--c-primary-pale)',
+            alignSelf: 'center',
+          }}
+        />
+
+        <FilterGroup
+          label="Trạng thái"
+          options={cacTrangThai}
+          value={filterTrangThai}
+          onChange={setFilterTrangThai}
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: 'var(--c-text-muted)',
+            fontSize: '14px',
+          }}
+        >
+          Không có bài tập nào phù hợp.
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+              gap: '10px',
+            }}
+          >
+            {visibleList.map((bai) => (
+              <CardBaiTapRow key={bai.id} bai={bai} />
+            ))}
+          </div>
+
+          {visibleCount < filtered.length && (
             <div
               style={{
                 display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
                 gap: '8px',
-                marginLeft: 'auto',
-                flexWrap: 'wrap',
+                marginTop: '24px',
               }}
             >
-              <span
+              <p
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
+                  margin: 0,
+                  fontSize: '13px',
+                  color: 'var(--c-text-muted)',
+                }}
+              >
+                Đang hiện {visibleCount} / {filtered.length} bài
+              </p>
+
+              <button
+                onClick={() =>
+                  setVisibleCount((v) =>
+                    Math.min(v + SO_LUONG_MOI_LAN, filtered.length)
+                  )
+                }
+                style={{
+                  padding: '9px 24px',
                   borderRadius: '9999px',
-                  backgroundColor: 'var(--c-success-bg)',
-                  color: 'var(--c-success-text)',
+                  border: '1.5px solid var(--c-primary-pale)',
+                  backgroundColor: 'var(--c-surface)',
+                  color: 'var(--c-primary-mid)',
                   fontSize: '13px',
                   fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    'var(--c-primary-bg)';
+                  e.currentTarget.style.borderColor =
+                    'var(--c-primary-mid)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    'var(--c-surface)';
+                  e.currentTarget.style.borderColor =
+                    'var(--c-primary-pale)';
                 }}
               >
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--c-success)',
-                    display: 'inline-block',
-                  }}
-                />
-                Đã làm: {daLam}
-              </span>
-
-              {dangLam > 0 && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 14px',
-                    borderRadius: '9999px',
-                    backgroundColor: 'var(--c-warn-bg)',
-                    color: 'var(--c-warn-text)',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '7px',
-                      height: '7px',
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--c-warn)',
-                      display: 'inline-block',
-                    }}
-                  />
-                  Đang làm: {dangLam}
-                </span>
-              )}
-
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  backgroundColor: 'var(--c-danger-bg)',
-                  color: 'var(--c-danger-text)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                }}
-              >
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--c-danger)',
-                    display: 'inline-block',
-                  }}
-                />
-                Chưa làm: {chuaLam}
-              </span>
+                Xem thêm ↓
+              </button>
             </div>
-          </div>
-
-          {/* ── Filter bar ── */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '20px',
-              marginBottom: '24px',
-              padding: '14px 18px',
-              backgroundColor: 'var(--c-primary-barest)',
-              borderRadius: '12px',
-              border: '1px solid var(--c-primary-bg)',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-            }}
-          >
-            <FilterGroup
-              label="Mức độ"
-              options={cacMucDo}
-              value={filterMucDo}
-              onChange={setFilterMucDo}
-            />
-
-            <div
-              style={{
-                width: '1px',
-                height: '22px',
-                backgroundColor: 'var(--c-primary-pale)',
-                alignSelf: 'center',
-              }}
-            />
-
-            <FilterGroup
-              label="Trạng thái"
-              options={cacTrangThai}
-              value={filterTrangThai}
-              onChange={setFilterTrangThai}
-            />
-          </div>
-
-          {/* Phần Card grid + Load more giữ nguyên 100% như code hiện tại */}
-
-          {filtered.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '60px 20px',
-                color: 'var(--c-text-muted)',
-                fontSize: '14px',
-              }}
-            >
-              Không có bài tập nào phù hợp.
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-                  gap: '10px',
-                }}
-              >
-                {visibleList.map((bai) => (
-                  <CardBaiTapRow key={bai.id} bai={bai} />
-                ))}
-              </div>
-
-              {visibleCount < filtered.length && (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '8px',
-                    marginTop: '24px',
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '13px',
-                      color: 'var(--c-text-muted)',
-                    }}
-                  >
-                    Đang hiện {visibleCount} / {filtered.length} bài
-                  </p>
-
-                  <button
-                    onClick={() =>
-                      setVisibleCount((v) =>
-                        Math.min(v + SO_LUONG_MOI_LAN, filtered.length)
-                      )
-                    }
-                    style={{
-                      padding: '9px 24px',
-                      borderRadius: '9999px',
-                      border: '1.5px solid var(--c-primary-pale)',
-                      backgroundColor: 'var(--c-surface)',
-                      color: 'var(--c-primary-mid)',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        'var(--c-primary-bg)';
-                      e.currentTarget.style.borderColor =
-                        'var(--c-primary-mid)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        'var(--c-surface)';
-                      e.currentTarget.style.borderColor =
-                        'var(--c-primary-pale)';
-                    }}
-                  >
-                    Xem thêm ↓
-                  </button>
-                </div>
-              )}
-            </>
           )}
         </>
-      ) : (
-        <TabGhiChu />
       )}
-    </main>
-  );
+    </>
+  )
 }
 
 /* ── FilterGroup ─────────────────────────────────────────────────── */

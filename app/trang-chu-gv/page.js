@@ -1704,8 +1704,19 @@ function TabTienDo({ userInfo }) {
   }
 
   const selectedEx = exercises.find(e => e.id === selectedExId) || null
-  const daDam      = rows.filter(r =>  r.sub).length
-  const chuaLam    = rows.filter(r => !r.sub).length
+
+  const daDam   = rows.filter(r => r.sub).length
+  const dangLam = rows.filter(r => {
+    if (r.sub) return false
+    const d = draftInfoMap[selectedExId]?.[r.id]
+    return d?.trangThai === 'Đang làm' && d.count > 0
+  }).length
+  const chuaLam = rows.filter(r => {
+    if (r.sub) return false
+    const d = draftInfoMap[selectedExId]?.[r.id]
+    return !(d?.trangThai === 'Đang làm' && d.count > 0)
+  }).length
+
   const diemTB     = (() => {
     const co = rows.filter(r => r.sub?.diem != null)
     if (!co.length) return null
@@ -1725,6 +1736,7 @@ function TabTienDo({ userInfo }) {
   // nếu matrixSubs[hv.id][ex.id] có key thì đã từng sub, nếu không có key thì cần check assignment
   // → dùng một set assignedMap: { exId: Set<userId> }
   const [assignedMap, setAssignedMap] = useState({}) // { exId: Set<userId> }
+  const [draftInfoMap, setDraftInfoMap] = useState({}) // { exId: { userId: { trangThai, count, total } } }
 
   // Cập nhật assignedMap khi chọn lớp
   useEffect(() => {
@@ -1732,12 +1744,27 @@ function TabTienDo({ userInfo }) {
     const loadAssigned = async () => {
       const snap = await getDocs(query(collection(db, 'assignments'), where('lopId', '==', selectedLop.lop)))
       const map = {}
+      const draftMap = {}
       snap.docs.forEach(d => {
-        const { exerciseId, userId } = d.data()
+        const { exerciseId, userId, trangThai, answers, tongCauDraft } = d.data()
         if (!map[exerciseId]) map[exerciseId] = new Set()
         map[exerciseId].add(userId)
+
+        if (!draftMap[exerciseId]) draftMap[exerciseId] = {}
+        const count = answers
+          ? Object.keys(answers).filter(k => {
+              const v = answers[k]
+              return Array.isArray(v) ? v.some(Boolean) : !!v
+            }).length
+          : 0
+        draftMap[exerciseId][userId] = {
+          trangThai: trangThai || 'Chưa làm',
+          count,
+          total: tongCauDraft || null,
+        }
       })
       setAssignedMap(map)
+      setDraftInfoMap(draftMap)
     }
     loadAssigned()
   }, [selectedLop, exercises])
@@ -1876,17 +1903,33 @@ function TabTienDo({ userInfo }) {
                       }
 
                       // Được giao, chưa làm hoặc đang làm
+                      const draftInfo  = draftInfoMap[ex.id]?.[hv.id]
+                      const isDangLam  = draftInfo?.trangThai === 'Đang làm' && draftInfo.count > 0
+
                       return (
                         <td key={ex.id} style={{
                           padding: '8px 12px', textAlign: 'center',
                           borderLeft: '1px solid var(--c-primary-bg)',
                         }}>
-                          <span style={{
-                            fontSize: '11px', fontWeight: '500',
-                            padding: '2px 8px', borderRadius: '9999px',
-                            backgroundColor: 'var(--c-danger-bg)',
-                            color: 'var(--c-danger-text)',
-                          }}>Chưa làm</span>
+                          {isDangLam ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                              <span style={{
+                                fontSize: '11px', fontWeight: '600',
+                                padding: '2px 8px', borderRadius: '9999px',
+                                backgroundColor: 'var(--c-warn-bg)', color: 'var(--c-warn-text)',
+                              }}>Đang làm</span>
+                              <span style={{ fontSize: '10px', color: 'var(--c-warn-text)', fontWeight: '600' }}>
+                                {draftInfo.count}{draftInfo.total ? `/${draftInfo.total}` : ''} câu
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{
+                              fontSize: '11px', fontWeight: '500',
+                              padding: '2px 8px', borderRadius: '9999px',
+                              backgroundColor: 'var(--c-danger-bg)',
+                              color: 'var(--c-danger-text)',
+                            }}>Chưa làm</span>
+                          )}
                         </td>
                       )
                     })}
@@ -1954,6 +1997,7 @@ function TabTienDo({ userInfo }) {
                     {[
                       { label: 'Tổng học viên', value: rows.length,                  bg: 'var(--c-primary-bg)',  color: 'var(--c-primary-dark)'  },
                       { label: 'Đã làm',        value: daDam,                        bg: 'var(--c-success-bg)', color: 'var(--c-success-text)'  },
+                      { label: 'Đang làm',      value: dangLam,                      bg: 'var(--c-warn-bg)',    color: 'var(--c-warn-text)'     },
                       { label: 'Chưa làm',      value: chuaLam,                      bg: 'var(--c-danger-bg)',  color: 'var(--c-danger-text)'   },
                       { label: 'Điểm TB',       value: diemTB ? `${diemTB}%` : '—', bg: 'var(--c-warn-bg)',    color: 'var(--c-warn-text)'     },
                     ].map(s => (
@@ -1981,8 +2025,11 @@ function TabTienDo({ userInfo }) {
                       ))}
                     </div>
                     {rows.map((r, i) => {
-                      const daDamRow = !!r.sub
-                      const phanTram = r.sub?.diem != null ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
+                      const daDamRow    = !!r.sub
+                      const phanTram    = r.sub?.diem != null ? Math.round(r.sub.diem / r.sub.tongCau * 100) : null
+                      const draftInfoRow = !daDamRow ? draftInfoMap[selectedExId]?.[r.id] : null
+                      const isDangLamRow = draftInfoRow?.trangThai === 'Đang làm' && draftInfoRow.count > 0
+
                       return (
                         <div key={r.id} style={{
                           display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
@@ -2004,17 +2051,21 @@ function TabTienDo({ userInfo }) {
                           <span style={{ fontSize: '13px', color: 'var(--c-text-soft)' }}>{r.lop}</span>
                           <span style={{
                             fontSize: '12px', fontWeight: '500', padding: '3px 10px', borderRadius: '9999px',
-                            backgroundColor: daDamRow ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
-                            color: daDamRow ? 'var(--c-success-text)' : 'var(--c-danger-text)',
+                            backgroundColor: daDamRow ? 'var(--c-success-bg)' : isDangLamRow ? 'var(--c-warn-bg)' : 'var(--c-danger-bg)',
+                            color: daDamRow ? 'var(--c-success-text)' : isDangLamRow ? 'var(--c-warn-text)' : 'var(--c-danger-text)',
                             alignSelf: 'center', justifySelf: 'start',
                           }}>
-                            {daDamRow ? 'Đã làm' : 'Chưa làm'}
+                            {daDamRow ? 'Đã làm' : isDangLamRow ? 'Đang làm' : 'Chưa làm'}
                           </span>
                           <span style={{
                             fontSize: '14px', fontWeight: '600',
-                            color: phanTram >= 50 ? 'var(--c-success)' : phanTram != null ? 'var(--c-danger)' : 'var(--c-primary-pale)',
+                            color: phanTram >= 50 ? 'var(--c-success)' : phanTram != null ? 'var(--c-danger)' : isDangLamRow ? 'var(--c-warn-text)' : 'var(--c-primary-pale)',
                           }}>
-                            {r.sub?.diem != null ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)` : '—'}
+                            {r.sub?.diem != null
+                              ? `${r.sub.diem}/${r.sub.tongCau} (${phanTram}%)`
+                              : isDangLamRow
+                                ? `${draftInfoRow.count}${draftInfoRow.total ? `/${draftInfoRow.total}` : ''} câu`
+                                : '—'}
                           </span>
                           <span style={{ fontSize: '13px', color: 'var(--c-text-muted)' }}>{formatNgay(r.sub?.thoiGianNop)}</span>
                         </div>

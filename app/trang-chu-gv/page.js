@@ -92,7 +92,7 @@ export default function TrangChuGV() {
         borderBottom: '1px solid var(--c-primary-pale)',
         display: 'flex', paddingLeft: '24px',
       }}>
-        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }, { key: 'taiKhoan', label: '👤 Tài khoản' }, { key: 'matKhau', label: '🔑 Mật khẩu' }].map(t => (
+        {[{ key: 'baiTap', label: '📚 Bài tập' }, { key: 'tienDo', label: '📊 Tiến độ' }, { key: 'caNhan', label: '🙋 Cá nhân' }, { key: 'taiKhoan', label: '👤 Tài khoản' }, { key: 'matKhau', label: '🔑 Mật khẩu' }].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '14px 24px', border: 'none',
             borderBottom: tab === t.key ? '3px solid var(--c-primary)' : '3px solid transparent',
@@ -107,6 +107,7 @@ export default function TrangChuGV() {
       <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
         {tab === 'baiTap' && <TabBaiTap userInfo={userInfo} />}
         {tab === 'tienDo' && <TabTienDo userInfo={userInfo} />}
+        {tab === 'caNhan' && <TabCaNhan userInfo={userInfo} />}
         {tab === 'taiKhoan' && <TabTaiKhoan userInfo={userInfo} />} 
         {tab === 'matKhau' && <TabMatKhau />}
       </div>
@@ -513,7 +514,357 @@ function TabTaiKhoan({ userInfo }) {
     </div>
   )
 }
+// ─── TAB CÁ NHÂN ─────────────────────────────────────────────────────────────
+function TabCaNhan({ userInfo }) {
+  const [students, setStudents]         = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(true)
+  const [filterKeyword, setFilterKeyword] = useState('')
+  const [selectedStudent, setSelectedStudent] = useState(null)
 
+  const [rows, setRows]                 = useState([])
+  const [loadingRows, setLoadingRows]   = useState(false)
+
+  const [editingScoreId, setEditingScoreId] = useState(null)
+  const [scoreInput, setScoreInput]         = useState('')
+  const [savingScore, setSavingScore]       = useState(false)
+
+  const [deletingRow, setDeletingRow]   = useState(null)
+  const [isDeleting, setIsDeleting]     = useState(false)
+
+  // ── Load danh sách học viên (union tất cả lớp của GV) ──
+  const loadStudents = async () => {
+    setLoadingStudents(true)
+    try {
+      const classSnap = await getDocs(query(collection(db, 'classes'), where('giaoVienId', '==', userInfo.taiKhoan)))
+      const classes = classSnap.docs.map(d => d.data())
+      const idsSet = new Set()
+      classes.forEach(c => (c.hocVienIds || []).forEach(id => idsSet.add(id)))
+      const data = await Promise.all([...idsSet].map(async uid => {
+        const s = await getDoc(doc(db, 'users', uid))
+        return s.exists() ? { id: uid, ...s.data() } : null
+      }))
+      const list = data.filter(Boolean)
+      list.sort((a, b) => (a.ho + a.ten).localeCompare(b.ho + b.ten, 'vi'))
+      setStudents(list)
+    } catch (err) { console.error(err) }
+    finally { setLoadingStudents(false) }
+  }
+
+  useEffect(() => { loadStudents() }, [])
+
+  // ── Load danh sách bài của 1 học viên ──
+  const loadAssignments = async (student) => {
+    setLoadingRows(true); setRows([])
+    try {
+      const [assignSnap, subSnap] = await Promise.all([
+        getDocs(query(collection(db, 'assignments'), where('userId', '==', student.id))),
+        getDocs(query(collection(db, 'submissions'), where('userId', '==', student.id))),
+      ])
+
+      const subMap = {}
+      subSnap.docs.forEach(d => {
+        const data = d.data()
+        const existing = subMap[data.exerciseId]
+        if (!existing || (data.diem ?? -1) > (existing.diem ?? -1)) {
+          subMap[data.exerciseId] = { id: d.id, ...data }
+        }
+      })
+
+      const data = await Promise.all(assignSnap.docs.map(async assignDoc => {
+        const assign = assignDoc.data()
+        const exSnap = await getDoc(doc(db, 'exercises', assign.exerciseId))
+        if (!exSnap.exists()) return null
+        const sub = subMap[assign.exerciseId] || null
+        return {
+          assignId: assignDoc.id,
+          exerciseId: assign.exerciseId,
+          thoiGianGiao: assign.thoiGianGiao,
+          ...exSnap.data(),
+          trangThai: sub ? 'Đã làm' : (assign.trangThai || 'Chưa làm'),
+          sub,
+        }
+      }))
+
+      const list = data.filter(Boolean)
+      list.sort((a, b) => (b.thoiGianGiao || '').localeCompare(a.thoiGianGiao || ''))
+      setRows(list)
+    } catch (err) { console.error(err) }
+    finally { setLoadingRows(false) }
+  }
+
+  const handleChonHV = (student) => {
+    setSelectedStudent(student)
+    setEditingScoreId(null)
+    loadAssignments(student)
+  }
+
+  // ── Xoá bài đã giao (kèm submission nếu có) ──
+  const handleXoa = async () => {
+    if (!deletingRow) return
+    setIsDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'assignments', deletingRow.assignId))
+      if (deletingRow.sub?.id) await deleteDoc(doc(db, 'submissions', deletingRow.sub.id))
+      setDeletingRow(null)
+      loadAssignments(selectedStudent)
+    } catch (err) {
+      console.error(err)
+      alert('Có lỗi khi xoá bài. Thử lại sau!')
+    } finally { setIsDeleting(false) }
+  }
+
+  // ── Sửa điểm ──
+  const handleSaveScore = async (row) => {
+    if (!row.sub) return
+    const val = parseInt(scoreInput)
+    if (isNaN(val) || val < 0) return
+    setSavingScore(true)
+    try {
+      await updateDoc(doc(db, 'submissions', row.sub.id), { diem: val })
+      setEditingScoreId(null)
+      loadAssignments(selectedStudent)
+    } catch (err) {
+      console.error(err)
+      alert('Có lỗi khi lưu điểm.')
+    } finally { setSavingScore(false) }
+  }
+
+  const filteredStudents = students.filter(s => {
+    const kw = filterKeyword.trim().toLowerCase()
+    if (!kw) return true
+    return `${s.ho} ${s.ten}`.toLowerCase().includes(kw) || s.taiKhoan?.toLowerCase().includes(kw)
+  })
+
+  const formatNgay = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+
+      {/* ── Cột trái: danh sách học viên ── */}
+      <div style={{
+        width: '260px', flexShrink: 0,
+        borderRadius: '12px', border: '1px solid var(--c-primary-pale)',
+        backgroundColor: 'var(--c-surface)', overflow: 'hidden',
+      }}>
+        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--c-primary-bg)' }}>
+          <input
+            type="text" placeholder="Tìm học viên..."
+            value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)}
+            style={{
+              width: '100%', padding: '7px 12px', borderRadius: '8px',
+              border: '1px solid var(--c-primary-pale)', backgroundColor: 'var(--c-surface)',
+              fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {loadingStudents ? (
+          <p style={{ padding: '16px', fontSize: '13px', color: 'var(--c-text-muted)' }}>Đang tải...</p>
+        ) : filteredStudents.length === 0 ? (
+          <p style={{ padding: '16px', fontSize: '13px', color: 'var(--c-text-muted)' }}>Không có học viên nào.</p>
+        ) : (
+          <div style={{ maxHeight: '560px', overflowY: 'auto' }}>
+            {filteredStudents.map((s, i) => {
+              const isSel = selectedStudent?.id === s.id
+              return (
+                <div key={s.id} onClick={() => handleChonHV(s)} style={{
+                  padding: '11px 14px', cursor: 'pointer',
+                  borderLeft: `3px solid ${isSel ? 'var(--c-primary)' : 'transparent'}`,
+                  backgroundColor: isSel ? 'var(--c-primary-barest)' : 'transparent',
+                  borderBottom: i < filteredStudents.length - 1 ? '1px solid var(--c-primary-bg)' : 'none',
+                  transition: 'background-color 0.15s',
+                }}>
+                  <p style={{ margin: 0, fontSize: '13.5px', fontWeight: '600', color: 'var(--c-primary-dark)' }}>
+                    {s.ho} {s.ten}
+                  </p>
+                  <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: 'var(--c-text-muted)' }}>
+                    @{s.taiKhoan} · {s.lop || '—'}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Cột phải: danh sách bài đã giao ── */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {!selectedStudent ? (
+          <div style={{
+            padding: '60px 20px', textAlign: 'center',
+            color: 'var(--c-text-muted)', fontSize: '14px',
+            borderRadius: '12px', border: '1px dashed var(--c-primary-pale)',
+          }}>
+            Chọn một học viên bên trái để xem bài tập được giao.
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '14px', gap: '10px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--c-primary-dark)' }}>
+                  {selectedStudent.ho} {selectedStudent.ten}
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--c-text-muted)' }}>
+                  @{selectedStudent.taiKhoan} · {selectedStudent.lop || 'Chưa xếp lớp'} · {rows.length} bài được giao
+                </p>
+              </div>
+            </div>
+
+            {loadingRows ? (
+              <p style={{ color: 'var(--c-primary)', fontSize: '14px' }}>Đang tải danh sách bài...</p>
+            ) : rows.length === 0 ? (
+              <p style={{ color: 'var(--c-text-muted)', fontSize: '14px', padding: '20px 0' }}>
+                Học viên này chưa được giao bài tập nào.
+              </p>
+            ) : (
+              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--c-primary-pale)' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr auto',
+                  backgroundColor: 'var(--c-primary)', padding: '10px 16px', gap: '8px', alignItems: 'center',
+                }}>
+                  {['Tên bài', 'Loại · Kỹ năng', 'Trạng thái', 'Điểm', 'Ngày giao', ''].map((h, i) => (
+                    <span key={i} style={{ color: '#fff', fontSize: '12.5px', fontWeight: '600' }}>{h}</span>
+                  ))}
+                </div>
+
+                {rows.map((row, i) => {
+                  const daLam    = row.trangThai === 'Đã làm'
+                  const mau      = mauTrangThaiCaNhan[row.trangThai] || mauTrangThaiCaNhan['Chưa làm']
+                  const accent   = accentKyNang[row.kyNang] || 'var(--c-primary-mid)'
+                  const isEditing = editingScoreId === row.assignId
+
+                  return (
+                    <div key={row.assignId} style={{
+                      display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr auto',
+                      padding: '11px 16px', gap: '8px', alignItems: 'center',
+                      backgroundColor: i % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+                      borderTop: '1px solid var(--c-primary-bg)',
+                    }}>
+                      <span style={{ fontSize: '13.5px', fontWeight: '500', color: 'var(--c-primary-dark)' }}>
+                        {row.tenBaiTap}
+                      </span>
+
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: accent, flexShrink: 0 }} />
+                        <span style={{ fontSize: '12.5px', color: 'var(--c-text-soft)' }}>{row.loaiBai} · {row.kyNang}</span>
+                      </span>
+
+                      <span style={{
+                        fontSize: '11.5px', fontWeight: '600', padding: '3px 9px',
+                        borderRadius: '9999px', backgroundColor: mau.bg, color: mau.text,
+                        justifySelf: 'start',
+                      }}>
+                        {row.trangThai}
+                      </span>
+
+                      {/* Điểm — editable */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isEditing ? (
+                          <>
+                            <input
+                              type="number" min="0" autoFocus
+                              value={scoreInput}
+                              onChange={e => setScoreInput(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && handleSaveScore(row)}
+                              style={{
+                                width: '54px', padding: '4px 6px', borderRadius: '6px',
+                                border: '1px solid var(--c-primary-mid)', fontSize: '13px',
+                                outline: 'none',
+                              }}
+                            />
+                            <button
+                              onClick={() => handleSaveScore(row)}
+                              disabled={savingScore}
+                              style={{
+                                padding: '4px 8px', borderRadius: '6px', border: 'none',
+                                backgroundColor: 'var(--c-success)', color: '#fff',
+                                fontSize: '11.5px', fontWeight: '600', cursor: 'pointer',
+                              }}
+                            >✓</button>
+                            <button
+                              onClick={() => setEditingScoreId(null)}
+                              style={{
+                                padding: '4px 8px', borderRadius: '6px',
+                                border: '1px solid var(--c-primary-pale)', backgroundColor: 'transparent',
+                                color: 'var(--c-text-muted)', fontSize: '11.5px', cursor: 'pointer',
+                              }}
+                            >×</button>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--c-primary-dark)' }}>
+                              {row.sub ? `${row.sub.diem}/${row.sub.tongCau}` : '—'}
+                            </span>
+                            {row.sub && (
+                              <button
+                                onClick={() => { setEditingScoreId(row.assignId); setScoreInput(String(row.sub.diem ?? '')) }}
+                                title="Sửa điểm"
+                                style={{
+                                  padding: '2px 7px', borderRadius: '6px',
+                                  border: '1px solid var(--c-primary-pale)', backgroundColor: 'transparent',
+                                  color: 'var(--c-primary-mid)', fontSize: '11px', cursor: 'pointer',
+                                }}
+                              >Sửa</button>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>
+                        {formatNgay(row.thoiGianGiao)}
+                      </span>
+
+                      <button
+                        onClick={() => setDeletingRow(row)}
+                        title="Xoá bài đã giao"
+                        style={{
+                          padding: '6px 12px', borderRadius: '7px',
+                          border: '1.5px solid var(--c-danger-border)', backgroundColor: 'transparent',
+                          color: 'var(--c-danger)', fontSize: '12px', fontWeight: '500', cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >Xoá</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Confirm xoá ── */}
+      {deletingRow && (
+        <Overlay onClose={() => setDeletingRow(null)}>
+          <h3 style={{ margin: 0, color: 'var(--c-primary-dark)' }}>Xác nhận xoá bài đã giao</h3>
+          <div style={{ backgroundColor: 'var(--c-danger-bg)', borderRadius: '10px', padding: '12px 16px', textAlign: 'center' }}>
+            <span style={{ color: 'var(--c-danger-text)', fontSize: '14px', fontWeight: '500' }}>
+              ⚠️ Xoá bài <strong>"{deletingRow.tenBaiTap}"</strong> của {selectedStudent.ho} {selectedStudent.ten}?<br />
+              Bài làm (nếu có) cũng sẽ bị xoá.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => setDeletingRow(null)} style={btnSecondary}>Huỷ</button>
+            <button onClick={handleXoa} disabled={isDeleting}
+              style={{ ...btnPrimary, backgroundColor: 'var(--c-danger)', opacity: isDeleting ? 0.7 : 1 }}>
+              {isDeleting ? 'Đang xoá...' : 'Xoá bài'}
+            </button>
+          </div>
+        </Overlay>
+      )}
+    </div>
+  )
+}
+
+const mauTrangThaiCaNhan = {
+  'Đã làm':   { bg: 'var(--c-success-bg)', text: 'var(--c-success-text)' },
+  'Đang làm': { bg: 'var(--c-warn-bg)',    text: 'var(--c-warn-text)'    },
+  'Chưa làm': { bg: 'var(--c-danger-bg)',  text: 'var(--c-danger-text)'  },
+}
 // ─── MODAL TẠO/SỬA TÀI KHOẢN ─────────────────────────────────────────────────
 function ModalTaiKhoan({ user, classes, onClose, onSaved }) {
   const isEdit = !!user

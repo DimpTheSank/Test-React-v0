@@ -1705,6 +1705,13 @@ function TabTienDo({ userInfo }) {
 
   const selectedEx = exercises.find(e => e.id === selectedExId) || null
 
+  // Kiểm tra HV có được giao bài này không (dựa vào matrixSubs key tồn tại)
+  // Ta dùng assignments để biết HV nào được giao, nhưng để đơn giản:
+  // nếu matrixSubs[hv.id][ex.id] có key thì đã từng sub, nếu không có key thì cần check assignment
+  // → dùng một set assignedMap: { exId: Set<userId> }
+  const [assignedMap, setAssignedMap] = useState({}) // { exId: Set<userId> }
+  const [draftInfoMap, setDraftInfoMap] = useState({}) // { exId: { userId: { trangThai, count, total } } }
+
   const daDam   = rows.filter(r => r.sub).length
   const dangLam = rows.filter(r => {
     if (r.sub) return false
@@ -1731,12 +1738,7 @@ function TabTienDo({ userInfo }) {
 
   const mauEx = selectedEx ? (mauKyNang[selectedEx.kyNang] || { bg: 'var(--c-primary)', text: '#fff' }) : null
 
-  // Kiểm tra HV có được giao bài này không (dựa vào matrixSubs key tồn tại)
-  // Ta dùng assignments để biết HV nào được giao, nhưng để đơn giản:
-  // nếu matrixSubs[hv.id][ex.id] có key thì đã từng sub, nếu không có key thì cần check assignment
-  // → dùng một set assignedMap: { exId: Set<userId> }
-  const [assignedMap, setAssignedMap] = useState({}) // { exId: Set<userId> }
-  const [draftInfoMap, setDraftInfoMap] = useState({}) // { exId: { userId: { trangThai, count, total } } }
+
 
   // Cập nhật assignedMap khi chọn lớp
   useEffect(() => {

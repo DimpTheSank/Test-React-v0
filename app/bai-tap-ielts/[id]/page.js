@@ -976,15 +976,22 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
   const tableRaw = firstQ?.Question?.trim() || ''
 
   // Parse bảng: tách hàng theo \n, tách cột theo ;;
-  const rows = tableRaw
+  const allRows = tableRaw
     .split('\n')
     .map(r => r.trim())
     .filter(Boolean)
     .map(r => r.split(';;').map(c => c.trim()))
 
-  if (rows.length === 0) return null
+  if (allRows.length === 0) return null
 
-  const headerRow = rows[0]
+  // Header cột thật = dòng ĐẦU TIÊN có từ 2 cột trở lên (chứa ;;).
+  // Các dòng đứng TRƯỚC nó mà chỉ có 1 giá trị (không ;;) → là tiêu đề tổng
+  // của cả bảng, hiển thị riêng phía trên <table>, không tính vào header/dataRows.
+  const headerIdx = allRows.findIndex(r => r.length > 1)
+  const titleRows = headerIdx > 0 ? allRows.slice(0, headerIdx) : []
+  const rows      = headerIdx >= 0 ? allRows.slice(headerIdx) : allRows
+
+  const headerRow = rows[0] || []
   const dataRows  = rows.slice(1)
 
   // Map số câu → question object để lấy đáp án
@@ -1114,64 +1121,74 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
       </td>
     )
   }
-
   return (
-    <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--c-primary-pale)', padding: '2px' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px' }}>
-        {/* Header */}
-        <thead>
-          <tr style={{ backgroundColor: 'var(--c-primary)' }}>
-            {headerRow.map((h, i) => (
-              <th key={i} style={{
-                padding: '10px 14px', textAlign: 'center',
-                fontSize: `${Math.max(11, fontSize - 1)}px`,
-                fontWeight: '700', color: '#fff',
-                borderRight: i < headerRow.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
-              }}>
-                <div style={{ whiteSpace: 'pre-wrap', textAlign: 'center' }}>
-                  {h.replace(/\\n/g, '\n')}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Tiêu đề tổng của bảng (nếu có) */}
+      {titleRows.map((tr, ti) => (
+        <div key={ti} style={{
+          fontSize: `${Math.max(13, fontSize)}px`, fontWeight: '700',
+          color: 'var(--c-primary-dark)', padding: '2px 4px',
+        }}>
+          {parseInline(tr[0])}
+        </div>
+      ))}
 
-        {/* Data rows */}
-        <tbody>
-          {dataRows.map((row, ri) => {
-            // Hàng chỉ có 1 phần tử (không chứa ;;) → tiêu đề gộp full-width
-            if (row.length === 1) {
+      <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--c-primary-pale)', padding: '2px' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px' }}>
+          {/* Header */}
+          <thead>
+            <tr style={{ backgroundColor: 'var(--c-primary)' }}>
+              {headerRow.map((h, i) => (
+                <th key={i} style={{
+                  padding: '10px 14px', textAlign: 'center',
+                  fontSize: `${Math.max(11, fontSize - 1)}px`,
+                  fontWeight: '700', color: '#fff',
+                  borderRight: i < headerRow.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                }}>
+                  <div style={{ whiteSpace: 'pre-wrap', textAlign: 'center' }}>
+                    {h.replace(/\\n/g, '\n')}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          {/* Data rows */}
+          <tbody>
+            {dataRows.map((row, ri) => {
+              // Hàng chỉ có 1 phần tử (không chứa ;;) → tiêu đề gộp full-width
+              if (row.length === 1) {
+                return (
+                  <tr key={ri}>
+                    <td colSpan={headerRow.length} style={{
+                      padding: '10px 14px',
+                      borderTop: '1px solid var(--c-primary-bg)',
+                      textAlign: 'center',
+                      backgroundColor: 'var(--c-primary-bg)',
+                      fontWeight: '700',
+                      color: 'var(--c-primary-dark)',
+                    }}>
+                      <span style={{ fontSize: `${Math.max(12, fontSize)}px` }}>
+                        {parseInline(row[0].replace(/\\n/g, '\n'))}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              }
               return (
-                <tr key={ri}>
-                  <td colSpan={headerRow.length} style={{
-                    padding: '10px 14px',
-                    borderTop: '1px solid var(--c-primary-bg)',
-                    textAlign: 'center',
-                    backgroundColor: 'var(--c-primary-bg)',
-                    fontWeight: '700',
-                    color: 'var(--c-primary-dark)',
-                  }}>
-                    <span style={{ fontSize: `${Math.max(12, fontSize)}px` }}>
-                      {parseInline(row[0].replace(/\\n/g, '\n'))}
-                    </span>
-                  </td>
+                <tr key={ri} style={{
+                  backgroundColor: ri % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
+                }}>
+                  {row.map((cell, ci) => renderCell(cell, ci, ri))}
                 </tr>
               )
-            }
-            return (
-              <tr key={ri} style={{
-                backgroundColor: ri % 2 === 0 ? 'var(--c-surface)' : 'var(--c-primary-barest)',
-              }}>
-                {row.map((cell, ci) => renderCell(cell, ci, ri))}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
-
 function tdStyle(isBlank, bg) {
   return {
     padding: '10px 14px',

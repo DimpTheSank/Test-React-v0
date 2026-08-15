@@ -548,8 +548,8 @@ function QuestionGroup({ group, answers, reviewAnswers, isReview, onChange, font
         </div>
       )}
 
-      {/* Question_Info — tất cả dạng trừ map và matching_headings (tự render) */}
-      {infoRaw && type !== 'map' && type !== 'matching_headings' && (
+      {/* Question_Info — trừ các dạng tự render riêng (map, matching_headings, matching_passage) */}
+      {infoRaw && type !== 'map' && type !== 'matching_headings' && type !== 'matching_passage' && (
         isInfoUrl
           ? <img src={infoRaw} alt="Info" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--c-primary-pale)' }} />
           : <div style={{

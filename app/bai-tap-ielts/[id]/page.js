@@ -1001,7 +1001,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
 
   // parseCell: có thể là text thuần, ___ (n) thuần, hoặc text xen lẫn ___ (n)
   const parseCell = (cell) => {
-    const decoded = cell.replace(/\\n/g, '\n')   // ← thêm dòng này: giải mã \\n → newline thật
+    const decoded = cell.replace(/\\n/g, '\n')   // ← giải mã \\n → newline thật
     if (!decoded.includes('___')) return { type: 'text', value: decoded }
     const pureBlank = decoded.match(/^___\s*\((\d+)\)$/)
     if (pureBlank) return { type: 'blank', num: pureBlank[1] }
@@ -1121,6 +1121,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
       </td>
     )
   }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {/* Tiêu đề tổng của bảng (nếu có) */}
@@ -1156,8 +1157,34 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
           {/* Data rows */}
           <tbody>
             {dataRows.map((row, ri) => {
-              // Hàng chỉ có 1 phần tử (không chứa ;;) → tiêu đề gộp full-width
+              // Hàng chỉ có 1 phần tử (không chứa ;;)
               if (row.length === 1) {
+                const cellText = row[0]
+                const hasBlank = /___\s*\(\d+\)/.test(cellText)
+
+                if (hasBlank) {
+                  // Dòng full-width có chỗ trống cần điền (vd thông tin phụ dưới bảng)
+                  const segments = parseMixed(cellText.replace(/\\n/g, '\n'))
+                  return (
+                    <tr key={ri}>
+                      <td colSpan={headerRow.length} style={{
+                        padding: '10px 14px',
+                        borderTop: '1px solid var(--c-primary-bg)',
+                        textAlign: 'left',
+                      }}>
+                        <span style={{ fontSize: `${fontSize}px`, lineHeight: '2', whiteSpace: 'pre-wrap' }}>
+                          {segments.map((seg, si) =>
+                            seg.type === 'text'
+                              ? <span key={si}>{parseInline(seg.val)}</span>
+                              : renderBlankInput(seg.num, `${ri}-${si}`)
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                }
+
+                // Không có chỗ trống → tiêu đề gộp section như cũ
                 return (
                   <tr key={ri}>
                     <td colSpan={headerRow.length} style={{
@@ -1169,7 +1196,7 @@ function TableQuestion({ questions, answers, reviewAnswers, isReview, onChange, 
                       color: 'var(--c-primary-dark)',
                     }}>
                       <span style={{ fontSize: `${Math.max(12, fontSize)}px` }}>
-                        {parseInline(row[0].replace(/\\n/g, '\n'))}
+                        {parseInline(cellText.replace(/\\n/g, '\n'))}
                       </span>
                     </td>
                   </tr>

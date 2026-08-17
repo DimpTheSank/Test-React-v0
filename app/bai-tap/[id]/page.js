@@ -1071,6 +1071,11 @@ export default function BaiTap({ params }) {
           const best = subSnap.docs.map(d => d.data())
             .reduce((a, b) => (a.diem ?? -1) >= (b.diem ?? -1) ? a : b)
           setReviewAnswers(best.answers || {})
+
+          // Điểm >= 25% tổng số câu → tự động mở khoá Transcript, khỏi cần nhập mật khẩu
+          if (best.tongCau > 0 && (best.diem ?? 0) / best.tongCau >= 0.25) {
+            setTranscriptUnlocked(true)
+          }
         }
 
         // Notes lưu ở assignments, không ở submissions → query riêng để hiển thị (read-only)

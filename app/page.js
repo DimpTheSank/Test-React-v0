@@ -32,11 +32,11 @@ export default function Home() {
       if (userSnap.exists() && userSnap.data().matKhau === matKhau) {
         const user = userSnap.data()
         await updateDoc(userRef, { lanCuoiTruyCap: new Date().toISOString() })
-        Cookies.set('isLoggedIn', 'true', { expires: 7 })
+        Cookies.set('isLoggedIn', 'true', { expires: 21 })
         Cookies.set('userInfo', JSON.stringify({
           taiKhoan: user.taiKhoan, ho: user.ho, ten: user.ten,
           vaiTro: user.vaiTro, lop: user.lop, mucTieu: user.mucTieu,
-        }), { expires: 7 })
+        }), { expires: 21 })
         router.push(user.vaiTro === 'Giáo viên' ? '/trang-chu-gv' : '/trang-chu')
       } else {
         setLoi('Thông tin đăng nhập sai')
